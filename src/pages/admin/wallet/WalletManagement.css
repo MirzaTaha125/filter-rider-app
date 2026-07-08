@@ -1,0 +1,649 @@
+.wallet-management {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 0;
+}
+
+/* KPI Cards Grid */
+.wallet-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+}
+
+.wallet-kpi-card {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: 1px solid var(--border-base);
+}
+
+.wallet-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.wallet-kpi-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+  z-index: 2;
+}
+
+.wallet-kpi-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.wallet-kpi-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.wallet-kpi-trend {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+
+.wallet-kpi-trend.positive {
+  color: var(--color-success);
+}
+
+.wallet-kpi-trend.negative {
+  color: var(--color-danger);
+}
+
+.wallet-kpi-icon-wrapper {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--primary-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bg-card);
+  z-index: 1;
+}
+
+.wallet-kpi-overlay {
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  width: 120px;
+  height: 120px;
+  opacity: 0.1;
+  z-index: 0;
+}
+
+/* Negative Balance Alert */
+.negative-balance-alert {
+  background: var(--bg-hover-warning);
+  border: 1px solid var(--color-warning);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.alert-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  flex: 1;
+}
+
+.alert-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--bg-hover-danger);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-danger);
+  flex-shrink: 0;
+}
+
+.alert-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.alert-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.25rem;
+}
+
+.alert-description {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.btn-review-providers {
+  padding: 0.75rem 1.5rem;
+  background: var(--primary-color);
+  border: none;
+  border-radius: 8px;
+  color: var(--bg-card);
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-review-providers:hover {
+  background: var(--primary-hover);
+}
+
+/* Middle Section - Reconciliation & Approvals */
+.wallet-middle-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.reconciliation-card,
+.approvals-card {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-base);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.card-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.btn-period {
+  padding: 0.5rem 1rem;
+  background: var(--border-light);
+  border: 1px solid var(--border-base);
+  border-radius: 8px;
+  color: var(--text-main);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-period:hover {
+  background: var(--border-light);
+}
+
+/* Reconciliation Content */
+.reconciliation-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.reconciliation-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.reconciliation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reconciliation-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.reconciliation-percentage {
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.reconciliation-percentage.yellow {
+  color: var(--primary-color);
+}
+
+.reconciliation-percentage.blue {
+  color: var(--primary-light);
+}
+
+.reconciliation-amount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--border-light);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+
+.progress-fill.yellow {
+  background: var(--primary-color);
+}
+
+.progress-fill.blue {
+  background: var(--primary-light);
+}
+
+.reconciliation-description {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* Approvals List */
+.approvals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.approval-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border-base);
+}
+
+.approval-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.approval-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.approval-entity {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.approval-amount {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.approval-details {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.approval-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-decline {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border-base);
+  background: var(--bg-card);
+  color: var(--color-danger);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-decline:hover {
+  background: var(--bg-hover-danger);
+  border-color: var(--color-danger);
+}
+
+.btn-approve {
+  padding: 0.5rem 1rem;
+  background: var(--primary-color);
+  border: none;
+  border-radius: 8px;
+  color: var(--bg-card);
+  font-weight: 700;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-approve:hover {
+  background: var(--primary-hover);
+}
+
+.approvals-footer {
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-base);
+}
+
+.link-view-all {
+  color: var(--primary-color);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.link-view-all:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+/* Transaction Ledger */
+.transaction-ledger {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-base);
+}
+
+.ledger-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.ledger-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.ledger-controls {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btn-filter,
+.btn-date {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--border-light);
+  border: 1px solid var(--border-base);
+  border-radius: 8px;
+  color: var(--text-main);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-filter:hover,
+.btn-date:hover {
+  background: var(--border-light);
+  border-color: var(--text-muted);
+}
+
+.ledger-table-container {
+  overflow-x: auto;
+}
+
+.ledger-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.ledger-table thead {
+  background: var(--border-light);
+}
+
+.ledger-table th {
+  padding: 1rem 1.25rem;
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  border-bottom: 2px solid var(--border-base);
+  white-space: nowrap;
+}
+
+.ledger-table td {
+  padding: 1.25rem 1.25rem;
+  border-bottom: 1px solid var(--border-base);
+  vertical-align: middle;
+  background: var(--bg-card);
+}
+
+.ledger-row:hover td {
+  background: var(--border-light);
+}
+
+.ledger-row:last-child td {
+  border-bottom: none;
+}
+
+.transaction-id {
+  font-weight: 600;
+  color: var(--text-main);
+  font-size: 0.9rem;
+}
+
+.transaction-date {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.transaction-entity {
+  font-weight: 500;
+  color: var(--text-main);
+  font-size: 0.9rem;
+}
+
+.type-badge {
+  display: inline-block;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  background: var(--bg-hover-primary);
+  color: var(--primary-color);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.transaction-gross {
+  font-weight: 600;
+  color: var(--text-main);
+  font-size: 0.9rem;
+}
+
+.transaction-commission {
+  font-weight: 600;
+  color: var(--text-main);
+  font-size: 0.9rem;
+}
+
+.transaction-commission.negative {
+  color: var(--color-danger);
+}
+
+.transaction-net {
+  font-weight: 600;
+  color: var(--text-main);
+  font-size: 0.9rem;
+}
+
+.transaction-net.negative {
+  color: var(--color-danger);
+}
+
+.transaction-status {
+  font-size: 0.875rem;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-indicator.settled {
+  color: var(--color-success);
+}
+
+.status-indicator.settled .status-dot {
+  background: var(--color-success);
+}
+
+.status-indicator.pending {
+  color: var(--color-warning);
+}
+
+.status-indicator.pending .status-dot {
+  background: var(--color-warning);
+}
+
+.status-indicator.processed {
+  color: var(--text-muted);
+}
+
+.status-indicator.processed .status-dot {
+  background: var(--text-muted);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .wallet-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .wallet-middle-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .wallet-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .negative-balance-alert {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .btn-review-providers {
+    width: 100%;
+  }
+
+  .ledger-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ledger-controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .ledger-table-container {
+    overflow-x: scroll;
+  }
+
+  .ledger-table {
+    min-width: 800px;
+  }
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.8s linear infinite; }
+
+.wallet-loading,
+.wallet-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.badge-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--color-danger);
+  color: var(--bg-card);
+  font-size: 11px;
+  font-weight: 600;
+}
+

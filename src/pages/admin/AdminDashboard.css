@@ -1,0 +1,78 @@
+.admin-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-admin);
+}
+
+.admin-nav {
+  background: var(--bg-card);
+  padding: 1rem 2rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nav-brand h2 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 1.5rem;
+}
+
+.nav-links {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.nav-links a {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.nav-links a:hover {
+  color: var(--primary-hover);
+}
+
+
+.sign-out-btn {
+  background: var(--color-danger);
+  color: var(--bg-card);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.sign-out-btn:hover {
+  background: var(--color-danger);
+}
+
+.admin-main {
+  flex: 1;
+  padding: 2rem;
+}
+
+.dashboard-content {
+  background: var(--bg-card);
+  padding: 2rem;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+
+.dashboard-content h1 {
+  color: var(--text-main);
+  margin-bottom: 1rem;
+}
+
+.dashboard-content p {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+}
+
+

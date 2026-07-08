@@ -1,0 +1,131 @@
+:root {
+  /* Radii */
+  --radius-xl: 12px;
+  --radius-lg: 10px;
+  --radius-md: 8px;
+  --radius-sm: 4px;
+  --radius-round: 50%;
+
+  /* Base Colors (remain constant) */
+  --primary-color: #fcc246;
+  --primary-hover: #fdb714;
+  --danger: #ef4444;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+
+  /* Theme Tokens (Light Default) */
+  --bg-admin: #f5f5f5;
+  --bg-card: white;
+  --bg-sidebar: var(--primary-color);
+  --bg-topbar: white;
+  --bg-input: white;
+  
+  --text-main: #1a1a1a;
+  --text-muted: #6b7280;
+  --text-on-dark: white;
+  --text-inv: white;
+  --topbar-text: #1a1a1a;
+  --sidebar-text: #1a1a1a;
+  --sidebar-muted: rgba(0, 0, 0, 0.6);
+  --sidebar-active-bg: #1a1a1a;
+  --sidebar-active-text: #FCC246;
+
+  --border-base: #e5e7eb;
+  --border-light: #f3f4f6;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(229, 231, 235, 0.3);
+}
+
+/* Dark Mode Overrides */
+body.dark-mode {
+  --bg-admin: #0d1117;
+  --bg-card: #161b22;
+  --bg-sidebar: #010409;
+  --bg-topbar: #161b22;
+  --bg-input: #0d1117;
+
+  --text-main: #f0f6fc;
+  --text-muted: #8b949e;
+  --text-inv: #0d1117;
+  --topbar-text: #f0f6fc;
+  --sidebar-text: rgba(255, 255, 255, 0.7);
+  --sidebar-muted: rgba(255, 255, 255, 0.5);
+  --sidebar-active-bg: var(--primary-color);
+  --sidebar-active-text: #1a1a1a;
+
+  --border-base: #30363d;
+  --border-light: #21262d;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+
+  --glass-bg: rgba(22, 27, 34, 0.8);
+  --glass-border: rgba(48, 54, 61, 0.5);
+}
+
+@font-face {
+  font-family: 'SaudiRiyal';
+  src: url('./assets/Fonts/saudi_riyal.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+.riyal-symbol {
+  font-family: 'SaudiRiyal' !important;
+}
+
+.content-fade-in {
+  animation: contentFadeIn 0.3s ease-out forwards;
+}
+
+@keyframes contentFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.loading-shimmer {
+  animation: shimmer 1.2s ease-in-out infinite;
+}
+
+/* Unified strong blur for all modal/dialog overlays across the app */
+.modal-overlay,
+.session-modal-overlay,
+.sp-detail-modal-overlay,
+.add-sp-modal-overlay,
+.spr-review-modal-overlay,
+.spr-action-modal-overlay,
+.order-modal-overlay,
+.order-dialog-overlay,
+.zone-dialog-overlay,
+.elite-modal-overlay {
+  background: rgba(15, 23, 42, 0.55) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  backdrop-filter: blur(16px) !important;
+}
+
+@keyframes shimmer {
+
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}

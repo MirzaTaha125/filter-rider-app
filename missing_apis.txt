@@ -1,0 +1,71 @@
+FILTER ADMIN PANEL - REQUIRED APIS LIST
+========================================
+
+The following APIs are required to replace current hardcoded data in the Admin Panel.
+
+1. PROMOTIONS & COUPONS (promotions.js)
+--------------------------------------
+- GET /api/v1/admin/promotions (List all coupons/campaigns)
+- POST /api/v1/admin/promotions (Create new coupon)
+- PATCH /api/v1/admin/promotions/{id} (Edit coupon details)
+- DELETE /api/v1/admin/promotions/{id} (Delete coupon)
+- PATCH /api/v1/admin/promotions/{id}/toggle (Activate/Deactivate)
+
+2. WALLET & FINANCIALS (wallet.js)
+----------------------------------
+- GET /api/v1/admin/wallet/stats (KPIs: Total earnings, commission, payouts, net balance)
+- GET /api/v1/admin/wallet/reconciliation (Cash vs Card breakdown)
+- GET /api/v1/admin/wallet/pending-approvals (List payout requests)
+- POST /api/v1/admin/wallet/approvals/{id}/action (Approve/Decline payout)
+- GET /api/v1/admin/wallet/ledger (Immutable transaction history)
+
+3. ANALYTICS (analytics.js)
+---------------------------
+- GET /api/v1/admin/analytics/overview?period={7d|30d|90d} (Revenue, Orders, Customers, SP counts)
+- GET /api/v1/admin/analytics/revenue-trend (Data for charts)
+- GET /api/v1/admin/analytics/service-distribution (Percentage breakdown per service)
+
+4. DISPUTE MANAGEMENT (disputes.js)
+-----------------------------------
+- GET /api/v1/admin/disputes (List all complaints)
+- GET /api/v1/admin/disputes/{id} (Full details including customer/SP messages)
+- PATCH /api/v1/admin/disputes/{id}/status (Set status: Resolved, Under Review, Rejected)
+- POST /api/v1/admin/disputes/{id}/resolution (Submit resolution notes)
+
+5. ZONES & GEOGRAPHY (zones.js)
+-------------------------------
+- GET /api/v1/admin/zones (List all service areas)
+- POST /api/v1/admin/zones (Add new zone with city and coordinates)
+- PATCH /api/v1/admin/zones/{id} (Update zone name/city/status)
+- DELETE /api/v1/admin/zones/{id} (Remove zone)
+
+6. CANCELLATION RULES (cancellation.js)
+---------------------------------------
+- GET /api/v1/admin/cancellation-rules (List current policies)
+- POST /api/v1/admin/cancellation-rules (Create new status-based rule)
+- PATCH /api/v1/admin/cancellation-rules/{id} (Update thresholds and penalties)
+- DELETE /api/v1/admin/cancellation-rules/{id} (Delete rule)
+
+7. COMMUNICATION & TEMPLATES (communication.js)
+----------------------------------------------
+- GET /api/v1/admin/templates (Email/SMS templates list)
+- PATCH /api/v1/admin/templates/{id} (Update template content)
+- GET /api/v1/admin/push-settings (Push notification configs)
+- PATCH /api/v1/admin/push-settings (Update push notification toggles)
+
+8. PRICING & CONFIGURATION (pricing.js)
+---------------------------------------
+- GET /api/v1/admin/pricing/fees (Platform fee settings)
+- PATCH /api/v1/admin/pricing/fees (Update service fees)
+- GET /api/v1/admin/pricing/surge (Active surge multipliers)
+- PATCH /api/v1/admin/pricing/surge (Update surge configuration)
+
+9. ASSET MANAGEMENT (assets.js)
+-------------------------------
+- GET /api/v1/admin/assets/categories (Physical asset groupings)
+- POST /api/v1/admin/assets/categories (Add category)
+- GET /api/v1/admin/assets/definitions (Specific asset types)
+
+-----------------------------------------------------------
+Note: All admin APIs should expect an Authorization header with a Bearer Token.
+-----------------------------------------------------------
