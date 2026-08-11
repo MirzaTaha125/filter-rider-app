@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { usePermissions } from "../../contexts/PermissionsContext";
+import frLogo from "../../assets/fr_logo.png";
 import {
   LayoutDashboard,
   Users,
@@ -165,13 +166,16 @@ function Sidebar({ isOpen, onClose }) {
         <X size={20} />
       </button>
       <div className="sidebar-logo">
-        <div className="logo-squares">
-          <div className="logo-square"></div>
-          <div className="logo-square"></div>
-          <div className="logo-square"></div>
-          <div className="logo-square"></div>
-        </div>
-        <span className="logo-text">Filter</span>
+        <span
+          className="sidebar-brand-logo"
+          role="img"
+          aria-label="Filter"
+          style={{
+            WebkitMaskImage: `url(${frLogo})`,
+            maskImage: `url(${frLogo})`,
+          }}
+        />
+        <span className="sidebar-brand-tagline">Car Services</span>
       </div>
       <nav className="sidebar-nav">
         <ul className="sidebar-menu">

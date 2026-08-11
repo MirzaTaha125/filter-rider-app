@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
-  Bell,
   User,
   ChevronDown,
   Settings,
@@ -95,10 +94,6 @@ function TopBar({ onMenuClick }) {
             aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
           >
             {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
-          </button>
-          <button className="topbar-icon-btn" aria-label="Notifications">
-            <Bell size={20} />
-            <span className="notification-badge">3</span>
           </button>
           <div className="topbar-divider"></div>
           <div className="profile-section" ref={dropdownRef}>

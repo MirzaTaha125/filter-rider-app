@@ -1,13 +1,14 @@
 .topbar {
   background: var(--bg-topbar);
-  border-radius: var(--radius-lg);
+  border-radius: 0;
   padding: 0;
-  height: 80px;
+  height: 72px;
   display: flex;
   align-items: center;
-  box-shadow: var(--shadow-sm);
-  margin-left: 10px;
-  border: 1px solid var(--border-base);
+  box-shadow: none;
+  margin-left: 0;
+  border: none;
+  border-bottom: 1px solid var(--border-base);
 }
 
 .topbar-content {
@@ -49,11 +50,12 @@
 }
 
 .page-title {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.35rem;
+  font-weight: 600;
   color: var(--topbar-text);
   margin: 0;
   line-height: 1.2;
+  font-family: var(--font-sans);
 }
 
 .page-subtitle {
@@ -91,24 +93,13 @@
 }
 
 .theme-toggle-btn {
-  color: var(--primary-color);
+  background: var(--primary-color);
+  color: var(--secondary-color);
 }
 
-.notification-badge {
-  position: absolute;
-  top: 0.25rem;
-  right: 0.25rem;
-  background: var(--primary-color);
-  color: var(--text-inv);
-  font-size: 0.7rem;
-  font-weight: 700;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--bg-topbar);
+.theme-toggle-btn:hover {
+  background: var(--primary-hover);
+  color: var(--secondary-color);
 }
 
 .topbar-divider {
@@ -162,12 +153,12 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: var(--border-light);
+  background: var(--primary-color);
   display: flex;
   align-items: center;
   justify-content: center;
   border: 2px solid var(--primary-color);
-  color: var(--primary-color);
+  color: var(--secondary-color);
   font-weight: 700;
 }
 
@@ -307,7 +298,7 @@
   }
   
   .topbar {
-    height: 70px;
+    height: 64px;
     border-radius: 0;
     margin-left: 0;
   }

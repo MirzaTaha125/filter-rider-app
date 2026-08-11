@@ -27,25 +27,44 @@
   margin-bottom: 3rem;
 }
 
-.logo-squares {
+.brand-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(252, 194, 70, 0.14);
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 2px;
-  width: 32px;
-  height: 32px;
+  place-items: center;
+  padding: 6px;
+}
+
+.brand-logo {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background-color: var(--primary-color);
+  -webkit-mask-image: url('/fr_logo.png');
+  mask-image: url('/fr_logo.png');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+.logo-squares {
+  display: none;
 }
 
 .logo-square {
-  width: 14px;
-  height: 14px;
-  background: var(--primary-color);
-  border-radius: 2px;
+  display: none;
 }
 
 .logo-text {
   font-size: 1.25rem;
   font-weight: 600;
   color: var(--text-main);
+  font-family: var(--font-sans);
 }
 
 .welcome-heading {

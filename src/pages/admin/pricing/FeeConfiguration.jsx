@@ -19,21 +19,45 @@ function FeeConfiguration() {
   const [savedMsg, setSavedMsg] = useState(false)
 
   useEffect(() => {
-    getPlatformFee()
-      .then(data => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const data = await getPlatformFee()
+        if (cancelled) return
         setFeeConfig({
-          commissionType:   data.commission_type   || 'PERCENTAGE',
+          commissionType:   data.commission_type === 'FIXED' ? 'FIXED' : 'PERCENTAGE',
           commissionValue:  parseFloat(data.commission_value) || 15,
           applicationLayer: data.application_layer || 'SUBTOTAL_BEFORE_SURGE',
           isActive:         data.is_active ?? true,
         })
         setHasExisting(true)
-      })
-      .catch(err => {
-        if (err.status !== 404) setError(err.message || 'Failed to load fee configuration')
-        // 404 = no config yet, form stays at defaults
-      })
-      .finally(() => setLoading(false))
+      } catch (err) {
+        if (cancelled) return
+        // 404 = never saved — persist UI defaults so commission actually applies
+        if (err.status === 404) {
+          try {
+            const result = await createPlatformFee(EMPTY)
+            if (cancelled) return
+            setFeeConfig({
+              commissionType:   result.commission_type === 'FIXED' ? 'FIXED' : 'PERCENTAGE',
+              commissionValue:  parseFloat(result.commission_value) || 15,
+              applicationLayer: result.application_layer || 'SUBTOTAL_BEFORE_SURGE',
+              isActive:         result.is_active ?? true,
+            })
+            setHasExisting(true)
+            setSavedMsg(true)
+            setTimeout(() => setSavedMsg(false), 4000)
+          } catch (createErr) {
+            if (!cancelled) setError(createErr.message || 'Failed to create fee configuration')
+          }
+        } else {
+          setError(err.message || 'Failed to load fee configuration')
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
   }, [])
 
   const handleSave = async () => {
@@ -83,7 +107,16 @@ function FeeConfiguration() {
       </div>
 
       {error && <div className="fee-error">{error}</div>}
-      {savedMsg && <div className="fee-saved">Configuration saved successfully.</div>}
+      {savedMsg && (
+        <div className="fee-saved">
+          Configuration saved successfully. Dashboard Revenue will use this commission.
+        </div>
+      )}
+      {!hasExisting && !loading && (
+        <div className="fee-error">
+          Platform fee is not saved yet. Click Save Configuration so commission applies on the dashboard.
+        </div>
+      )}
 
       <div className="fee-config-section">
         <div className="config-card">
@@ -105,7 +138,7 @@ function FeeConfiguration() {
                 onChange={e => setFeeConfig(p => ({ ...p, commissionType: e.target.value }))}
               >
                 <option value="PERCENTAGE">Percentage</option>
-                <option value="FLAT_FEE">Flat Fee</option>
+                <option value="FIXED">Flat Fee</option>
               </select>
             </div>
             <div className="form-group">

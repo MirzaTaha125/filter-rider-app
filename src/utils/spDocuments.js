@@ -30,8 +30,8 @@ export function extractDocuments(rawDocs, item = {}) {
 
   return {
     governmentId: isArray
-      ? docFromArray(rawDocs, ['NATIONAL', 'GOVT', 'ID', 'IQAMA'])
-      : getDocUrl(docs.governmentId || docs.national_id || docs.nationalId || docs.iqama || docs.nationalIdDocument || item.governmentId),
+      ? docFromArray(rawDocs, ['NATIONAL', 'GOVT', 'ID', 'IQAMA', 'PASSPORT', 'GOVERNMENT'])
+      : getDocUrl(docs.governmentId || docs.national_id || docs.nationalId || docs.iqama || docs.passport || docs.nationalIdDocument || item.governmentId),
 
     certification: isArray
       ? docFromArray(rawDocs, ['CERTIFICATION', 'COMMERCIAL_REG', 'COMMERCIAL', 'REGISTRATION'])
@@ -44,6 +44,14 @@ export function extractDocuments(rawDocs, item = {}) {
     businessLicense: isArray
       ? docFromArray(rawDocs, ['LICENSE', 'BUSINESS', 'TRADE', 'VAT'])
       : getDocUrl(docs.businessLicense || docs.business_license || docs.commercial_license || docs.commercialLicense || docs.tradeLicense || item.businessLicense),
+
+    iqama: isArray
+      ? docFromArray(rawDocs, ['IQAMA'])
+      : getDocUrl(docs.iqama || item.iqama),
+
+    passport: isArray
+      ? docFromArray(rawDocs, ['PASSPORT'])
+      : getDocUrl(docs.passport || item.passport),
   }
 }
 

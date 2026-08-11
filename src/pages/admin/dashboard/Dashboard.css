@@ -6,73 +6,70 @@
   gap: 1.5rem;
 }
 
-/* Top Row - 3 KPI Cards */
+/* Top Row - 4 KPI Cards */
 .dashboard-top-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 1.5rem;
 }
 
 .kpi-card {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
-  padding: 1.5rem;
+  padding: 1.35rem 1.4rem;
   box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-base);
   position: relative;
   overflow: hidden;
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .kpi-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .kpi-icon-wrapper {
   position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-md);
+  top: 1.25rem;
+  right: 1.25rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--bg-card);
+  color: #1a1a1a;
 }
 
-.kpi-icon-wrapper.orders {
-  background: var(--primary-color);
-}
-
-.kpi-icon-wrapper.revenue {
-  background: var(--primary-color);
-}
-
+.kpi-icon-wrapper.orders,
+.kpi-icon-wrapper.revenue,
+.kpi-icon-wrapper.sales,
 .kpi-icon-wrapper.sps {
-  background: var(--primary-color);
+  background: var(--primary-soft);
+  color: #b8860b;
 }
 
 .kpi-content {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  max-width: calc(100% - 80px);
+  gap: 0.45rem;
+  max-width: calc(100% - 64px);
 }
 
 .kpi-label {
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: 0.8rem;
+  font-weight: 500;
   color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .kpi-value {
-  font-size: 2.5rem;
-  font-weight: 800;
+  font-size: 1.75rem;
+  font-weight: 700;
   color: var(--text-main);
-  line-height: 1;
+  line-height: 1.15;
   letter-spacing: -0.02em;
 }
 
@@ -591,6 +588,10 @@
 
 /* Responsive Design */
 @media (max-width: 1200px) {
+  .dashboard-top-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .dashboard-bottom-row {
     grid-template-columns: 1fr;
   }

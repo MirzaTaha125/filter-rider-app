@@ -22,6 +22,33 @@ import "./AssetCategories.css";
 
 const ICON_MAP = { Car, Home, Package, Box, ShoppingBag, Truck };
 const DEFAULT_ICON = Car;
+const inferIconName = (name = "", nameAr = "") => {
+  const value = `${name} ${nameAr}`.toLowerCase();
+  if (
+    value.includes("home") ||
+    value.includes("clean") ||
+    value.includes("house") ||
+    value.includes("تنظيف") ||
+    value.includes("منزل")
+  ) {
+    return "Home";
+  }
+  if (
+    value.includes("box") ||
+    value.includes("package") ||
+    value.includes("parcel") ||
+    value.includes("delivery")
+  ) {
+    return "Package";
+  }
+  if (value.includes("shop") || value.includes("bag")) {
+    return "ShoppingBag";
+  }
+  if (value.includes("truck") || value.includes("transport")) {
+    return "Truck";
+  }
+  return "Car";
+};
 
 function AssetCategories() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,7 +60,7 @@ function AssetCategories() {
   const [formData, setFormData] = useState({
     name: "",
     nameAr: "",
-    icon: Car,
+    iconName: "Car",
     color: "#3b82f6",
   });
 
@@ -61,8 +88,11 @@ function AssetCategories() {
     id: item.id,
     name: item.title_en || item.name,
     nameAr: item.title_ar || item.nameAr,
+    iconName: item.icon || inferIconName(item.title_en || item.name, item.title_ar || item.nameAr),
     color: item.icon_color || item.color || "#3b82f6",
-    icon: ICON_MAP[item.icon] || DEFAULT_ICON,
+    icon:
+      ICON_MAP[item.icon || inferIconName(item.title_en || item.name, item.title_ar || item.nameAr)] ||
+      DEFAULT_ICON,
     isActive: item.is_active,
   });
 
@@ -90,7 +120,7 @@ function AssetCategories() {
       setFormData({
         name: category.name,
         nameAr: category.nameAr,
-        icon: category.icon || Car,
+        iconName: category.iconName || "Car",
         color: category.color || "#3b82f6",
       });
     } else {
@@ -98,7 +128,7 @@ function AssetCategories() {
       setFormData({
         name: "",
         nameAr: "",
-        icon: Car,
+        iconName: "Car",
         color: "#3b82f6",
       });
     }
@@ -109,7 +139,7 @@ function AssetCategories() {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingCategory(null);
-    setFormData({ name: "", nameAr: "", icon: Car, color: "#3b82f6" });
+    setFormData({ name: "", nameAr: "", iconName: "Car", color: "#3b82f6" });
   };
 
   const handleInputChange = (field, value) => {
@@ -124,6 +154,7 @@ function AssetCategories() {
         await updateServiceCategory(editingCategory.id, {
           name: formData.name,
           nameAr: formData.nameAr,
+          icon: formData.iconName,
           color: formData.color,
           isActive: true,
         });
@@ -131,6 +162,7 @@ function AssetCategories() {
         await createServiceCategory({
           name: formData.name,
           nameAr: formData.nameAr,
+          icon: formData.iconName,
           color: formData.color,
         });
       }
@@ -267,7 +299,7 @@ function AssetCategories() {
                   <div className="icon-selector">
                     {availableIcons.map((iconOption) => {
                       const IconComponent = iconOption.component;
-                      const isSelected = formData.icon === iconOption.component;
+                      const isSelected = formData.iconName === iconOption.name;
                       return (
                         <button
                           key={iconOption.name}
@@ -276,7 +308,7 @@ function AssetCategories() {
                             isSelected ? "selected" : ""
                           }`}
                           onClick={() =>
-                            handleInputChange("icon", iconOption.component)
+                            handleInputChange("iconName", iconOption.name)
                           }
                           style={{
                             backgroundColor: isSelected
@@ -329,7 +361,8 @@ function AssetCategories() {
                       }}
                     >
                       {(() => {
-                        const PreviewIconComponent = formData.icon;
+                        const PreviewIconComponent =
+                          ICON_MAP[formData.iconName] || DEFAULT_ICON;
                         return <PreviewIconComponent size={32} />;
                       })()}
                     </div>

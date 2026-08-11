@@ -29,6 +29,14 @@ export async function createPromotion(payload) {
   if (payload.validTo)           body.valid_to           = new Date(payload.validTo).toISOString();
   if (payload.zoneIds?.length)   body.zone_ids           = payload.zoneIds;
   if (payload.serviceIds?.length) body.service_ids       = payload.serviceIds;
+  if (payload.bannerBadge != null)      body.banner_badge      = payload.bannerBadge || null;
+  if (payload.bannerTitle != null)      body.banner_title      = payload.bannerTitle || null;
+  if (payload.bannerSubtitle != null)   body.banner_subtitle   = payload.bannerSubtitle || null;
+  if (payload.bannerImageUrl != null)   body.banner_image_url  = payload.bannerImageUrl || null;
+  if (payload.showOnHome != null)       body.show_on_home      = Boolean(payload.showOnHome);
+  if (payload.bannerSortOrder != null && payload.bannerSortOrder !== '') {
+    body.banner_sort_order = Number(payload.bannerSortOrder);
+  }
 
   return apiRequest('/admin/promotions', {
     method: 'POST',
@@ -53,6 +61,14 @@ export async function updatePromotion(id, payload) {
   if (payload.serviceIds != null)       body.service_ids       = payload.serviceIds;
   if (payload.status != null)           body.status            = payload.status;
   if (payload.isActive != null)         body.is_active         = payload.isActive;
+  if (payload.bannerBadge != null)      body.banner_badge      = payload.bannerBadge || null;
+  if (payload.bannerTitle != null)      body.banner_title      = payload.bannerTitle || null;
+  if (payload.bannerSubtitle != null)   body.banner_subtitle   = payload.bannerSubtitle || null;
+  if (payload.bannerImageUrl != null)   body.banner_image_url  = payload.bannerImageUrl || null;
+  if (payload.showOnHome != null)       body.show_on_home      = Boolean(payload.showOnHome);
+  if (payload.bannerSortOrder != null && payload.bannerSortOrder !== '') {
+    body.banner_sort_order = Number(payload.bannerSortOrder);
+  }
 
   return apiRequest(`/admin/promotions/${id}`, {
     method: 'PATCH',

@@ -20,6 +20,7 @@ export async function createServiceCategory(payload) {
     body: JSON.stringify({
       title_en: payload.name,
       title_ar: payload.nameAr || payload.name,
+      icon: payload.icon,
       icon_color: payload.color || '#3b82f6',
       is_active: payload.isActive !== false,
     }),
@@ -33,6 +34,7 @@ export async function updateServiceCategory(id, payload) {
     body: JSON.stringify({
       title_en: payload.name,
       title_ar: payload.nameAr,
+      icon: payload.icon,
       icon_color: payload.color,
       is_active: payload.isActive,
     }),

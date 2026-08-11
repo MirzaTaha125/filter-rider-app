@@ -3,9 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   MapPin, X, Loader2, Ticket, Percent,
   Tag, Settings, Calendar, Check, AlertCircle,
-  Layers, CircleDollarSign, Hash, Users, Banknote
+  Layers, CircleDollarSign, Hash, Users, Banknote, Image as ImageIcon
 } from 'lucide-react'
-import { createPromotion, updatePromotion, getPromotion, getZones, getServices } from '../../../api'
+import { createPromotion, updatePromotion, getPromotion, getZones, getServices, uploadFile } from '../../../api'
 import './CreatePromotion.css'
 
 function toDateInput(val) {
@@ -38,11 +38,18 @@ function CreatePromotion() {
     minOrderValue: '',
     validFrom: '',
     validTo: '',
+    showOnHome: true,
+    bannerBadge: '',
+    bannerTitle: '',
+    bannerSubtitle: '',
+    bannerImageUrl: '',
+    bannerSortOrder: '0',
   })
 
   const [zones, setZones] = useState([])
   const [services, setServices] = useState([])
   const [saving, setSaving] = useState(false)
+  const [uploadingBanner, setUploadingBanner] = useState(false)
   const [loadingPromo, setLoadingPromo] = useState(isEdit)
   const [error, setError] = useState('')
 
@@ -74,6 +81,12 @@ function CreatePromotion() {
             minOrderValue: promo.min_order_value ? String(promo.min_order_value) : '',
             validFrom: toDateInput(promo.valid_from),
             validTo: toDateInput(promo.valid_to),
+            showOnHome: Boolean(promo.show_on_home),
+            bannerBadge: promo.banner_badge ?? '',
+            bannerTitle: promo.banner_title ?? '',
+            bannerSubtitle: promo.banner_subtitle ?? '',
+            bannerImageUrl: promo.banner_image_url ?? '',
+            bannerSortOrder: String(promo.banner_sort_order ?? 0),
           })
         }
       }).catch(err => setError(err.message || 'Failed to load promotion'))
@@ -130,6 +143,12 @@ function CreatePromotion() {
       serviceIds: formData.selectedServiceIds.length ? formData.selectedServiceIds : [],
       status: action === 'activate' ? 'ACTIVE' : 'DRAFT',
       isActive: action === 'activate',
+      showOnHome: formData.showOnHome,
+      bannerBadge: formData.bannerBadge.trim(),
+      bannerTitle: formData.bannerTitle.trim(),
+      bannerSubtitle: formData.bannerSubtitle.trim(),
+      bannerImageUrl: formData.bannerImageUrl.trim(),
+      bannerSortOrder: formData.bannerSortOrder,
     }
     try {
       if (isEdit) {
@@ -142,6 +161,22 @@ function CreatePromotion() {
       setError(err.message || `Failed to ${isEdit ? 'update' : 'create'} promotion`)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleBannerUpload = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploadingBanner(true)
+    setError('')
+    try {
+      const url = await uploadFile(file)
+      handleInputChange('bannerImageUrl', url)
+    } catch (err) {
+      setError(err.message || 'Failed to upload banner image')
+    } finally {
+      setUploadingBanner(false)
     }
   }
 
@@ -393,6 +428,113 @@ function CreatePromotion() {
                   onChange={(e) => handleInputChange('validTo', e.target.value)}
                 />
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Home Banner Card */}
+        <div className="form-card">
+          <div className="card-header">
+            <div className="card-icon"><ImageIcon size={20} /></div>
+            <h2 className="card-title">Customer App Home Banner</h2>
+          </div>
+          <div className="card-body">
+            <div className="form-row">
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="checkbox-label" htmlFor="showOnHome">
+                  <input
+                    type="checkbox"
+                    id="showOnHome"
+                    checked={formData.showOnHome}
+                    onChange={(e) => handleInputChange('showOnHome', e.target.checked)}
+                  />
+                  <span>Show this promotion as a home banner</span>
+                </label>
+                <span className="helper-text">Active promotions appear on the customer home carousel. Uncheck to hide from home while keeping the coupon usable.</span>
+              </div>
+              <div className="form-group">
+                <label className="form-label" htmlFor="bannerSortOrder">Sort order</label>
+                <input
+                  type="number"
+                  id="bannerSortOrder"
+                  className="form-input"
+                  min="0"
+                  value={formData.bannerSortOrder}
+                  onChange={(e) => handleInputChange('bannerSortOrder', e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label" htmlFor="bannerBadge">Badge text</label>
+                <input
+                  type="text"
+                  id="bannerBadge"
+                  className="form-input"
+                  placeholder="e.g. 20% off"
+                  value={formData.bannerBadge}
+                  onChange={(e) => handleInputChange('bannerBadge', e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label" htmlFor="bannerTitle">Banner title</label>
+                <input
+                  type="text"
+                  id="bannerTitle"
+                  className="form-input"
+                  placeholder="e.g. 20% Off First Booking"
+                  value={formData.bannerTitle}
+                  onChange={(e) => handleInputChange('bannerTitle', e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="bannerSubtitle">Banner subtitle</label>
+              <input
+                type="text"
+                id="bannerSubtitle"
+                className="form-input"
+                placeholder="e.g. New users get 20% off their first service"
+                value={formData.bannerSubtitle}
+                onChange={(e) => handleInputChange('bannerSubtitle', e.target.value)}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="bannerImageUrl">Banner image URL</label>
+              <div className="input-wrapper">
+                <input
+                  type="url"
+                  id="bannerImageUrl"
+                  className="form-input"
+                  placeholder="https://..."
+                  value={formData.bannerImageUrl}
+                  onChange={(e) => handleInputChange('bannerImageUrl', e.target.value)}
+                />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 }}>
+                <label className="btn btn-secondary" style={{ margin: 0, cursor: uploadingBanner ? 'wait' : 'pointer' }}>
+                  {uploadingBanner ? <Loader2 size={16} className="spin-icon" /> : null}
+                  {uploadingBanner ? 'Uploading...' : 'Upload image'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    disabled={uploadingBanner}
+                    onChange={handleBannerUpload}
+                  />
+                </label>
+                {formData.bannerImageUrl ? (
+                  <img
+                    src={formData.bannerImageUrl}
+                    alt="Banner preview"
+                    style={{ height: 56, borderRadius: 8, objectFit: 'cover', background: '#f3f4f6' }}
+                  />
+                ) : null}
+              </div>
+              <span className="helper-text">Optional. If empty, the customer app uses the default banner image.</span>
             </div>
           </div>
         </div>

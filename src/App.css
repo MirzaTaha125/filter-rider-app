@@ -5,10 +5,45 @@
 }
 
 body{
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Poppins', system-ui, -apple-system, sans-serif;
 }
 
 .container{
   max-width: 1200px;
   margin: 0 auto;
+}
+
+/* Shared workshop-style surfaces used across admin pages */
+.admin-card,
+.kpi-card,
+.stat-card,
+.panel-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-btn-primary,
+.btn-primary {
+  background: var(--primary-color) !important;
+  color: #1a1a1a !important;
+  border: none !important;
+  font-family: inherit;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+}
+
+.admin-btn-primary:hover,
+.btn-primary:hover {
+  background: var(--primary-hover) !important;
+}
+
+.admin-btn-dark {
+  background: #1e1e2d;
+  color: #fff;
+  border: none;
+  font-family: inherit;
+  font-weight: 500;
+  border-radius: var(--radius-md);
 }

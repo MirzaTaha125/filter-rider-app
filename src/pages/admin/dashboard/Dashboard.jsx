@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import {
   ShoppingCart, TrendingUp,
-  Users,
+  Users, DollarSign, Percent,
   AlertCircle, MapPin,
   ChevronDown
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
-import { getGoogleMapsKeyFromSettings, getAdminOrders, getProviders } from '../../../api'
+import { getGoogleMapsKeyFromSettings, getAdminOrders, getProviders, getWalletOverview } from '../../../api'
 import { useGoogleMapsApiKey } from '../../../contexts/AppSettingsContext'
 import { isGoogleMapsKeyValid } from '../../../utils/googleMapsKey'
 import './Dashboard.css'
@@ -85,6 +85,7 @@ function Dashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState('7days')
   const [orderStats, setOrderStats] = useState({ total: null, active: null, pending: null })
   const [spStats, setSpStats] = useState({ total: null, online: null, busy: null, offline: null })
+  const [financeStats, setFinanceStats] = useState({ totalSales: null, revenue: null })
   const [statsLoading, setStatsLoading] = useState(true)
 
   const contextMapKey = useGoogleMapsApiKey()
@@ -92,6 +93,12 @@ function Dashboard() {
 
   // Riyadh as default map center
   const mapCenter = useMemo(() => ({ lat: 24.7136, lng: 46.6753 }), [])
+
+  const fmtMoney = (n) =>
+    Number(n || 0).toLocaleString('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    })
 
   useEffect(() => {
     getGoogleMapsKeyFromSettings()
@@ -101,7 +108,8 @@ function Dashboard() {
     Promise.all([
       getAdminOrders({}).catch(() => null),
       getProviders({ limit: 100 }).catch(() => null),
-    ]).then(([ordersData, providersData]) => {
+      getWalletOverview().catch(() => null),
+    ]).then(([ordersData, providersData, walletData]) => {
       // Orders
       const orderList = Array.isArray(ordersData) ? ordersData : (ordersData?.items ?? ordersData?.orders ?? [])
       const totalOrders = ordersData?.total ?? orderList.length
@@ -127,6 +135,20 @@ function Dashboard() {
         ['OFFLINE', 'offline', 'INACTIVE', 'inactive'].includes(sp.availability ?? sp.status)
       ).length
       setSpStats({ total: totalSP || null, online: onlineCount, busy: busyCount, offline: offlineCount })
+
+      // Sales & Revenue from wallet overview (completed orders + platform fee)
+      const wallet = Array.isArray(walletData) ? walletData[0] : walletData
+      const totalSales = wallet?.total_sales ?? wallet?.totalSales ?? null
+      const revenue =
+        wallet?.total_revenue ??
+        wallet?.platform_commission ??
+        wallet?.total_commission ??
+        wallet?.platform_earnings ??
+        null
+      setFinanceStats({
+        totalSales: totalSales != null ? Number(totalSales) : null,
+        revenue: revenue != null ? Number(revenue) : null,
+      })
     }).finally(() => setStatsLoading(false))
   }, [])
 
@@ -192,6 +214,46 @@ function Dashboard() {
             <div className="kpi-trend yellow">
               <TrendingUp size={14} />
               <span>Online: {spStats.online ?? 0} · Busy: {spStats.busy ?? 0}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="kpi-card">
+          <div className="kpi-icon-wrapper sales">
+            <DollarSign size={24} />
+          </div>
+          <div className="kpi-content">
+            <div className="kpi-label">Total Sales</div>
+            <div className="kpi-value">
+              {statsLoading
+                ? '—'
+                : financeStats.totalSales != null
+                  ? <><span className="riyal-symbol">&#x20C1;</span>{fmtMoney(financeStats.totalSales)}</>
+                  : '—'}
+            </div>
+            <div className="kpi-trend positive">
+              <TrendingUp size={14} />
+              <span>Completed orders gross</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="kpi-card">
+          <div className="kpi-icon-wrapper revenue">
+            <Percent size={24} />
+          </div>
+          <div className="kpi-content">
+            <div className="kpi-label">Revenue</div>
+            <div className="kpi-value">
+              {statsLoading
+                ? '—'
+                : financeStats.revenue != null
+                  ? <><span className="riyal-symbol">&#x20C1;</span>{fmtMoney(financeStats.revenue)}</>
+                  : '—'}
+            </div>
+            <div className="kpi-trend yellow">
+              <TrendingUp size={14} />
+              <span>Platform commission</span>
             </div>
           </div>
         </div>

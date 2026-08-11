@@ -58,13 +58,20 @@ function Analytics() {
 
   const fmt = (n) => Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })
 
-  // Wallet overview field names are unknown until the API responds — try common shapes
-  const totalRevenue = wallet?.totalRevenue ?? wallet?.total_revenue
-    ?? wallet?.platformEarnings ?? wallet?.platform_earnings
-    ?? wallet?.balance ?? wallet?.available_balance ?? null
+  // Wallet overview — Platform Revenue = platform commission from completed orders
+  const totalRevenue = wallet?.total_revenue
+    ?? wallet?.platform_commission
+    ?? wallet?.total_commission
+    ?? wallet?.platform_earnings
+    ?? wallet?.platformEarnings
+    ?? wallet?.totalRevenue
+    ?? null
 
-  const pendingPayouts = wallet?.pendingPayouts ?? wallet?.pending_payouts
-    ?? wallet?.pendingWithdrawals ?? wallet?.locked_balance ?? null
+  const pendingPayouts = wallet?.pending_payouts
+    ?? wallet?.pending_withdrawals
+    ?? wallet?.pending_amount
+    ?? wallet?.pendingPayouts
+    ?? null
 
   return (
     <div className="analytics-page">
@@ -91,7 +98,7 @@ function Analytics() {
         <StatCard
           label="Total Orders"
           value={fmt(orderMeta?.total)}
-          sub={`Completed: ${fmt(orderMeta?.completedCount ?? orderMeta?.completed)}`}
+          sub={`Completed: ${fmt(orderMeta?.completedCount ?? orderMeta?.completed ?? wallet?.completed_orders_count)}`}
           icon={ShoppingCart}
           color="#3b82f6"
           loading={loading}
@@ -114,7 +121,11 @@ function Analytics() {
         <StatCard
           label="Platform Revenue"
           value={totalRevenue != null ? <><span className="riyal-symbol">&#x20C1;</span>{fmt(totalRevenue)}</> : '—'}
-          sub={pendingPayouts != null ? `Pending payouts: ﷼${fmt(pendingPayouts)}` : undefined}
+          sub={
+            pendingPayouts != null
+              ? `Pending payouts: ﷼${fmt(pendingPayouts)}`
+              : (wallet?.total_sales != null ? `Gross sales: ﷼${fmt(wallet.total_sales)}` : undefined)
+          }
           icon={DollarSign}
           color="#10b981"
           loading={loading}

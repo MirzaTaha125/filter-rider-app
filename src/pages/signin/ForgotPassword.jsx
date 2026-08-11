@@ -35,11 +35,8 @@ function ForgotPassword() {
       <div className="signin-left">
         <div className="signin-content">
           <div className="logo">
-            <div className="logo-squares">
-              <div className="logo-square"></div>
-              <div className="logo-square"></div>
-              <div className="logo-square"></div>
-              <div className="logo-square"></div>
+            <div className="brand-mark" aria-hidden="true">
+              <span className="brand-logo" />
             </div>
             <span className="logo-text">Filter</span>
           </div>
