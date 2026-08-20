@@ -31,6 +31,7 @@ export async function createService(payload) {
       category_id: payload.categoryId,
       name_en: payload.name,
       name_ar: payload.nameAr || payload.name,
+      icon: payload.icon || null,
       icon_color: payload.color || '#3b82f6',
       base_price: String(payload.basePrice ?? 0),
       duration_min: Number(payload.duration ?? 60),
@@ -45,6 +46,7 @@ export async function updateService(id, payload) {
   if (payload.name !== undefined) body.name_en = payload.name;
   if (payload.nameAr !== undefined) body.name_ar = payload.nameAr;
   if (payload.categoryId !== undefined) body.category_id = payload.categoryId;
+  if (payload.icon !== undefined) body.icon = payload.icon;
   if (payload.color !== undefined) body.icon_color = payload.color;
   if (payload.basePrice !== undefined) body.base_price = String(payload.basePrice);
   if (payload.duration !== undefined) body.duration_min = Number(payload.duration);

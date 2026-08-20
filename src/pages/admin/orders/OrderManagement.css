@@ -566,7 +566,7 @@
   min-height: 36px;
   border-radius: 6px;
   border: 1px solid var(--border-base);
-  background: var(--border-light);
+  background: var(--action-btn-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -579,7 +579,7 @@
 }
 
 .action-btn:hover {
-  background: var(--border-light);
+  background: var(--action-btn-bg-hover);
   border-color: var(--border-base);
   color: var(--text-main);
 }

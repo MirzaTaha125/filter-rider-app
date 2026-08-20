@@ -1,0 +1,240 @@
+/* Shared form primitives (.sf-*) live in ../adminForm.css.
+   Badges (.pr-badge) come from ProviderRequests.css. */
+
+.prd-page {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.prd-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 330px);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.prd-main,
+.prd-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+/* ---------- Applicant ---------- */
+.prd-applicant {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.prd-avatar {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-soft);
+  color: var(--text-main);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.prd-applicant-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.prd-applicant-body strong {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.prd-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.prd-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* ---------- Documents ---------- */
+.prd-docs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.prd-doc {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-md);
+}
+
+.prd-doc.is-missing {
+  border-style: dashed;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.prd-doc-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--border-light);
+  color: var(--text-muted);
+}
+
+.prd-doc-label {
+  flex: 1;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.prd-doc-link {
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-sm);
+  background: var(--action-btn-bg);
+  border: 1px solid var(--border-base);
+  color: var(--text-main);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.prd-doc-link:hover { background: var(--action-btn-bg-hover); }
+
+.prd-doc-missing {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--danger);
+}
+
+/* ---------- Services ---------- */
+.prd-services {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.prd-service {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-base);
+  background: var(--border-light);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.prd-empty {
+  margin: 0;
+  padding: 1.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  background: var(--border-light);
+  border-radius: var(--radius-md);
+}
+
+/* ---------- Decision panel ---------- */
+.prd-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.825rem;
+  color: var(--text-muted);
+}
+
+.prd-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-md);
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: var(--warning);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.prd-warn svg { flex-shrink: 0; margin-top: 0.1rem; }
+
+.prd-reason {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-main);
+  font-size: 0.875rem;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.prd-reason:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.prd-actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.prd-actions .sf-btn {
+  flex: 1;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+.prd-btn--accept {
+  background: var(--success);
+  color: #fff;
+}
+
+.prd-btn--accept:hover:not(:disabled) { filter: brightness(0.93); }
+
+.prd-btn--reject {
+  background: var(--bg-card);
+  border-color: rgba(239, 68, 68, 0.45);
+  color: var(--danger);
+}
+
+.prd-btn--reject:hover:not(:disabled) { background: rgba(239, 68, 68, 0.1); }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 980px) {
+  .prd-layout { grid-template-columns: 1fr; }
+}

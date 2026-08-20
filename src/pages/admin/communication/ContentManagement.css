@@ -188,7 +188,7 @@
   height: 36px;
   border-radius: 8px;
   border: 1px solid var(--border-base);
-  background: var(--bg-card);
+  background: var(--action-btn-bg);
   color: var(--text-main);
   cursor: pointer;
   display: flex;

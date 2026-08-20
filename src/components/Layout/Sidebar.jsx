@@ -44,9 +44,6 @@ function Sidebar({ isOpen, onClose }) {
     isCommunicationActive,
   );
   const [walletOpen, setWalletOpen] = useState(isWalletActive);
-  const [serviceProvidersOpen, setServiceProvidersOpen] = useState(
-    isServiceProvidersActive,
-  );
 
   useEffect(() => {
     if (isServicesActive) {
@@ -78,11 +75,6 @@ function Sidebar({ isOpen, onClose }) {
     }
   }, [isWalletActive]);
 
-  useEffect(() => {
-    if (isServiceProvidersActive) {
-      setServiceProvidersOpen(true);
-    }
-  }, [isServiceProvidersActive]);
 
   const menuItems = [
     { path: "/admin", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard.view" },
@@ -123,11 +115,6 @@ function Sidebar({ isOpen, onClose }) {
     { path: "/admin/wallet/transaction-ledger", label: "Immutable Transaction Ledger", permission: "wallet.view" },
   ];
 
-  const serviceProvidersSubItems = [
-    { path: "/admin/service-providers", label: "Service Providers", permission: "providers.view" },
-    { path: "/admin/service-providers/requests", label: "SP Requests", permission: "providers.view" },
-  ];
-
   const handleLinkClick = () => {
     onClose();
   };
@@ -152,9 +139,6 @@ function Sidebar({ isOpen, onClose }) {
     setWalletOpen(!walletOpen);
   };
 
-  const toggleServiceProviders = () => {
-    setServiceProvidersOpen(!serviceProvidersOpen);
-  };
 
   return (
     <aside className={`sidebar ${isOpen ? "open" : ""}`}>
@@ -198,44 +182,21 @@ function Sidebar({ isOpen, onClose }) {
             );
           })}
 
-          {/* Service Providers Dropdown */}
-          {hasPermission("providers.view") && <li>
-            <button
-              className={`sidebar-menu-item sidebar-dropdown-toggle ${isServiceProvidersActive ? "active" : ""
-                }`}
-              onClick={toggleServiceProviders}
-            >
-              <span className="menu-icon">
-                <UserCheck size={20} />
-              </span>
-              <span className="menu-label">Service Providers</span>
-              <span
-                className={`dropdown-arrow ${serviceProvidersOpen ? "open" : ""}`}
+          {/* Service Providers — single link; requests live in a tab on that page */}
+          {hasPermission("providers.view") && (
+            <li>
+              <Link
+                to="/admin/service-providers"
+                className={`sidebar-menu-item ${isServiceProvidersActive ? "active" : ""}`}
+                onClick={handleLinkClick}
               >
-                {serviceProvidersOpen ? (
-                  <ChevronDown size={16} />
-                ) : (
-                  <ChevronRight size={16} />
-                )}
-              </span>
-            </button>
-            <ul
-              className={`sidebar-submenu ${serviceProvidersOpen ? "open" : ""}`}
-            >
-              {serviceProvidersSubItems.map((subItem) => (
-                <li key={subItem.path}>
-                  <Link
-                    to={subItem.path}
-                    className={`sidebar-submenu-item ${location.pathname === subItem.path ? "active" : ""
-                      }`}
-                    onClick={handleLinkClick}
-                  >
-                    {subItem.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </li>}
+                <span className="menu-icon">
+                  <UserCheck size={20} />
+                </span>
+                <span className="menu-label">Service Providers</span>
+              </Link>
+            </li>
+          )}
 
           {/* Services Dropdown */}
           {hasPermission("services.view") && <li>

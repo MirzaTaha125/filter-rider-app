@@ -5,10 +5,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run dev        # Start Vite dev server
-npm run build      # Production build (outputs to dist/)
-npm run preview    # Preview production build locally
-npm run lint       # Run ESLint
+npm run dev            # Start Vite dev server on localhost:5173
+npm run build          # Production build (outputs to dist/)
+npm run preview        # Preview production build locally
+npm run lint           # Run ESLint
+npm run test           # Run Vitest (single run)
+npm run test:watch     # Run Vitest in watch mode
+npm run test:coverage  # Generate coverage report
 ```
 
 ## Environment Setup
@@ -30,8 +33,13 @@ Copy `.env.example` to `.env` and fill in:
 ### API Layer (`src/api/`)
 - `client.js` is the central HTTP client — all API modules call `apiRequest()` from here
 - Handles Bearer token auth, automatic token refresh on 401 (rotates `adminToken`/`adminRefreshToken` in localStorage), and dispatches a session-expiry event when refresh fails
-- 22 API modules wrap specific backend domains (orders, customers, services, zones, etc.)
+- 22+ API modules wrap specific backend domains (orders, customers, services, zones, etc.)
 - `missing_apis.txt` documents backend endpoints that are not yet implemented
+
+### Real-Time Features
+- Socket.io client connects to the backend for real-time updates (presence, chat, order status changes)
+- Configured in relevant feature modules (chat, presence, orders) to emit and listen for WebSocket events
+- Auto-reconnects on connection loss
 
 ### State & Context
 - No global state library; state is local to each page component
@@ -48,6 +56,12 @@ Copy `.env.example` to `.env` and fill in:
 
 - **UI:** React 19, React Router 7, Lucide React (icons), Recharts (charts)
 - **Maps:** `@react-google-maps/api`
+- **Real-Time:** Socket.io client for WebSocket communication
 - **Build:** Vite 7, ESLint 9 (flat config)
+- **Testing:** Vitest, React Testing Library
 - **Auth tokens:** `adminToken`, `adminRefreshToken` stored in `localStorage`
 - **Custom font:** Saudi Riyal (loaded via `@font-face` in `src/index.css`)
+
+## Related Documentation
+
+See the root [CLAUDE.md](../CLAUDE.md) for backend architecture, full tech stack, and development setup guidance for both frontend and backend.

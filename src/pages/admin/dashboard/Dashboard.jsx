@@ -87,6 +87,8 @@ function Dashboard() {
   const [spStats, setSpStats] = useState({ total: null, online: null, busy: null, offline: null })
   const [financeStats, setFinanceStats] = useState({ totalSales: null, revenue: null })
   const [statsLoading, setStatsLoading] = useState(true)
+  // Kept so the revenue chart can be derived — there is no time-series endpoint.
+  const [orders, setOrders] = useState([])
 
   const contextMapKey = useGoogleMapsApiKey()
   const [mapApiKey, setMapApiKey] = useState('')
@@ -106,13 +108,16 @@ function Dashboard() {
       .catch(() => {})
 
     Promise.all([
-      getAdminOrders({}).catch(() => null),
+      // A page of orders large enough to drive the revenue chart. The list
+      // endpoint caps at its own default (10) when no limit is given.
+      getAdminOrders({ limit: 500 }).catch(() => null),
       getProviders({ limit: 100 }).catch(() => null),
       getWalletOverview().catch(() => null),
     ]).then(([ordersData, providersData, walletData]) => {
-      // Orders
-      const orderList = Array.isArray(ordersData) ? ordersData : (ordersData?.items ?? ordersData?.orders ?? [])
-      const totalOrders = ordersData?.total ?? orderList.length
+      // Orders — the response is { orders, meta: { total } }.
+      const orderList = Array.isArray(ordersData) ? ordersData : (ordersData?.orders ?? ordersData?.items ?? [])
+      const totalOrders = ordersData?.meta?.total ?? ordersData?.total ?? orderList.length
+      setOrders(orderList)
       const activeOrders = orderList.filter(o =>
         ['ACCEPTED', 'IN_PROGRESS', 'ON_THE_WAY', 'ARRIVED', 'accepted', 'in_progress', 'on_the_way', 'arrived'].includes(o.status)
       ).length
@@ -156,31 +161,59 @@ function Dashboard() {
 
   const totalSPs = spStats.total ?? ((spStats.online + spStats.busy + spStats.offline) || 0)
   const spStatusData = {
-    busy:    { count: spStats.busy ?? 0,    percentage: totalSPs ? Math.round((spStats.busy ?? 0)    / totalSPs * 100) : 0, color: '#FCC246' },
+    busy:    { count: spStats.busy ?? 0,    percentage: totalSPs ? Math.round((spStats.busy ?? 0)    / totalSPs * 100) : 0, color: '#F0B020' },
     online:  { count: spStats.online ?? 0,  percentage: totalSPs ? Math.round((spStats.online ?? 0)  / totalSPs * 100) : 0, color: '#10b981' },
     offline: { count: spStats.offline ?? 0, percentage: totalSPs ? Math.round((spStats.offline ?? 0) / totalSPs * 100) : 0, color: '#6b7280' },
   }
 
-  // Revenue chart — no API available yet, show empty placeholder
+  /**
+   * Order-value chart, derived from the order list above — there is no
+   * time-series endpoint. Cancelled orders are excluded because they were
+   * never worth anything; everything else counts.
+   * 90 days is grouped into weeks — 90 daily bars is unreadable.
+   */
   const revenueTrendsData = useMemo(() => {
+    const dayMs = 24 * 60 * 60 * 1000
     const today = new Date()
-    if (selectedPeriod === '7days') {
-      return Array.from({ length: 7 }, (_, i) => {
-        const date = new Date(today.getTime() - (6 - i) * 24 * 60 * 60 * 1000)
-        return { day: date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(), value: 0, date }
-      })
-    }
-    if (selectedPeriod === '30days') {
-      return Array.from({ length: 30 }, (_, i) => {
-        const date = new Date(today.getTime() - (29 - i) * 24 * 60 * 60 * 1000)
-        return { day: date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(), value: 0, date }
-      })
-    }
-    return Array.from({ length: 12 }, (_, i) => {
-      const date = new Date(today.getFullYear(), today.getMonth() - (11 - i), 1)
-      return { day: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(), value: 0, date }
+    today.setHours(0, 0, 0, 0)
+
+    const config = {
+      '7days': { count: 7, step: 1 },
+      '30days': { count: 30, step: 1 },
+      '90days': { count: 13, step: 7 },
+    }[selectedPeriod] ?? { count: 7, step: 1 }
+
+    const buckets = Array.from({ length: config.count }, (_, i) => {
+      const start = new Date(today.getTime() - (config.count - 1 - i) * config.step * dayMs)
+      return {
+        start,
+        end: new Date(start.getTime() + config.step * dayMs),
+        day: config.step === 1
+          ? start.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
+          : start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        value: 0,
+        count: 0,
+      }
     })
-  }, [selectedPeriod])
+
+    const windowStart = buckets[0]?.start.getTime() ?? 0
+    for (const order of orders) {
+      if (String(order.status).toUpperCase() === 'CANCELLED') continue
+      if (!order.created_at) continue
+      const time = new Date(order.created_at).getTime()
+      if (Number.isNaN(time) || time < windowStart) continue
+      const index = Math.floor((time - windowStart) / (config.step * dayMs))
+      if (index < 0 || index >= buckets.length) continue
+      buckets[index].value += Number(order.total_price || 0)
+      buckets[index].count += 1
+    }
+
+    return buckets
+  }, [selectedPeriod, orders])
+
+  const revenueHasData = revenueTrendsData.some(b => b.value > 0)
+  const periodTotal = revenueTrendsData.reduce((sum, b) => sum + b.value, 0)
+  const periodOrders = revenueTrendsData.reduce((sum, b) => sum + b.count, 0)
 
   return (
     <div className="dashboard">
@@ -326,7 +359,20 @@ function Dashboard() {
         {/* Revenue Trends */}
         <div className="trends-card">
           <div className="trends-header">
-            <h3 className="trends-title">Revenue Trends</h3>
+            <div className="trends-heading">
+              <h3 className="trends-title">Order Value</h3>
+              <p className="trends-summary">
+                {statsLoading ? '—' : (
+                  <>
+                    <span className="riyal-symbol">&#x20C1;</span>
+                    {fmtMoney(periodTotal)}
+                    <span className="trends-summary-sub">
+                      {' '}from {periodOrders.toLocaleString()} order{periodOrders === 1 ? '' : 's'}
+                    </span>
+                  </>
+                )}
+              </p>
+            </div>
             <div className="trends-dropdown">
               <select value={selectedPeriod} onChange={(e) => setSelectedPeriod(e.target.value)} className="period-select">
                 <option value="7days">Last 7 Days</option>
@@ -337,23 +383,33 @@ function Dashboard() {
             </div>
           </div>
           <div className="chart-container">
+            {!statsLoading && !revenueHasData ? (
+              <div className="chart-empty">
+                <TrendingUp size={32} />
+                <p>No orders in this period.</p>
+              </div>
+            ) : (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={revenueTrendsData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                 <XAxis dataKey="day" tick={{ fill: '#6b7280', fontSize: 12, fontWeight: 600 }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fill: '#6b7280', fontSize: 12, fontWeight: 600 }} tickLine={false} axisLine={false} tickFormatter={(v) => `\u20C1${v.toLocaleString()}`} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', padding: '8px 12px' }}
-                  formatter={(v) => [`\u20C1${v.toLocaleString()}`, 'Revenue']}
-                  labelStyle={{ color: '#1a1a1a', fontWeight: 600, marginBottom: '4px' }}
+                  contentStyle={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-base)', borderRadius: '8px', boxShadow: 'var(--shadow-md)', padding: '8px 12px' }}
+                  formatter={(v, _name, item) => [
+                    `\u20C1${Number(v).toLocaleString()} \u00B7 ${item?.payload?.count ?? 0} orders`,
+                    'Order value',
+                  ]}
+                  labelStyle={{ color: 'var(--text-main)', fontWeight: 600, marginBottom: '4px' }}
                 />
                 <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                   {revenueTrendsData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={index === revenueTrendsData.length - 1 ? '#fdb714' : '#FCC246'} />
+                    <Cell key={`cell-${index}`} fill={index === revenueTrendsData.length - 1 ? '#D39A18' : '#F0B020'} />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+            )}
           </div>
         </div>
 

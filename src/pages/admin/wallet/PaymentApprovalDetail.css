@@ -1,0 +1,277 @@
+/* Shared form primitives (.sf-*) live in ../adminForm.css. */
+
+.approval-detail-page {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.pa-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 340px);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.pa-main,
+.pa-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+/* ---------- Amount ---------- */
+.pa-amount {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.15rem 1.25rem;
+  border-radius: var(--radius-md);
+  background: var(--border-light);
+}
+
+.pa-amount-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.pa-amount-value {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 1.85rem;
+  font-weight: 700;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+}
+
+.pa-amount-value em {
+  font-style: normal;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* ---------- Detail rows ---------- */
+.pa-rows {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pa-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.pa-row:last-child { border-bottom: none; }
+
+.pa-row dt {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.825rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.pa-row dt svg { flex-shrink: 0; }
+
+.pa-row dd {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Notes ---------- */
+.pa-note {
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md);
+  background: var(--border-light);
+  border-left: 3px solid var(--border-base);
+}
+
+.pa-note--admin {
+  border-left-color: var(--primary-color);
+}
+
+.pa-note-label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.pa-note p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-main);
+  white-space: pre-wrap;
+}
+
+/* ---------- Transactions ---------- */
+.pa-tx-wrap { overflow-x: auto; }
+
+.pa-tx {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pa-tx th {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-base);
+  white-space: nowrap;
+}
+
+.pa-tx td {
+  padding: 0.7rem 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-main);
+  border-bottom: 1px solid var(--border-light);
+  white-space: nowrap;
+}
+
+.pa-tx tbody tr:last-child td { border-bottom: none; }
+
+/* ---------- Decision panel ---------- */
+.pa-status-block {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.pa-status-label {
+  font-size: 0.825rem;
+  color: var(--text-muted);
+}
+
+.pa-badge {
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pa-badge--pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--warning);
+}
+
+.pa-badge--success {
+  background: rgba(22, 163, 74, 0.14);
+  color: var(--success);
+}
+
+.pa-badge--danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger);
+}
+
+.pa-textarea {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-main);
+  font-size: 0.875rem;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pa-textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.pa-textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.pa-textarea:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.pa-actions,
+.pa-confirm-actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.pa-actions .sf-btn,
+.pa-confirm-actions .sf-btn {
+  flex: 1;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+.pa-btn--approve {
+  background: var(--success);
+  color: #fff;
+}
+
+.pa-btn--approve:hover:not(:disabled) { filter: brightness(0.93); }
+
+.pa-btn--reject {
+  background: var(--bg-card);
+  border-color: rgba(239, 68, 68, 0.45);
+  color: var(--danger);
+}
+
+.pa-btn--reject:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.pa-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 0.95rem 1rem;
+  border-radius: var(--radius-md);
+  background: var(--border-light);
+  border: 1px solid var(--border-base);
+}
+
+.pa-confirm p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-main);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 980px) {
+  .pa-layout {
+    grid-template-columns: 1fr;
+  }
+}

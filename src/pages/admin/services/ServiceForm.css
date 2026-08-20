@@ -1,0 +1,82 @@
+/* Shared form primitives (.sf-*) live in ../adminForm.css — this file only
+   carries what is specific to the service form. */
+
+.service-form-page {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Icon picker ---------- */
+.sf-icons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: 0.6rem;
+}
+
+.sf-icon {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.sf-icon:hover:not(:disabled) {
+  border-color: var(--text-muted);
+  color: var(--text-main);
+}
+
+.sf-icon.is-selected {
+  border-color: var(--accent);
+  background: var(--primary-soft); /* fallback where color-mix() is unsupported */
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
+.sf-icon:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---------- Colour swatches ---------- */
+.sf-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.sf-swatch {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  background: var(--swatch);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  padding: 0;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sf-swatch:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.sf-swatch.is-selected {
+  border-color: var(--text-main);
+  box-shadow: 0 0 0 3px var(--bg-card), 0 0 0 4px var(--swatch);
+}
+
+.sf-swatch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

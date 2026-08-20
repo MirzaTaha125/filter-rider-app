@@ -1,397 +1,263 @@
-import { useState, useEffect } from "react";
-import { Edit, Plus, Trash2, X } from "lucide-react";
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  Plus, Pencil, Trash2, Loader2, AlertTriangle, Ruler, Search,
+} from 'lucide-react'
+import ConfirmDialog from '../../../components/ConfirmDialog/ConfirmDialog'
 import {
   getServices,
-  getPricingMatrix,
-  getAllPricingMatrix,
   getSizeCategories,
-  createPricingMatrix,
-  updatePricingMatrix,
+  getPricingMatrix,
   deletePricingMatrix,
-} from "../../../api";
-import "./PricingMatrix.css";
+} from '../../../api'
+import './PricingMatrix.css'
+
+function toArray(value) {
+  return Array.isArray(value) ? value : []
+}
 
 function PricingMatrix() {
-  const [services, setServices] = useState([]);
-  const [sizeCategories, setSizeCategories] = useState([]);
-  const [pricingMatrix, setPricingMatrix] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingPricing, setEditingPricing] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [formData, setFormData] = useState({
-    serviceId: "",
-    sizeCategoryId: "",
-    basePrice: "",
-    duration: "",
-    status: true,
-  });
+  const navigate = useNavigate()
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const [services, setServices] = useState([])
+  const [sizeNames, setSizeNames] = useState({})
+  const [rowsByService, setRowsByService] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [search, setSearch] = useState('')
+  const [confirm, setConfirm] = useState(null)
 
-  async function loadData() {
-    setLoading(true);
-    setError("");
+  const loadData = useCallback(async () => {
+    setError('')
     try {
       const [svcs, sizes] = await Promise.all([
         getServices(null, true),
         getSizeCategories(),
-      ]);
-      setServices(Array.isArray(svcs) ? svcs : []);
-      setSizeCategories(Array.isArray(sizes) ? sizes : []);
+      ])
+      const serviceList = toArray(svcs)
+      setServices(serviceList)
+      setSizeNames(
+        Object.fromEntries(toArray(sizes).map(s => [s.id, s.name])),
+      )
 
-      const matrix = await getAllPricingMatrix(svcs || []);
-      setPricingMatrix(
-        matrix.map((row) => ({
-          id: `${row.service_id}-${row.size_category_id}`,
-          serviceId: row.service_id,
-          serviceName:
-            row._serviceName ||
-            row.service?.name_en ||
-            row.service?.name ||
-            "—",
-          sizeCategoryId: row.size_category_id,
-          sizeCategoryName:
-            row.size_category?.name ||
-            row.size_category?.title_en ||
-            sizes?.find((s) => s.id === row.size_category_id)?.name ||
-            row.size_category_id,
-          basePrice: parseFloat(row.base_price || 0),
-          duration: parseInt(row.duration_min || row.duration || 0, 10),
-          status: row.status !== false ? "ACTIVE" : "INACTIVE",
-        }))
-      );
+      const results = await Promise.allSettled(
+        serviceList.map(s => getPricingMatrix(s.id)),
+      )
+      setRowsByService(
+        Object.fromEntries(
+          serviceList.map((s, i) => [
+            s.id,
+            results[i].status === 'fulfilled' ? toArray(results[i].value) : [],
+          ]),
+        ),
+      )
     } catch (err) {
-      setError(err.message || "Failed to load pricing matrix");
-      setPricingMatrix([]);
+      setError(err.message || 'Failed to load pricing matrix')
+      setServices([])
+      setRowsByService({})
     } finally {
-      setLoading(false);
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { loadData() }, [loadData])
+
+  const sizeLabel = (row) =>
+    row.size_category?.name ?? sizeNames[row.size_category_id] ?? row.size_category_id
+
+  const askDelete = (row, service) => {
+    setConfirm({
+      row,
+      message: `Delete the ${sizeLabel(row)} price for ${service.name_en}? This cannot be undone.`,
+    })
+  }
+
+  const handleDelete = async (row) => {
+    const previous = rowsByService
+    setRowsByService(prev => ({
+      ...prev,
+      [row.service_id]: toArray(prev[row.service_id])
+        .filter(r => r.size_category_id !== row.size_category_id),
+    }))
+    try {
+      await deletePricingMatrix(row.service_id, row.size_category_id)
+    } catch (err) {
+      setRowsByService(previous)
+      setError(err.message || 'Failed to delete pricing entry')
     }
   }
 
-  const openModal = (pricing = null) => {
-    if (pricing) {
-      setEditingPricing(pricing);
-      setFormData({
-        serviceId: pricing.serviceId,
-        sizeCategoryId: pricing.sizeCategoryId,
-        basePrice: String(pricing.basePrice ?? ""),
-        duration: String(pricing.duration ?? ""),
-        status: pricing.status === "ACTIVE",
-      });
-    } else {
-      setEditingPricing(null);
-      setFormData({
-        serviceId: services[0]?.id || "",
-        sizeCategoryId: sizeCategories[0]?.id || "",
-        basePrice: "",
-        duration: "",
-        status: true,
-      });
-    }
-    setError("");
-    setIsModalOpen(true);
-  };
+  const term = search.trim().toLowerCase()
+  const matches = (row, service) =>
+    !term ||
+    (service.name_en || '').toLowerCase().includes(term) ||
+    String(sizeLabel(row)).toLowerCase().includes(term)
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingPricing(null);
-    setFormData({
-      serviceId: "",
-      sizeCategoryId: "",
-      basePrice: "",
-      duration: "",
-      status: true,
-    });
-  };
+  const visibleServices = services.filter(service => {
+    if (!term) return true
+    return toArray(rowsByService[service.id]).some(r => matches(r, service))
+  })
 
-  const handleInputChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+  const totalRows = Object.values(rowsByService).reduce((n, list) => n + toArray(list).length, 0)
 
-  const handleSave = async () => {
-    setSaving(true);
-    setError("");
-    try {
-      if (editingPricing) {
-        await updatePricingMatrix(
-          editingPricing.serviceId,
-          editingPricing.sizeCategoryId,
-          {
-            basePrice: formData.basePrice,
-            duration: formData.duration,
-            status: formData.status,
-          }
-        );
-      } else {
-        await createPricingMatrix({
-          serviceId: formData.serviceId,
-          sizeCategoryId: formData.sizeCategoryId,
-          basePrice: formData.basePrice,
-          duration: formData.duration,
-          status: formData.status,
-        });
-      }
-      await loadData();
-      closeModal();
-    } catch (err) {
-      setError(err.message || "Failed to save pricing");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (pricing) => {
-    if (!window.confirm("Delete this pricing entry?")) return;
-    setError("");
-    const prev = pricingMatrix;
-    setPricingMatrix((m) => m.filter((p) => p.id !== pricing.id));
-    try {
-      await deletePricingMatrix(pricing.serviceId, pricing.sizeCategoryId);
-    } catch (err) {
-      setPricingMatrix(prev);
-      setError(err.message || "Failed to delete pricing");
-    }
-  };
+  const formatPrice = (value) =>
+    Number(value ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
   return (
     <div className="pricing-matrix">
-      <div className="pricing-matrix-header-content">
+      <header className="pm-header">
         <div>
-          <h1 className="pricing-matrix-title">Pricing Matrix</h1>
-          <p className="pricing-matrix-subtitle">
-            Configure pricing based on asset size categories
-          </p>
+          <h1 className="pm-title">Pricing Matrix</h1>
+          <p className="pm-subtitle">Per-size pricing that overrides a service’s base price.</p>
         </div>
         <button
-          className="btn-add-pricing"
-          onClick={() => openModal()}
-          disabled={services.length === 0 || sizeCategories.length === 0}
+          className="pm-btn pm-btn--primary"
+          onClick={() => navigate('/admin/services/pricing-matrix/add')}
+          disabled={services.length === 0}
         >
           <Plus size={18} />
-          <span>Add New Pricing</span>
+          Add New Pricing
         </button>
+      </header>
+
+      <div className="pm-toolbar">
+        <div className="pm-search">
+          <Search size={16} />
+          <input
+            type="search"
+            placeholder="Search by service or size…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <span className="pm-count">
+          {loading ? '—' : `${totalRows} entr${totalRows === 1 ? 'y' : 'ies'} across ${services.length} service${services.length === 1 ? '' : 's'}`}
+        </span>
       </div>
 
-      {error && !isModalOpen && <p className="api-error">{error}</p>}
-      {sizeCategories.length === 0 && !loading && (
-        <p className="helper-message">
-          No size categories found. Add size categories in the Assets section
-          first.
-        </p>
+      {error && (
+        <div className="pm-alert">
+          <AlertTriangle size={16} />
+          <span>{error}</span>
+        </div>
       )}
+
       {loading ? (
-        <p className="loading-message loading-shimmer">
-          Loading pricing matrix...
-        </p>
+        <div className="pm-state">
+          <Loader2 size={32} className="spin" />
+          <span>Loading pricing matrix…</span>
+        </div>
+      ) : services.length === 0 ? (
+        <div className="pm-state">
+          <Ruler size={32} />
+          <h2>No services yet</h2>
+          <p>Pricing attaches to a service, so create a service first.</p>
+          <button className="pm-btn pm-btn--primary" onClick={() => navigate('/admin/services/add')}>
+            <Plus size={16} /> Add Service
+          </button>
+        </div>
+      ) : visibleServices.length === 0 ? (
+        <div className="pm-state">
+          <Search size={32} />
+          <h2>No matches</h2>
+          <p>No pricing entries match “{search.trim()}”.</p>
+        </div>
       ) : (
-        <div className="pricing-table-container content-fade-in">
-          <table className="pricing-table">
-            <thead>
-              <tr>
-                <th>Service</th>
-                <th>Size Category</th>
-                <th>Base Price</th>
-                <th>Duration (min)</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pricingMatrix.length === 0 ? (
-                <tr>
-                  <td colSpan="6">
-                    No pricing entries. Add one to get started.
-                  </td>
-                </tr>
-              ) : (
-                pricingMatrix.map((pricing) => (
-                  <tr key={pricing.id}>
-                    <td>{pricing.serviceName}</td>
-                    <td>{pricing.sizeCategoryName}</td>
-                    <td>
-                      <span className="riyal-symbol">&#x20C1;</span>
-                      {(pricing.basePrice ?? 0).toFixed(2)}
-                    </td>
-                    <td>{pricing.duration ?? 0}</td>
-                    <td>
-                      <span
-                        className={`status-badge ${(
-                          pricing.status || "ACTIVE"
-                        ).toLowerCase()}`}
-                      >
-                        {pricing.status || "ACTIVE"}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="pricing-actions">
-                        <button
-                          className="btn-edit-small"
-                          onClick={() => openModal(pricing)}
-                          title="Edit"
-                        >
-                          <Edit size={14} />
-                        </button>
-                        <button
-                          className="btn-delete-small"
-                          onClick={() => handleDelete(pricing)}
-                          title="Delete"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className="pm-sections">
+          {visibleServices.map(service => {
+            const rows = toArray(rowsByService[service.id]).filter(r => matches(r, service))
+            return (
+              <section key={service.id} className="pm-section">
+                <header className="pm-section-head">
+                  <div>
+                    <h2 className="pm-section-title">{service.name_en}</h2>
+                    <p className="pm-section-meta">
+                      {rows.length} price{rows.length === 1 ? '' : 's'}
+                    </p>
+                  </div>
+                  <button
+                    className="pm-btn pm-btn--ghost"
+                    onClick={() => navigate(`/admin/services/pricing-matrix/add?serviceId=${service.id}`)}
+                  >
+                    <Plus size={15} /> Add
+                  </button>
+                </header>
+
+                {rows.length === 0 ? (
+                  <p className="pm-empty">No size-specific pricing for this service yet.</p>
+                ) : (
+                  <div className="pm-table-wrap">
+                    <table className="pm-table">
+                      <thead>
+                        <tr>
+                          <th>Size category</th>
+                          <th>Base price</th>
+                          <th>Duration</th>
+                          <th>Status</th>
+                          <th aria-label="Actions" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map(row => (
+                          <tr key={`${row.service_id}-${row.size_category_id}`}>
+                            <td className="pm-cell-name">{sizeLabel(row)}</td>
+                            <td>
+                              <span className="riyal-symbol">&#x20C1;</span>{formatPrice(row.base_price)}
+                            </td>
+                            <td>{row.duration_min ?? 0} min</td>
+                            <td>
+                              <span className={`pm-badge ${row.status !== false ? 'is-active' : 'is-inactive'}`}>
+                                {row.status !== false ? 'Active' : 'Inactive'}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="pm-row-actions">
+                                <button
+                                  className="pm-icon-btn"
+                                  onClick={() => navigate(
+                                    `/admin/services/pricing-matrix/${row.service_id}/${row.size_category_id}/edit`,
+                                  )}
+                                  title={`Edit ${sizeLabel(row)} pricing`}
+                                  aria-label={`Edit ${sizeLabel(row)} pricing`}
+                                >
+                                  <Pencil size={15} />
+                                </button>
+                                <button
+                                  className="pm-icon-btn pm-icon-btn--danger"
+                                  onClick={() => askDelete(row, service)}
+                                  title={`Delete ${sizeLabel(row)} pricing`}
+                                  aria-label={`Delete ${sizeLabel(row)} pricing`}
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            )
+          })}
         </div>
       )}
 
-      {isModalOpen && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div
-            className="modal-content pricing-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="modal-header">
-              <div className="modal-title-section">
-                <h2 className="modal-title">
-                  {editingPricing ? "Edit Pricing" : "Add New Pricing"}
-                </h2>
-              </div>
-              <button className="modal-close-btn" onClick={closeModal}>
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="modal-body">
-              {error && <p className="api-error">{error}</p>}
-              <div className="pricing-form">
-                <div className="form-group">
-                  <label htmlFor="pricing-service">Service</label>
-                  <select
-                    id="pricing-service"
-                    className="form-select"
-                    value={formData.serviceId}
-                    onChange={(e) =>
-                      handleInputChange("serviceId", e.target.value)
-                    }
-                    disabled={!!editingPricing}
-                  >
-                    {services.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name_en || s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="pricing-size">Size Category</label>
-                  <select
-                    id="pricing-size"
-                    className="form-select"
-                    value={formData.sizeCategoryId}
-                    onChange={(e) =>
-                      handleInputChange("sizeCategoryId", e.target.value)
-                    }
-                    disabled={!!editingPricing}
-                  >
-                    {sizeCategories.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name || s.title_en || s.id}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="pricing-base-price">
-                    Base Price (<span className="riyal-symbol">&#x20C1;</span>)
-                  </label>
-                  <div className="input-with-prefix">
-                    <span className="input-prefix riyal-symbol">&#x20C1;</span>
-                    <input
-                      type="number"
-                      id="pricing-base-price"
-                      className="form-input"
-                      placeholder="0.00"
-                      step="0.01"
-                      min="0"
-                      value={formData.basePrice}
-                      onChange={(e) =>
-                        handleInputChange("basePrice", e.target.value)
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="pricing-duration">Duration (minutes)</label>
-                  <div className="input-with-suffix">
-                    <input
-                      type="number"
-                      id="pricing-duration"
-                      className="form-input"
-                      placeholder="60"
-                      min="1"
-                      value={formData.duration}
-                      onChange={(e) =>
-                        handleInputChange("duration", e.target.value)
-                      }
-                    />
-                    <span className="input-suffix">min</span>
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="pricing-status">Status</label>
-                  <select
-                    id="pricing-status"
-                    className="form-select"
-                    value={formData.status ? "ACTIVE" : "INACTIVE"}
-                    onChange={(e) =>
-                      handleInputChange("status", e.target.value === "ACTIVE")
-                    }
-                  >
-                    <option value="ACTIVE">Active</option>
-                    <option value="INACTIVE">Inactive</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button className="btn-secondary" onClick={closeModal}>
-                Cancel
-              </button>
-              <button
-                className="btn-primary"
-                onClick={handleSave}
-                disabled={
-                  saving ||
-                  !formData.serviceId ||
-                  !formData.sizeCategoryId ||
-                  !formData.basePrice
-                }
-              >
-                {saving
-                  ? "Saving..."
-                  : editingPricing
-                  ? "Update Pricing"
-                  : "Add Pricing"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={Boolean(confirm)}
+        title="Delete pricing entry"
+        message={confirm?.message}
+        confirmLabel="Delete entry"
+        onCancel={() => setConfirm(null)}
+        onConfirm={() => {
+          const pending = confirm
+          setConfirm(null)
+          if (pending) handleDelete(pending.row)
+        }}
+      />
     </div>
-  );
+  )
 }
 
-export default PricingMatrix;
+export default PricingMatrix

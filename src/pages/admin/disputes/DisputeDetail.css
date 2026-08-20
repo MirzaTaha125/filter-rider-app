@@ -1,0 +1,380 @@
+/* Shared form primitives (.sf-*) live in ../adminForm.css. */
+
+.dispute-detail-page {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.dd-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.dd-main,
+.dd-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+/* ---------- Detail rows ---------- */
+.dd-rows {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dd-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.dd-row:last-child { border-bottom: none; }
+
+.dd-row dt {
+  font-size: 0.825rem;
+  color: var(--text-muted);
+}
+
+.dd-row dd {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+  text-align: right;
+}
+
+/* ---------- Text blocks ---------- */
+.dd-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.dd-block-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.dd-block p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--text-main);
+  white-space: pre-wrap;
+}
+
+/* ---------- Attachments ---------- */
+.dd-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.dd-attachment {
+  display: block;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-base);
+  overflow: hidden;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.dd-attachment:hover {
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+}
+
+.dd-attachment img {
+  display: block;
+  width: 104px;
+  height: 78px;
+  object-fit: cover;
+  background: var(--border-light);
+}
+
+/* ---------- Message thread ---------- */
+.dd-thread-card { gap: 1rem; }
+
+.dd-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 460px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.dd-thread-empty {
+  margin: 0;
+  padding: 2rem 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  background: var(--border-light);
+  border-radius: var(--radius-md);
+}
+
+.dd-msg {
+  max-width: 82%;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-base);
+  background: var(--bg-card);
+}
+
+/* Admin replies sit on the right, the other parties on the left. */
+.dd-msg--admin {
+  align-self: flex-end;
+  background: var(--primary-soft);
+  border-color: transparent;
+}
+
+.dd-msg--customer,
+.dd-msg--provider {
+  align-self: flex-start;
+  background: var(--border-light);
+  border-color: transparent;
+}
+
+.dd-msg.is-internal {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px dashed rgba(245, 158, 11, 0.5);
+}
+
+.dd-msg-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.dd-msg-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.dd-msg-time {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.dd-msg-body {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-main);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.dd-msg-internal {
+  display: inline-block;
+  margin-top: 0.4rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--warning);
+}
+
+/* ---------- Reply box ---------- */
+.dd-reply {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-light);
+}
+
+.dd-reply-input {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-main);
+  font-size: 0.875rem;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dd-reply-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.dd-reply-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.dd-reply-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.dd-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.825rem;
+  color: var(--text-main);
+  cursor: pointer;
+  user-select: none;
+}
+
+.dd-check input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dd-check-box {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--border-base);
+  border-radius: 4px;
+  background: var(--bg-input);
+  color: #fff;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.dd-check input:checked + .dd-check-box {
+  background: var(--warning);
+  border-color: var(--warning);
+}
+
+.dd-check input:focus-visible + .dd-check-box {
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+/* ---------- Status panel ---------- */
+.dd-status-current {
+  display: flex;
+}
+
+.dd-badge {
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dd-badge--pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--warning);
+}
+
+.dd-badge--info {
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--info);
+}
+
+.dd-badge--success {
+  background: rgba(22, 163, 74, 0.14);
+  color: var(--success);
+}
+
+.dd-badge--danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger);
+}
+
+.dd-status-save { width: 100%; }
+
+/* ---------- Parties ---------- */
+.dd-party {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.dd-party:last-child { border-bottom: none; }
+
+.dd-party-avatar {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--border-light);
+  color: var(--text-muted);
+}
+
+.dd-party-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dd-party-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.dd-party-role {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.dd-party-info strong {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+  overflow-wrap: anywhere;
+}
+
+.dd-party-info em {
+  font-style: normal;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 980px) {
+  .dd-layout { grid-template-columns: 1fr; }
+  .dd-msg { max-width: 100%; }
+}
