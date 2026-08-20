@@ -583,6 +583,7 @@
   border-color: var(--border-base);
   color: var(--text-main);
 }
+
 /* Text variant — .action-btn on its own is a fixed 36px icon square, which
    crushes a label like "View Details" onto two lines. */
 .action-btn.view-details {
@@ -595,6 +596,7 @@
   font-weight: 600;
   white-space: nowrap;
 }
+
 .btn-action-primary {
   padding: 0 0.875rem;
   background: var(--primary-color);
