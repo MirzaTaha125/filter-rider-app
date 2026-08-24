@@ -45,9 +45,60 @@
 .kpi-icon-wrapper.orders,
 .kpi-icon-wrapper.revenue,
 .kpi-icon-wrapper.sales,
-.kpi-icon-wrapper.sps {
+.kpi-icon-wrapper.sps,
+.kpi-icon-wrapper.services,
+.kpi-icon-wrapper.customers,
+.kpi-icon-wrapper.zones {
   background: var(--primary-soft);
   color: #b8860b;
+}
+
+/* Dispute cards carry their own tone so an at-a-glance scan separates
+   "needs attention" from "already closed". */
+.kpi-icon-wrapper.disputes {
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+}
+
+.kpi-icon-wrapper.resolved {
+  background: rgba(22, 163, 74, 0.13);
+  color: #15803d;
+}
+
+.kpi-icon-wrapper.rejected {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+
+body.dark-mode .kpi-icon-wrapper.disputes { color: #fbbf24; }
+body.dark-mode .kpi-icon-wrapper.resolved { color: #4ade80; }
+body.dark-mode .kpi-icon-wrapper.rejected { color: #f87171; }
+
+/* Shown when a role holds no dashboard permissions at all. */
+.dash-locked {
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px dashed var(--border-base);
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1.5rem;
+  padding: 3rem 1.5rem;
+  text-align: center;
+}
+
+.dash-locked h2 {
+  color: var(--text-main);
+  font-size: 1.05rem;
+  margin: 0.5rem 0 0;
+}
+
+.dash-locked p {
+  font-size: 0.875rem;
+  margin: 0;
+  max-width: 46ch;
 }
 
 .kpi-content {

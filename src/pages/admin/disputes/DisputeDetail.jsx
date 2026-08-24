@@ -215,11 +215,17 @@ function DisputeDetail() {
               ) : (
                 messages.map(msg => {
                   const Icon = SENDER_ICONS[msg.sender_type] ?? User
-                  const who = msg.sender_type === 'CUSTOMER'
-                    ? partyName(dispute.customer)
-                    : msg.sender_type === 'PROVIDER'
-                      ? partyName(dispute.provider)
-                      : SENDER_LABELS[msg.sender_type] ?? msg.sender_type
+                  const fallback = SENDER_LABELS[msg.sender_type] ?? msg.sender_type
+                  // The API now sends the sender's own name and role names, so
+                  // an admin reply reads "Taha · CHAT DISPUTES MANAGER" rather
+                  // than a generic "Admin".
+                  const who = msg.sender_name
+                    ?? (msg.sender_type === 'CUSTOMER'
+                      ? partyName(dispute.customer)
+                      : msg.sender_type === 'PROVIDER'
+                        ? partyName(dispute.provider)
+                        : fallback)
+                  const roles = Array.isArray(msg.sender_roles) ? msg.sender_roles : []
                   return (
                     <article
                       key={msg.id}
@@ -227,6 +233,13 @@ function DisputeDetail() {
                     >
                       <header className="dd-msg-head">
                         <span className="dd-msg-who"><Icon size={12} /> {who}</span>
+                        {roles.length > 0 && (
+                          <span className="dd-msg-roles">
+                            {roles.map(role => (
+                              <span key={role} className="dd-msg-role">{role}</span>
+                            ))}
+                          </span>
+                        )}
                         <span className="dd-msg-time">{formatDate(msg.created_at, true)}</span>
                       </header>
                       <p className="dd-msg-body">{msg.message}</p>

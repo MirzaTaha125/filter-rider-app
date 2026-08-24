@@ -3,13 +3,27 @@ import {
   ShoppingCart, TrendingUp,
   Users, DollarSign, Percent,
   AlertCircle, MapPin,
-  ChevronDown
+  ChevronDown, ShieldAlert, CheckCircle2, XCircle,
+  Wrench, UserRound, Lock
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
-import { getGoogleMapsKeyFromSettings, getAdminOrders, getProviders, getWalletOverview } from '../../../api'
+import {
+  getGoogleMapsKeyFromSettings, getAdminOrders, getProviders, getWalletOverview,
+  getDisputes, getServices, getCustomers, getZones,
+} from '../../../api'
 import { useGoogleMapsApiKey } from '../../../contexts/AppSettingsContext'
+import { usePermissions } from '../../../contexts/PermissionsContext'
 import { isGoogleMapsKeyValid } from '../../../utils/googleMapsKey'
 import './Dashboard.css'
+
+/** Response shapes vary per endpoint; pull out whichever array is present. */
+function toList(data, ...keys) {
+  if (Array.isArray(data)) return data
+  for (const key of keys) {
+    if (Array.isArray(data?.[key])) return data[key]
+  }
+  return []
+}
 
 // Google Maps
 function GoogleMapsAdvanced({ apiKey, center }) {
@@ -82,10 +96,32 @@ function GoogleMapsAdvanced({ apiKey, center }) {
 }
 
 function Dashboard() {
+  const { hasPermission, loadingPermissions, isSuperAdmin, gatingUnavailable } = usePermissions()
+
+  // Each dashboard block is gated on the same slug as its sidebar entry, so a
+  // role only ever sees — and only ever fetches — what it is allowed to read.
+  // Without this a limited role got the full UI populated with zeros, because
+  // every request behind it came back 403.
+  const canOrders = hasPermission('orders.view')
+  const canProviders = hasPermission('providers.view')
+  const canWallet = hasPermission('wallet.view')
+
+  // The scoped cards below exist to give a limited role something useful in
+  // place of the platform-wide KPIs. A super admin already gets the full
+  // picture from the four headline cards, the map and the charts, so they stay
+  // off there — same when gating is unavailable and everything reads as true.
+  const showScopedCards = !isSuperAdmin && !gatingUnavailable
+  const canDisputes = showScopedCards && hasPermission('disputes.view')
+  const canServices = showScopedCards && hasPermission('services.view')
+  const canCustomers = showScopedCards && hasPermission('customers.view')
+  const canZones = showScopedCards && hasPermission('zones.view')
+
   const [selectedPeriod, setSelectedPeriod] = useState('7days')
   const [orderStats, setOrderStats] = useState({ total: null, active: null, pending: null })
   const [spStats, setSpStats] = useState({ total: null, online: null, busy: null, offline: null })
   const [financeStats, setFinanceStats] = useState({ totalSales: null, revenue: null })
+  const [disputeStats, setDisputeStats] = useState({ total: 0, open: 0, resolved: 0, rejected: 0 })
+  const [catalogStats, setCatalogStats] = useState({ services: null, customers: null, zones: null })
   const [statsLoading, setStatsLoading] = useState(true)
   // Kept so the revenue chart can be derived — there is no time-series endpoint.
   const [orders, setOrders] = useState([])
@@ -103,17 +139,56 @@ function Dashboard() {
     })
 
   useEffect(() => {
-    getGoogleMapsKeyFromSettings()
-      .then((value) => { if (value?.trim()) setMapApiKey(value.trim()) })
-      .catch(() => {})
+    // Wait until we know what this user may see, otherwise the first pass
+    // fetches nothing and the blocks flash empty.
+    if (loadingPermissions) return
 
+    if (hasPermission('settings.view')) {
+      getGoogleMapsKeyFromSettings()
+        .then((value) => { if (value?.trim()) setMapApiKey(value.trim()) })
+        .catch(() => {})
+    }
+
+    // statsLoading already starts true; the .finally below clears it.
     Promise.all([
       // A page of orders large enough to drive the revenue chart. The list
       // endpoint caps at its own default (10) when no limit is given.
-      getAdminOrders({ limit: 500 }).catch(() => null),
-      getProviders({ limit: 100 }).catch(() => null),
-      getWalletOverview().catch(() => null),
-    ]).then(([ordersData, providersData, walletData]) => {
+      canOrders ? getAdminOrders({ limit: 500 }).catch(() => null) : null,
+      canProviders ? getProviders({ limit: 100 }).catch(() => null) : null,
+      canWallet ? getWalletOverview().catch(() => null) : null,
+      canDisputes ? getDisputes().catch(() => null) : null,
+      canServices ? getServices().catch(() => null) : null,
+      canCustomers ? getCustomers({ limit: 1 }).catch(() => null) : null,
+      canZones ? getZones().catch(() => null) : null,
+    ]).then(([
+      ordersData, providersData, walletData,
+      disputesData, servicesData, customersData, zonesData,
+    ]) => {
+      // Disputes — PENDING/UNDER_REVIEW count as still open.
+      if (disputesData) {
+        const list = toList(disputesData, 'disputes', 'items', 'data')
+        const by = (...statuses) =>
+          list.filter(d => statuses.includes(String(d.status).toUpperCase())).length
+        setDisputeStats({
+          total: list.length,
+          open: by('PENDING', 'UNDER_REVIEW'),
+          resolved: by('RESOLVED'),
+          rejected: by('REJECTED'),
+        })
+      }
+
+      const servicesList = servicesData ? toList(servicesData, 'services', 'items', 'data') : null
+      const zonesList = zonesData ? toList(zonesData, 'zones', 'items', 'data') : null
+      const customersTotal = customersData
+        ? (customersData?.meta?.total ?? customersData?.total
+          ?? toList(customersData, 'customers', 'items', 'data').length)
+        : null
+      setCatalogStats({
+        services: servicesList ? servicesList.length : null,
+        customers: customersTotal != null ? Number(customersTotal) : null,
+        zones: zonesList ? zonesList.length : null,
+      })
+
       // Orders — the response is { orders, meta: { total } }.
       const orderList = Array.isArray(ordersData) ? ordersData : (ordersData?.orders ?? ordersData?.items ?? [])
       const totalOrders = ordersData?.meta?.total ?? ordersData?.total ?? orderList.length
@@ -155,9 +230,18 @@ function Dashboard() {
         revenue: revenue != null ? Number(revenue) : null,
       })
     }).finally(() => setStatsLoading(false))
-  }, [])
+  }, [
+    loadingPermissions, hasPermission,
+    canOrders, canProviders, canWallet, canDisputes, canServices,
+    canCustomers, canZones,
+  ])
 
   const GOOGLE_MAPS_API_KEY = mapApiKey || contextMapKey
+
+  const visibleBlocks = [
+    canOrders, canProviders, canWallet, canDisputes, canServices,
+    canCustomers, canZones,
+  ].filter(Boolean).length
 
   const totalSPs = spStats.total ?? ((spStats.online + spStats.busy + spStats.offline) || 0)
   const spStatusData = {
@@ -217,8 +301,20 @@ function Dashboard() {
 
   return (
     <div className="dashboard">
+      {!loadingPermissions && visibleBlocks === 0 && (
+        <div className="dash-locked">
+          <Lock size={30} />
+          <h2>Nothing to show yet</h2>
+          <p>
+            Your role has no dashboard permissions. Ask an administrator to
+            grant you access from Settings → Role Permissions.
+          </p>
+        </div>
+      )}
+
       {/* Top Row - KPI Cards */}
       <div className="dashboard-top-row">
+        {canOrders && (
         <div className="kpi-card">
           <div className="kpi-icon-wrapper orders">
             <ShoppingCart size={24} />
@@ -234,7 +330,9 @@ function Dashboard() {
             </div>
           </div>
         </div>
+        )}
 
+        {canProviders && (
         <div className="kpi-card">
           <div className="kpi-icon-wrapper sps">
             <Users size={24} />
@@ -250,7 +348,9 @@ function Dashboard() {
             </div>
           </div>
         </div>
+        )}
 
+        {canWallet && (
         <div className="kpi-card">
           <div className="kpi-icon-wrapper sales">
             <DollarSign size={24} />
@@ -270,7 +370,9 @@ function Dashboard() {
             </div>
           </div>
         </div>
+        )}
 
+        {canWallet && (
         <div className="kpi-card">
           <div className="kpi-icon-wrapper revenue">
             <Percent size={24} />
@@ -290,9 +392,133 @@ function Dashboard() {
             </div>
           </div>
         </div>
+        )}
+
+        {canDisputes && (
+          <>
+            <div className="kpi-card">
+              <div className="kpi-icon-wrapper disputes">
+                <ShieldAlert size={24} />
+              </div>
+              <div className="kpi-content">
+                <div className="kpi-label">Open Disputes</div>
+                <div className="kpi-value">
+                  {statsLoading ? '—' : disputeStats.open.toLocaleString()}
+                </div>
+                <div className="kpi-trend yellow">
+                  <AlertCircle size={14} />
+                  <span>Pending &amp; under review</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="kpi-card">
+              <div className="kpi-icon-wrapper disputes">
+                <AlertCircle size={24} />
+              </div>
+              <div className="kpi-content">
+                <div className="kpi-label">Total Disputes</div>
+                <div className="kpi-value">
+                  {statsLoading ? '—' : disputeStats.total.toLocaleString()}
+                </div>
+                <div className="kpi-trend">
+                  <TrendingUp size={14} />
+                  <span>All time</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="kpi-card">
+              <div className="kpi-icon-wrapper resolved">
+                <CheckCircle2 size={24} />
+              </div>
+              <div className="kpi-content">
+                <div className="kpi-label">Resolved Disputes</div>
+                <div className="kpi-value">
+                  {statsLoading ? '—' : disputeStats.resolved.toLocaleString()}
+                </div>
+                <div className="kpi-trend positive">
+                  <TrendingUp size={14} />
+                  <span>Closed successfully</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="kpi-card">
+              <div className="kpi-icon-wrapper rejected">
+                <XCircle size={24} />
+              </div>
+              <div className="kpi-content">
+                <div className="kpi-label">Rejected Disputes</div>
+                <div className="kpi-value">
+                  {statsLoading ? '—' : disputeStats.rejected.toLocaleString()}
+                </div>
+                <div className="kpi-trend">
+                  <TrendingUp size={14} />
+                  <span>Closed without action</span>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {canServices && (
+          <div className="kpi-card">
+            <div className="kpi-icon-wrapper services">
+              <Wrench size={24} />
+            </div>
+            <div className="kpi-content">
+              <div className="kpi-label">Services</div>
+              <div className="kpi-value">
+                {statsLoading ? '—' : (catalogStats.services ?? 0).toLocaleString()}
+              </div>
+              <div className="kpi-trend">
+                <TrendingUp size={14} />
+                <span>In the catalog</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {canCustomers && (
+          <div className="kpi-card">
+            <div className="kpi-icon-wrapper customers">
+              <UserRound size={24} />
+            </div>
+            <div className="kpi-content">
+              <div className="kpi-label">Customers</div>
+              <div className="kpi-value">
+                {statsLoading ? '—' : (catalogStats.customers ?? 0).toLocaleString()}
+              </div>
+              <div className="kpi-trend">
+                <TrendingUp size={14} />
+                <span>Registered accounts</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {canZones && (
+          <div className="kpi-card">
+            <div className="kpi-icon-wrapper zones">
+              <MapPin size={24} />
+            </div>
+            <div className="kpi-content">
+              <div className="kpi-label">Service Zones</div>
+              <div className="kpi-value">
+                {statsLoading ? '—' : (catalogStats.zones ?? 0).toLocaleString()}
+              </div>
+              <div className="kpi-trend">
+                <TrendingUp size={14} />
+                <span>Configured areas</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Map Section */}
+      {/* Map Section — provider positions, so it follows providers.view */}
+      {canProviders && (
       <div className="dashboard-map-section">
         <div className="map-card">
           <div className="map-header">
@@ -353,10 +579,14 @@ function Dashboard() {
           </div>
         </div>
       </div>
+      )}
 
-      {/* Bottom Row */}
+      {/* Bottom Row — the trend chart is derived from orders, the donut from
+          providers, so each follows its own permission. */}
+      {(canOrders || canProviders) && (
       <div className="dashboard-bottom-row">
         {/* Revenue Trends */}
+        {canOrders && (
         <div className="trends-card">
           <div className="trends-header">
             <div className="trends-heading">
@@ -412,8 +642,10 @@ function Dashboard() {
             )}
           </div>
         </div>
+        )}
 
         {/* SP Status */}
+        {canProviders && (
         <div className="sp-status-card">
           <div className="sp-status-header">
             <h3 className="sp-status-title">Service Provider Status</h3>
@@ -471,7 +703,9 @@ function Dashboard() {
             </div>
           </div>
         </div>
+        )}
       </div>
+      )}
     </div>
   )
 }

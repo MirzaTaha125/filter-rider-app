@@ -29,6 +29,7 @@ import SurgeConfigure from "./pricing/SurgeConfigure";
 import RegionalPricing from "./pricing/RegionalPricing";
 import RegionForm from "./pricing/RegionForm";
 import AssetCategories from "./assets/AssetCategories";
+import AssetCategoryForm from "./assets/AssetCategoryForm";
 // import AssetDefinitions from "./assets/AssetDefinitions";
 import SizeCategories from "./assets/SizeCategories";
 import SizeCategoryForm from "./assets/SizeCategoryForm";
@@ -41,6 +42,10 @@ import DisputeManagement from "./disputes/DisputeManagement";
 import DisputeDetail from "./disputes/DisputeDetail";
 import Analytics from "./analytics/Analytics";
 import Settings from "./settings/Settings";
+import AdminUserForm from "./settings/AdminUserForm";
+import RoleForm from "./settings/RoleForm";
+import UserRolesForm from "./settings/UserRolesForm";
+import PermissionForm from "./settings/PermissionForm";
 import ZoneManagement from "./zones/ZoneManagement";
 import ZoneForm from "./zones/ZoneForm";
 import AccountSettings from "./account/AccountSettings";
@@ -107,6 +112,8 @@ function AdminDashboard() {
         <Route path="/pricing/regional/add" element={<RegionForm />} />
         <Route path="/pricing/regional/:regionId/edit" element={<RegionForm />} />
         <Route path="/assets" element={<AssetCategories />} />
+        <Route path="/assets/add" element={<AssetCategoryForm />} />
+        <Route path="/assets/:categoryId/edit" element={<AssetCategoryForm />} />
         {/* <Route path="/assets/definitions" element={<AssetDefinitions />} /> */}
         <Route path="/assets/sizes" element={<SizeCategories />} />
         <Route path="/assets/sizes/add" element={<SizeCategoryForm />} />
@@ -124,6 +131,10 @@ function AdminDashboard() {
         <Route path="/disputes/:disputeId" element={<DisputeDetail />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/settings/admin-users/new" element={<AdminUserForm />} />
+        <Route path="/settings/roles/new" element={<RoleForm />} />
+        <Route path="/settings/roles/users/:userId" element={<UserRolesForm />} />
+        <Route path="/settings/permissions/new" element={<PermissionForm />} />
         <Route path="/zones" element={<ZoneManagement />} />
         <Route path="/zones/add" element={<ZoneForm />} />
         <Route path="/zones/:zoneId/edit" element={<ZoneForm />} />

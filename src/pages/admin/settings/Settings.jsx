@@ -1,12 +1,34 @@
-import { useState, useEffect } from 'react'
-import { Save, Key, Globe, Shield, Users, CheckCircle, Loader2, Eye, EyeOff, Plus, Trash2, Search, X, UserPlus } from 'lucide-react'
-import { getRoles, createRole, assignRole, removeRole, getUserRoles, getUsers, getSettings, createSetting, updateSetting, saveGoogleMapsKeyToBackend, signupAdmin, getPermissions, createPermission, getRolePermissions, setRolePermissions } from '../../../api'
+import { useState, useEffect, useCallback, useMemo, Fragment } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Save, Key, Globe, Shield, Users, CheckCircle, Loader2, Eye, EyeOff, Plus, UserPlus } from 'lucide-react'
+import { getRoles, getUsers, getSettings, createSetting, updateSetting, saveGoogleMapsKeyToBackend, getPermissions, createPermission, getRolePermissions, setRolePermissions } from '../../../api'
 import { useAppSettings } from '../../../contexts/AppSettingsContext'
+import { PREDEFINED_PERMISSIONS, PERMISSION_GROUPS } from './permissionCatalog'
 import './Settings.css'
+
+const TABS = ['general', 'api', 'security', 'admin-users', 'roles', 'permissions']
+
+/** Up to two letters for the avatar, falling back to the email. */
+function initials(name, email) {
+  const source = (name && name !== '—' ? name : email) ?? ''
+  const parts = source.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
 
 
 function Settings() {
-  const [activeTab, setActiveTab] = useState('general')
+  const navigate = useNavigate()
+  // Tab lives in the URL so the create/edit pages can return to the right one.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const activeTab = TABS.includes(tabParam) ? tabParam : 'general'
+  const setActiveTab = (tab) => setSearchParams(
+    tab === 'general' ? {} : { tab },
+    { replace: true },
+  )
+
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [settingsLoading, setSettingsLoading] = useState(true)
   const [settingsError, setSettingsError] = useState('')
@@ -24,24 +46,12 @@ function Settings() {
   // Roles Management state
   const [allRoles, setAllRoles] = useState([])
   const [rolesListLoading, setRolesListLoading] = useState(false)
-  const [createRoleModal, setCreateRoleModal] = useState(false)
-  const [newRole, setNewRole] = useState({ name: '', description: '' })
-  const [createRoleLoading, setCreateRoleLoading] = useState(false)
-  const [createRoleError, setCreateRoleError] = useState('')
-  const [userSearch, setUserSearch] = useState('')
-  const [userSearchResults, setUserSearchResults] = useState([])
-  const [userSearchLoading, setUserSearchLoading] = useState(false)
-  const [selectedUser, setSelectedUser] = useState(null) // { id, name, email }
-  const [selectedUserRoles, setSelectedUserRoles] = useState([])
-  const [selectedUserRolesLoading, setSelectedUserRolesLoading] = useState(false)
-  const [assignModal, setAssignModal] = useState({ open: false, userId: '', roleId: '', loading: false, error: '' })
+  const [rolesError, setRolesError] = useState('')
 
-  // Admin User creation state
-  const [addAdminModal, setAddAdminModal] = useState(false)
-  const [newAdmin, setNewAdmin] = useState({ fullName: '', email: '', phone: '', password: '', adminRole: '', department: '' })
-  const [addAdminLoading, setAddAdminLoading] = useState(false)
-  const [addAdminError, setAddAdminError] = useState('')
-  const [showAdminPassword, setShowAdminPassword] = useState(false)
+  // Admin Users tab — everyone holding a role other than CUSTOMER/PROVIDER
+  const [adminUsers, setAdminUsers] = useState([])
+  const [adminUsersLoading, setAdminUsersLoading] = useState(false)
+  const [adminUsersError, setAdminUsersError] = useState('')
 
   useEffect(() => {
     getSettings()
@@ -73,61 +83,9 @@ function Settings() {
   const [permsError, setPermsError] = useState('')
   const [permsSuccess, setPermsSuccess] = useState(false)
 
-  // Predefined permissions list for dropdown
-  const PREDEFINED_PERMISSIONS = [
-    { name: 'Dashboard View', slug: 'dashboard.view', description: 'View dashboard and statistics' },
-    { name: 'Orders View', slug: 'orders.view', description: 'View orders list and details' },
-    { name: 'Orders Manage', slug: 'orders.manage', description: 'Create, update and manage orders' },
-    { name: 'Customers View', slug: 'customers.view', description: 'View customer list and profiles' },
-    { name: 'Customers Manage', slug: 'customers.manage', description: 'Edit and manage customer accounts' },
-    { name: 'Providers View', slug: 'providers.view', description: 'View service providers and requests' },
-    { name: 'Providers Manage', slug: 'providers.manage', description: 'Approve, reject and manage providers' },
-    { name: 'Services View', slug: 'services.view', description: 'View services, add-ons and pricing matrix' },
-    { name: 'Services Manage', slug: 'services.manage', description: 'Create and manage services' },
-    { name: 'Pricing View', slug: 'pricing.view', description: 'View pricing, surge and regional pricing' },
-    { name: 'Pricing Manage', slug: 'pricing.manage', description: 'Edit fee configuration and pricing rules' },
-    { name: 'Assets View', slug: 'assets.view', description: 'View asset categories and sizes' },
-    { name: 'Assets Manage', slug: 'assets.manage', description: 'Manage asset categories and sizes' },
-    { name: 'Wallet View', slug: 'wallet.view', description: 'View wallet, payments and transactions' },
-    { name: 'Wallet Manage', slug: 'wallet.manage', description: 'Approve payments and manage wallet' },
-    { name: 'Promotions View', slug: 'promotions.view', description: 'View promotions and discount codes' },
-    { name: 'Promotions Manage', slug: 'promotions.manage', description: 'Create and manage promotions' },
-    { name: 'Communication View', slug: 'communication.view', description: 'View templates and notifications' },
-    { name: 'Communication Manage', slug: 'communication.manage', description: 'Manage communication templates' },
-    { name: 'Analytics View', slug: 'analytics.view', description: 'View analytics and reports' },
-    { name: 'Disputes View', slug: 'disputes.view', description: 'View dispute cases' },
-    { name: 'Disputes Manage', slug: 'disputes.manage', description: 'Resolve and manage disputes' },
-    { name: 'Zones View', slug: 'zones.view', description: 'View zone and map configuration' },
-    { name: 'Zones Manage', slug: 'zones.manage', description: 'Create and manage service zones' },
-    { name: 'Settings View', slug: 'settings.view', description: 'Access system settings' },
-    { name: 'Settings Manage', slug: 'settings.manage', description: 'Modify system settings and configuration' },
-  ]
-
-  // Create permission state
-  const [createPermModal, setCreatePermModal] = useState(false)
-  const [newPerm, setNewPerm] = useState({ name: '', slug: '', description: '' })
-  const [createPermLoading, setCreatePermLoading] = useState(false)
-  const [createPermError, setCreatePermError] = useState('')
-
   // Seed permissions state
   const [seedLoading, setSeedLoading] = useState(false)
   const [seedResult, setSeedResult] = useState(null) // { created, skipped, failed }
-
-  const handleCreatePermission = async () => {
-    if (!newPerm.name.trim() || !newPerm.slug.trim()) { setCreatePermError('Name and slug are required'); return }
-    setCreatePermLoading(true)
-    setCreatePermError('')
-    try {
-      await createPermission({ name: newPerm.name.trim(), slug: newPerm.slug.trim(), description: newPerm.description.trim() })
-      setCreatePermModal(false)
-      setNewPerm({ name: '', slug: '', description: '' })
-      loadPermissionsTab()
-    } catch (e) {
-      setCreatePermError(e.message || 'Failed to create permission')
-    } finally {
-      setCreatePermLoading(false)
-    }
-  }
 
   const handleSeedPermissions = async () => {
     setSeedLoading(true)
@@ -147,16 +105,17 @@ function Settings() {
     loadPermissionsTab()
   }
 
-  const loadPermissionsTab = () => {
+  const loadPermissionsTab = useCallback(() => {
     setPermsLoading(true)
-    getPermissions()
+    setPermsError('')
+    return getPermissions()
       .then((data) => {
         const list = Array.isArray(data) ? data : (data?.data ?? data?.permissions ?? [])
-        setAllPermissions(list)
+        setAllPermissions(Array.isArray(list) ? list : [])
       })
-      .catch(() => {})
+      .catch((e) => setPermsError(e.message || 'Failed to load permissions'))
       .finally(() => setPermsLoading(false))
-  }
+  }, [])
 
   const handleRoleForPermsChange = async (roleId) => {
     setSelectedRoleForPerms(roleId)
@@ -186,6 +145,39 @@ function Settings() {
     })
   }
 
+  const toggleGroup = (ids, turnOn) => {
+    setCheckedPermIds((prev) => {
+      const next = new Set(prev)
+      ids.forEach((id) => (turnOn ? next.add(id) : next.delete(id)))
+      return next
+    })
+  }
+
+  /**
+   * The API returns a flat list, so rows are bucketed against the catalog to
+   * keep 80 checkboxes navigable. Anything the catalog does not know about
+   * (a hand-made permission, or one left over from an older catalog) falls
+   * into "Other" rather than disappearing.
+   */
+  const groupedPermissions = useMemo(() => {
+    const bySlug = new Map(allPermissions.map((p) => [p.slug, p]))
+    const used = new Set()
+
+    const groups = PERMISSION_GROUPS.map(({ group, permissions }) => ({
+      group,
+      permissions: permissions
+        .map((catalogEntry) => {
+          const match = bySlug.get(catalogEntry.slug)
+          if (match) used.add(match.slug)
+          return match
+        })
+        .filter(Boolean),
+    })).filter((g) => g.permissions.length > 0)
+
+    const other = allPermissions.filter((p) => !used.has(p.slug))
+    return other.length > 0 ? [...groups, { group: 'Other', permissions: other }] : groups
+  }, [allPermissions])
+
   const handleSaveRolePermissions = async () => {
     if (!selectedRoleForPerms) return
     setPermsSaving(true)
@@ -202,104 +194,43 @@ function Settings() {
     }
   }
 
-  const loadAllRoles = () => {
+  const loadAllRoles = useCallback(() => {
     setRolesListLoading(true)
-    getRoles()
+    setRolesError('')
+    return getRoles()
       .then((data) => {
         const list = Array.isArray(data) ? data : (data?.data ?? data?.roles ?? [])
-        setAllRoles(list)
+        setAllRoles(Array.isArray(list) ? list : [])
       })
-      .catch(() => {})
+      .catch((e) => setRolesError(e.message || 'Failed to load roles'))
       .finally(() => setRolesListLoading(false))
-  }
+  }, [])
 
-  const handleCreateRole = async () => {
-    if (!newRole.name.trim()) { setCreateRoleError('Role name is required'); return }
-    setCreateRoleLoading(true)
-    setCreateRoleError('')
-    try {
-      await createRole({ name: newRole.name.trim().toUpperCase(), description: newRole.description.trim() })
-      setCreateRoleModal(false)
-      setNewRole({ name: '', description: '' })
-      loadAllRoles()
-    } catch (e) {
-      setCreateRoleError(e.message || 'Failed to create role')
-    } finally {
-      setCreateRoleLoading(false)
-    }
-  }
+  const loadAdminUsers = useCallback(() => {
+    setAdminUsersLoading(true)
+    setAdminUsersError('')
+    return getUsers({ audience: 'admin', limit: 100 })
+      .then((data) => {
+        const list = Array.isArray(data) ? data : (data?.data ?? data?.users ?? [])
+        setAdminUsers(Array.isArray(list) ? list : [])
+      })
+      .catch((e) => setAdminUsersError(e.message || 'Failed to load admin users'))
+      .finally(() => setAdminUsersLoading(false))
+  }, [])
 
-  const handleUserSearch = async (query) => {
-    setUserSearch(query)
-    setSelectedUser(null)
-    setSelectedUserRoles([])
-    if (!query.trim()) { setUserSearchResults([]); return }
-    setUserSearchLoading(true)
-    try {
-      const data = await getUsers({ search: query.trim(), limit: 10 })
-      const list = Array.isArray(data) ? data : (data?.users ?? data?.items ?? data?.data ?? [])
-      setUserSearchResults(list)
-    } catch {
-      setUserSearchResults([])
-    } finally {
-      setUserSearchLoading(false)
+  // Tab data is loaded from the URL-driven tab, so returning from one of the
+  // create pages (?tab=roles) refetches instead of showing a stale empty list.
+  useEffect(() => {
+    if (activeTab === 'roles' || activeTab === 'permissions') {
+      void loadAllRoles()
     }
-  }
-
-  const handleSelectUser = async (user) => {
-    setSelectedUser(user)
-    setUserSearch(user.name ?? user.full_name ?? user.email ?? '')
-    setUserSearchResults([])
-    setSelectedUserRolesLoading(true)
-    try {
-      const data = await getUserRoles(user.id)
-      const list = Array.isArray(data) ? data : (data?.data ?? data?.roles ?? [])
-      setSelectedUserRoles(list)
-    } catch {
-      setSelectedUserRoles([])
-    } finally {
-      setSelectedUserRolesLoading(false)
+    if (activeTab === 'permissions') {
+      void loadPermissionsTab()
     }
-  }
-
-  const handleAssignRole = async () => {
-    setAssignModal((s) => ({ ...s, loading: true, error: '' }))
-    try {
-      await assignRole(assignModal.userId, assignModal.roleId)
-      setAssignModal({ open: false, userId: '', roleId: '', loading: false, error: '' })
-      if (selectedUser) handleSelectUser(selectedUser)
-    } catch (e) {
-      setAssignModal((s) => ({ ...s, error: e.message || 'Failed to assign role', loading: false }))
+    if (activeTab === 'admin-users') {
+      void loadAdminUsers()
     }
-  }
-
-  const handleRemoveRole = async (userId, roleId) => {
-    try {
-      await removeRole(userId, roleId)
-      setSelectedUserRoles((prev) => prev.filter((r) => (r.id ?? r.roleId) !== roleId))
-    } catch (e) {
-      alert(e.message || 'Failed to remove role')
-    }
-  }
-
-  const handleAddAdmin = async () => {
-    if (!newAdmin.fullName.trim() || !newAdmin.email.trim() || !newAdmin.password.trim() || !newAdmin.adminRole) {
-      setAddAdminError('Full name, email, password and role are required')
-      return
-    }
-    setAddAdminLoading(true)
-    setAddAdminError('')
-    try {
-      await signupAdmin(newAdmin)
-      setAddAdminModal(false)
-      setNewAdmin({ fullName: '', email: '', phone: '', password: '', adminRole: '', department: '' })
-      alert('Admin user created successfully!')
-    } catch (e) {
-      setAddAdminError(e.message || 'Failed to create admin user')
-    } finally {
-      setAddAdminLoading(false)
-    }
-  }
+  }, [activeTab, loadAllRoles, loadPermissionsTab, loadAdminUsers])
 
   const upsertSetting = async (key, value, type = 'STRING') => {
     const id = settingIds[key]
@@ -384,15 +315,15 @@ function Settings() {
             <Shield size={18} />
             Security
           </button>
-          <button className={`settings-tab ${activeTab === 'admin-users' ? 'active' : ''}`} onClick={() => { setActiveTab('admin-users'); loadAllRoles() }}>
+          <button className={`settings-tab ${activeTab === 'admin-users' ? 'active' : ''}`} onClick={() => setActiveTab('admin-users')}>
             <UserPlus size={18} />
             Admin Users
           </button>
-          <button className={`settings-tab ${activeTab === 'roles' ? 'active' : ''}`} onClick={() => { setActiveTab('roles'); loadAllRoles() }}>
+          <button className={`settings-tab ${activeTab === 'roles' ? 'active' : ''}`} onClick={() => setActiveTab('roles')}>
             <Users size={18} />
             Roles
           </button>
-          <button className={`settings-tab ${activeTab === 'permissions' ? 'active' : ''}`} onClick={() => { setActiveTab('permissions'); loadAllRoles(); loadPermissionsTab() }}>
+          <button className={`settings-tab ${activeTab === 'permissions' ? 'active' : ''}`} onClick={() => setActiveTab('permissions')}>
             <Shield size={18} />
             Role Permissions
           </button>
@@ -530,78 +461,92 @@ function Settings() {
               <div className="permissions-header">
                 <div>
                   <h2>Admin Users</h2>
-                  <p className="permissions-subtitle">Create new admin accounts and assign roles</p>
+                  <p className="permissions-subtitle">
+                    Everyone holding a role other than CUSTOMER or PROVIDER.
+                    Only a SUPER_ADMIN can create another SUPER_ADMIN.
+                  </p>
                 </div>
-                <button className="btn-save" onClick={() => { setAddAdminModal(true); setAddAdminError('') }}>
+                <button className="btn-save" onClick={() => navigate('/admin/settings/admin-users/new')}>
                   <UserPlus size={18} /> Add Admin User
                 </button>
               </div>
 
-              {/* Add Admin Modal */}
-              {addAdminModal && (
-                <div className="modal-overlay" onClick={() => setAddAdminModal(false)}>
-                  <div className="modal-content" style={{ maxWidth: '480px' }} onClick={(e) => e.stopPropagation()}>
-                    <div className="modal-header">
-                      <h2 className="modal-title">Create Admin User</h2>
-                      <button className="modal-close-btn" onClick={() => setAddAdminModal(false)}><X size={22} /></button>
-                    </div>
-                    <div className="modal-body">
-                      {addAdminError && <p className="settings-message settings-message--error">{addAdminError}</p>}
-                      <div className="form-group">
-                        <label>Full Name *</label>
-                        <input type="text" className="form-input" placeholder="e.g. Ali Khan"
-                          value={newAdmin.fullName}
-                          onChange={(e) => setNewAdmin((a) => ({ ...a, fullName: e.target.value }))} />
-                      </div>
-                      <div className="form-group">
-                        <label>Email *</label>
-                        <input type="email" className="form-input" placeholder="admin@example.com"
-                          value={newAdmin.email}
-                          onChange={(e) => setNewAdmin((a) => ({ ...a, email: e.target.value }))} />
-                      </div>
-                      <div className="form-group">
-                        <label>Phone</label>
-                        <input type="text" className="form-input" placeholder="+966500000000"
-                          value={newAdmin.phone}
-                          onChange={(e) => setNewAdmin((a) => ({ ...a, phone: e.target.value }))} />
-                      </div>
-                      <div className="form-group">
-                        <label>Password *</label>
-                        <div className="settings-input-with-eye">
-                          <input type={showAdminPassword ? 'text' : 'password'} className="form-input" placeholder="Strong@123"
-                            value={newAdmin.password}
-                            onChange={(e) => setNewAdmin((a) => ({ ...a, password: e.target.value }))} />
-                          <button type="button" className="settings-eye-btn" onClick={() => setShowAdminPassword((s) => !s)}>
-                            {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
-                        </div>
-                      </div>
-                      <div className="form-group">
-                        <label>Role *</label>
-                        <select className="form-select" value={newAdmin.adminRole}
-                          onChange={(e) => setNewAdmin((a) => ({ ...a, adminRole: e.target.value }))}>
-                          <option value="">— Select a role —</option>
-                          {allRoles.map((r) => (
-                            <option key={r.id} value={r.name}>{r.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>Department</label>
-                        <input type="text" className="form-input" placeholder="e.g. Operations"
-                          value={newAdmin.department}
-                          onChange={(e) => setNewAdmin((a) => ({ ...a, department: e.target.value }))} />
-                      </div>
-                    </div>
-                    <div className="modal-footer">
-                      <button className="btn-action-secondary" onClick={() => setAddAdminModal(false)}>Cancel</button>
-                      <button className="btn-action-primary" onClick={handleAddAdmin} disabled={addAdminLoading}>
-                        {addAdminLoading ? <Loader2 size={16} className="spin" /> : <UserPlus size={16} />}
-                        Create Admin
-                      </button>
-                    </div>
-                  </div>
+              {adminUsersError && (
+                <p className="settings-message settings-message--error">{adminUsersError}</p>
+              )}
+
+              {adminUsersLoading ? (
+                <div className="settings-loading"><Loader2 size={20} className="spin" /> Loading admin users…</div>
+              ) : adminUsers.length === 0 ? (
+                <div className="au-empty">
+                  <Users size={28} />
+                  <p>No admin users yet</p>
+                  <span>Create one to give a teammate access to this panel.</span>
                 </div>
+              ) : (
+                <>
+                  <div className="au-count">
+                    {adminUsers.length} {adminUsers.length === 1 ? 'account' : 'accounts'}
+                  </div>
+                  <div className="au-table-wrapper">
+                    <table className="au-table">
+                      <thead>
+                        <tr>
+                          <th>User</th>
+                          <th>Roles</th>
+                          <th>Status</th>
+                          <th className="au-col-action">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {adminUsers.map((u) => {
+                          const name = u.name ?? u.full_name ?? '—'
+                          const status = (u.status ?? '').toLowerCase()
+                          return (
+                            <tr key={u.id}>
+                              <td>
+                                <div className="au-user-cell">
+                                  <div className="au-avatar">{initials(name, u.email)}</div>
+                                  <div className="au-user-info">
+                                    <span className="au-user-name">{name}</span>
+                                    <span className="au-user-email">{u.email ?? '—'}</span>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>
+                                <div className="au-roles">
+                                  {(u.roles ?? []).length === 0
+                                    ? <span className="au-muted">No roles</span>
+                                    : u.roles.map((r) => (
+                                      <span
+                                        key={r.id ?? r.name}
+                                        className={`au-chip ${r.name === 'SUPER_ADMIN' ? 'au-chip--primary' : ''}`}
+                                      >
+                                        {r.name}
+                                      </span>
+                                    ))}
+                                </div>
+                              </td>
+                              <td>
+                                <span className={`au-status au-status--${status || 'unknown'}`}>
+                                  {u.status ?? '—'}
+                                </span>
+                              </td>
+                              <td className="au-col-action">
+                                <button
+                                  className="au-action-btn"
+                                  onClick={() => navigate(`/admin/settings/roles/users/${u.id}?from=admin-users`)}
+                                >
+                                  Manage roles
+                                </button>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -613,10 +558,12 @@ function Settings() {
                   <h2>Roles Management</h2>
                   <p className="permissions-subtitle">Create roles and manage role assignments per user</p>
                 </div>
-                <button className="btn-save" onClick={() => { setCreateRoleModal(true); setCreateRoleError('') }}>
+                <button className="btn-save" onClick={() => navigate('/admin/settings/roles/new')}>
                   <Plus size={18} /> Create Role
                 </button>
               </div>
+
+              {rolesError && <p className="settings-message settings-message--error">{rolesError}</p>}
 
               {/* All Roles List */}
               <div className="roles-list-section">
@@ -637,168 +584,6 @@ function Settings() {
                 )}
               </div>
 
-              {/* User Role Assignment */}
-              <div className="roles-list-section" style={{ marginTop: '2rem' }}>
-                <h3 className="permissions-section-title">User Role Assignment</h3>
-
-                {/* Search Box */}
-                <div style={{ position: 'relative', maxWidth: '420px' }}>
-                  <div style={{ position: 'relative' }}>
-                    <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
-                    <input
-                      type="text"
-                      className="form-input"
-                      style={{ paddingLeft: '36px' }}
-                      placeholder="Search user by name or email…"
-                      value={userSearch}
-                      onChange={(e) => handleUserSearch(e.target.value)}
-                    />
-                    {userSearch && (
-                      <button style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '2px' }}
-                        onClick={() => { setUserSearch(''); setUserSearchResults([]); setSelectedUser(null); setSelectedUserRoles([]) }}>
-                        <X size={15} />
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Search Dropdown */}
-                  {(userSearchLoading || userSearchResults.length > 0) && (
-                    <div className="user-search-dropdown">
-                      {userSearchLoading ? (
-                        <div className="user-search-item" style={{ color: '#9ca3af' }}><Loader2 size={14} className="spin" /> Searching…</div>
-                      ) : (
-                        userSearchResults.map((u) => (
-                          <button key={u.id} className="user-search-item" onClick={() => handleSelectUser(u)}>
-                            <div className="user-search-avatar">{(u.name ?? u.full_name ?? u.email ?? '?')[0].toUpperCase()}</div>
-                            <div>
-                              <div style={{ fontWeight: 600, fontSize: '13px' }}>{u.name ?? u.full_name ?? '—'}</div>
-                              <div style={{ fontSize: '11px', color: '#6b7280' }}>{u.email}</div>
-                            </div>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Selected User Panel */}
-                {selectedUser && (
-                  <div className="selected-user-panel">
-                    <div className="selected-user-info">
-                      <div className="user-search-avatar" style={{ width: '40px', height: '40px', fontSize: '16px' }}>
-                        {(selectedUser.name ?? selectedUser.full_name ?? selectedUser.email ?? '?')[0].toUpperCase()}
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '14px' }}>{selectedUser.name ?? selectedUser.full_name}</div>
-                        <div style={{ fontSize: '12px', color: '#6b7280' }}>{selectedUser.email}</div>
-                      </div>
-                      <button className="btn-save" style={{ marginLeft: 'auto' }}
-                        onClick={() => setAssignModal({ open: true, userId: selectedUser.id, roleId: '', loading: false, error: '' })}>
-                        <Plus size={15} /> Assign Role
-                      </button>
-                    </div>
-
-                    {selectedUserRolesLoading ? (
-                      <div style={{ padding: '12px', color: '#9ca3af', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <Loader2 size={16} className="spin" /> Loading roles…
-                      </div>
-                    ) : selectedUserRoles.length === 0 ? (
-                      <p style={{ color: '#9ca3af', fontSize: '13px', margin: '12px 0 0' }}>No roles assigned to this user.</p>
-                    ) : (
-                      <table className="permissions-table" style={{ marginTop: '12px' }}>
-                        <thead>
-                          <tr>
-                            <th>Role</th>
-                            <th>Description</th>
-                            <th style={{ width: '90px' }}>Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedUserRoles.map((r) => (
-                            <tr key={r.id ?? r.roleId ?? r.name}>
-                              <td><strong>{r.name ?? r.roleName}</strong></td>
-                              <td style={{ color: '#6b7280', fontSize: '13px' }}>{r.description ?? '—'}</td>
-                              <td>
-                                <button className="action-link disable" style={{ fontSize: '11px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                  onClick={() => handleRemoveRole(selectedUser.id, r.id ?? r.roleId)}>
-                                  <Trash2 size={13} /> Remove
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Create Role Modal */}
-              {createRoleModal && (
-                <div className="modal-overlay" onClick={() => setCreateRoleModal(false)}>
-                  <div className="modal-content" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
-                    <div className="modal-header">
-                      <h2 className="modal-title">Create New Role</h2>
-                      <button className="modal-close-btn" onClick={() => setCreateRoleModal(false)}><X size={22} /></button>
-                    </div>
-                    <div className="modal-body">
-                      {createRoleError && <p className="settings-message settings-message--error">{createRoleError}</p>}
-                      <div className="form-group">
-                        <label>Role Name *</label>
-                        <input type="text" className="form-input" placeholder="e.g. FINANCE_MANAGER"
-                          value={newRole.name}
-                          onChange={(e) => setNewRole((r) => ({ ...r, name: e.target.value }))} />
-                        <span className="form-hint">Will be saved in uppercase</span>
-                      </div>
-                      <div className="form-group">
-                        <label>Description</label>
-                        <input type="text" className="form-input" placeholder="Brief description of this role"
-                          value={newRole.description}
-                          onChange={(e) => setNewRole((r) => ({ ...r, description: e.target.value }))} />
-                      </div>
-                    </div>
-                    <div className="modal-footer">
-                      <button className="btn-action-secondary" onClick={() => setCreateRoleModal(false)}>Cancel</button>
-                      <button className="btn-action-primary" onClick={handleCreateRole} disabled={createRoleLoading}>
-                        {createRoleLoading ? <Loader2 size={16} className="spin" /> : <Plus size={16} />}
-                        Create Role
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Assign Role Modal */}
-              {assignModal.open && (
-                <div className="modal-overlay" onClick={() => setAssignModal((s) => ({ ...s, open: false }))}>
-                  <div className="modal-content" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
-                    <div className="modal-header">
-                      <h2 className="modal-title">Assign Role</h2>
-                      <button className="modal-close-btn" onClick={() => setAssignModal((s) => ({ ...s, open: false }))}><X size={22} /></button>
-                    </div>
-                    <div className="modal-body">
-                      {assignModal.error && <p className="settings-message settings-message--error">{assignModal.error}</p>}
-                      <div className="form-group">
-                        <label>Select Role</label>
-                        <select className="form-select" value={assignModal.roleId}
-                          onChange={(e) => setAssignModal((s) => ({ ...s, roleId: e.target.value }))}>
-                          <option value="">— Select a role —</option>
-                          {allRoles.map((r) => (
-                            <option key={r.id} value={r.id}>{r.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="modal-footer">
-                      <button className="btn-action-secondary" onClick={() => setAssignModal((s) => ({ ...s, open: false }))}>Cancel</button>
-                      <button className="btn-action-primary" onClick={handleAssignRole} disabled={assignModal.loading || !assignModal.roleId}>
-                        {assignModal.loading ? <Loader2 size={16} className="spin" /> : null}
-                        Assign
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
@@ -816,7 +601,7 @@ function Settings() {
                     Seed All Permissions
                   </button>
                   <button className="btn-action-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                    onClick={() => { setCreatePermModal(true); setCreatePermError('') }}>
+                    onClick={() => navigate('/admin/settings/permissions/new')}>
                     <Plus size={18} /> Create Permission
                   </button>
                   <button
@@ -829,62 +614,6 @@ function Settings() {
                   </button>
                 </div>
               </div>
-
-              {/* Create Permission Modal */}
-              {createPermModal && (
-                <div className="modal-overlay" onClick={() => setCreatePermModal(false)}>
-                  <div className="modal-content" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
-                    <div className="modal-header">
-                      <h2 className="modal-title">Create Permission</h2>
-                      <button className="modal-close-btn" onClick={() => setCreatePermModal(false)}><X size={22} /></button>
-                    </div>
-                    <div className="modal-body">
-                      {createPermError && <p className="settings-message settings-message--error">{createPermError}</p>}
-                      <div className="form-group">
-                        <label>Quick Select</label>
-                        <select className="form-select"
-                          value=""
-                          onChange={(e) => {
-                            const preset = PREDEFINED_PERMISSIONS.find(p => p.slug === e.target.value)
-                            if (preset) setNewPerm({ name: preset.name, slug: preset.slug, description: preset.description })
-                          }}>
-                          <option value="">— Select a predefined permission —</option>
-                          {PREDEFINED_PERMISSIONS.map((p) => (
-                            <option key={p.slug} value={p.slug}>{p.name} ({p.slug})</option>
-                          ))}
-                        </select>
-                        <span className="form-hint">Selecting auto-fills the fields below. You can also type custom values.</span>
-                      </div>
-                      <div className="form-group">
-                        <label>Name *</label>
-                        <input type="text" className="form-input" placeholder="e.g. Orders View"
-                          value={newPerm.name}
-                          onChange={(e) => setNewPerm((p) => ({ ...p, name: e.target.value }))} />
-                      </div>
-                      <div className="form-group">
-                        <label>Slug *</label>
-                        <input type="text" className="form-input" placeholder="e.g. orders.view"
-                          value={newPerm.slug}
-                          onChange={(e) => setNewPerm((p) => ({ ...p, slug: e.target.value }))} />
-                        <span className="form-hint">Unique identifier, lowercase with dots</span>
-                      </div>
-                      <div className="form-group">
-                        <label>Description</label>
-                        <input type="text" className="form-input" placeholder="Allows viewing orders"
-                          value={newPerm.description}
-                          onChange={(e) => setNewPerm((p) => ({ ...p, description: e.target.value }))} />
-                      </div>
-                    </div>
-                    <div className="modal-footer">
-                      <button className="btn-action-secondary" onClick={() => setCreatePermModal(false)}>Cancel</button>
-                      <button className="btn-action-primary" onClick={handleCreatePermission} disabled={createPermLoading}>
-                        {createPermLoading ? <Loader2 size={16} className="spin" /> : <Plus size={16} />}
-                        Create
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {permsError && <p className="settings-message settings-message--error">{permsError}</p>}
               {permsSuccess && <p className="settings-message settings-message--success">Permissions saved successfully!</p>}
@@ -931,28 +660,52 @@ function Settings() {
                             </tr>
                           </thead>
                           <tbody>
-                            {allPermissions.map((perm) => {
-                              const id = perm.id ?? perm._id
-                              const checked = checkedPermIds.has(id)
+                            {groupedPermissions.map(({ group, permissions }) => {
+                              const ids = permissions.map((p) => p.id ?? p._id)
+                              const allOn = ids.every((id) => checkedPermIds.has(id))
                               return (
-                                <tr key={id}>
-                                  <td className="permissions-role-cell">
-                                    <label className="permission-checkbox-label">
-                                      <input
-                                        type="checkbox"
-                                        className="permission-checkbox"
-                                        checked={checked}
-                                        onChange={() => togglePerm(id)}
-                                      />
-                                      <span className={`permission-indicator ${checked ? 'allowed' : 'denied'}`}>
-                                        {checked ? '✓' : '✗'}
-                                      </span>
-                                    </label>
-                                  </td>
-                                  <td className="permissions-page-cell"><span className="page-name">{perm.name}</span></td>
-                                  <td><code style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{perm.slug}</code></td>
-                                  <td style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>{perm.description ?? '—'}</td>
-                                </tr>
+                                <Fragment key={group}>
+                                  <tr className="perm-group-row">
+                                    <td colSpan={4}>
+                                      <label className="perm-group-label">
+                                        <input
+                                          type="checkbox"
+                                          className="permission-checkbox"
+                                          checked={allOn}
+                                          onChange={() => toggleGroup(ids, !allOn)}
+                                        />
+                                        <span>{group}</span>
+                                        <span className="perm-group-count">
+                                          {ids.filter((id) => checkedPermIds.has(id)).length}/{ids.length}
+                                        </span>
+                                      </label>
+                                    </td>
+                                  </tr>
+                                  {permissions.map((perm) => {
+                                    const id = perm.id ?? perm._id
+                                    const checked = checkedPermIds.has(id)
+                                    return (
+                                      <tr key={id}>
+                                        <td className="permissions-role-cell">
+                                          <label className="permission-checkbox-label">
+                                            <input
+                                              type="checkbox"
+                                              className="permission-checkbox"
+                                              checked={checked}
+                                              onChange={() => togglePerm(id)}
+                                            />
+                                            <span className={`permission-indicator ${checked ? 'allowed' : 'denied'}`}>
+                                              {checked ? '✓' : '✗'}
+                                            </span>
+                                          </label>
+                                        </td>
+                                        <td className="permissions-page-cell"><span className="page-name">{perm.name}</span></td>
+                                        <td><code style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{perm.slug}</code></td>
+                                        <td style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>{perm.description ?? '—'}</td>
+                                      </tr>
+                                    )
+                                  })}
+                                </Fragment>
                               )
                             })}
                           </tbody>

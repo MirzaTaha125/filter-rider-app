@@ -26,7 +26,12 @@ import "./Sidebar.css";
 
 function Sidebar({ isOpen, onClose }) {
   const location = useLocation();
-  const { hasPermission } = usePermissions();
+  const {
+    hasPermission,
+    loadingPermissions,
+    permissionsError,
+    reloadPermissions,
+  } = usePermissions();
   const isServicesActive = location.pathname.startsWith("/admin/services");
   const isPricingActive = location.pathname.startsWith("/admin/pricing");
   const isAssetsActive = location.pathname.startsWith("/admin/assets");
@@ -87,33 +92,43 @@ function Sidebar({ isOpen, onClose }) {
     { path: "/admin/settings", label: "Settings", icon: Settings, permission: "settings.view" },
   ];
 
+  // Each sub-page carries its own slug, so a role can be given Add-ons without
+  // also getting Services and the Pricing Matrix.
   const servicesSubItems = [
     { path: "/admin/services", label: "Services", permission: "services.view" },
-    { path: "/admin/services/addons", label: "Add-ons", permission: "services.view" },
-    { path: "/admin/services/pricing-matrix", label: "Pricing Matrix", permission: "services.view" },
+    { path: "/admin/services/addons", label: "Add-ons", permission: "addons.view" },
+    { path: "/admin/services/pricing-matrix", label: "Pricing Matrix", permission: "pricing_matrix.view" },
   ];
 
   const pricingSubItems = [
-    { path: "/admin/pricing", label: "Fee Configuration", permission: "pricing.view" },
-    { path: "/admin/pricing/surge", label: "Surge Pricing", permission: "pricing.view" },
-    { path: "/admin/pricing/regional", label: "Regional Pricing", permission: "pricing.view" },
+    { path: "/admin/pricing", label: "Fee Configuration", permission: "pricing_fees.view" },
+    { path: "/admin/pricing/surge", label: "Surge Pricing", permission: "surge.view" },
+    { path: "/admin/pricing/regional", label: "Regional Pricing", permission: "regional_pricing.view" },
   ];
 
   const assetsSubItems = [
-    { path: "/admin/assets", label: "Categories", permission: "assets.view" },
-    { path: "/admin/assets/sizes", label: "Size Categories", permission: "assets.view" },
+    { path: "/admin/assets", label: "Categories", permission: "asset_categories.view" },
+    { path: "/admin/assets/sizes", label: "Size Categories", permission: "size_categories.view" },
   ];
 
   const communicationSubItems = [
-    { path: "/admin/communication", label: "Email/SMS Templates", permission: "communication.view" },
-    { path: "/admin/communication/push-notifications", label: "Push Notifications", permission: "communication.view" },
-    { path: "/admin/communication/content", label: "Content Management", permission: "communication.view" },
+    { path: "/admin/communication", label: "Email/SMS Templates", permission: "templates.view" },
+    { path: "/admin/communication/push-notifications", label: "Push Notifications", permission: "push_notifications.view" },
+    { path: "/admin/communication/content", label: "Content Management", permission: "content_pages.view" },
   ];
 
   const walletSubItems = [
-    { path: "/admin/wallet/payment-approval", label: "Payment Approval", permission: "wallet.view" },
-    { path: "/admin/wallet/transaction-ledger", label: "Immutable Transaction Ledger", permission: "wallet.view" },
+    { path: "/admin/wallet/payment-approval", label: "Payment Approval", permission: "wallet.approvals.view" },
+    { path: "/admin/wallet/transaction-ledger", label: "Immutable Transaction Ledger", permission: "wallet.ledger.view" },
   ];
+
+  // A dropdown is only worth showing when at least one of its children is.
+  const visible = (items) => items.filter((item) => hasPermission(item.permission));
+  const visibleServices = visible(servicesSubItems);
+  const visiblePricing = visible(pricingSubItems);
+  const visibleAssets = visible(assetsSubItems);
+  const visibleCommunication = visible(communicationSubItems);
+  const visibleWallet = visible(walletSubItems);
 
   const handleLinkClick = () => {
     onClose();
@@ -162,6 +177,20 @@ function Sidebar({ isOpen, onClose }) {
         <span className="sidebar-brand-tagline">Car Services</span>
       </div>
       <nav className="sidebar-nav">
+        {/* Menu gating is fail-closed, so an unloaded/failed permission fetch
+            would otherwise render as a silently empty sidebar. */}
+        {loadingPermissions && (
+          <p className="sidebar-nav-notice">Loading menu…</p>
+        )}
+        {!loadingPermissions && permissionsError && (
+          <div className="sidebar-nav-notice sidebar-nav-notice--warn">
+            <span>
+              Couldn&apos;t load your permissions — showing the full menu.
+              Is the API running?
+            </span>
+            <button type="button" onClick={reloadPermissions}>Retry</button>
+          </div>
+        )}
         <ul className="sidebar-menu">
           {menuItems.slice(0, 3).filter(item => hasPermission(item.permission)).map((item) => {
             const IconComponent = item.icon;
@@ -199,7 +228,7 @@ function Sidebar({ isOpen, onClose }) {
           )}
 
           {/* Services Dropdown */}
-          {hasPermission("services.view") && <li>
+          {visibleServices.length > 0 && <li>
             <button
               className={`sidebar-menu-item sidebar-dropdown-toggle ${isServicesActive ? "active" : ""
                 }`}
@@ -218,7 +247,7 @@ function Sidebar({ isOpen, onClose }) {
               </span>
             </button>
             <ul className={`sidebar-submenu ${servicesOpen ? "open" : ""}`}>
-              {servicesSubItems.map((subItem) => (
+              {visibleServices.map((subItem) => (
                 <li key={subItem.path}>
                   <Link
                     to={subItem.path}
@@ -234,7 +263,7 @@ function Sidebar({ isOpen, onClose }) {
           </li>}
 
           {/* Pricing & Fees Dropdown */}
-          {hasPermission("pricing.view") && <li>
+          {visiblePricing.length > 0 && <li>
             <button
               className={`sidebar-menu-item sidebar-dropdown-toggle ${isPricingActive ? "active" : ""
                 }`}
@@ -253,7 +282,7 @@ function Sidebar({ isOpen, onClose }) {
               </span>
             </button>
             <ul className={`sidebar-submenu ${pricingOpen ? "open" : ""}`}>
-              {pricingSubItems.map((subItem) => (
+              {visiblePricing.map((subItem) => (
                 <li key={subItem.path}>
                   <Link
                     to={subItem.path}
@@ -269,7 +298,7 @@ function Sidebar({ isOpen, onClose }) {
           </li>}
 
           {/* Assets Dropdown */}
-          {hasPermission("assets.view") && <li>
+          {visibleAssets.length > 0 && <li>
             <button
               className={`sidebar-menu-item sidebar-dropdown-toggle ${isAssetsActive ? "active" : ""
                 }`}
@@ -288,7 +317,7 @@ function Sidebar({ isOpen, onClose }) {
               </span>
             </button>
             <ul className={`sidebar-submenu ${assetsOpen ? "open" : ""}`}>
-              {assetsSubItems.map((subItem) => (
+              {visibleAssets.map((subItem) => (
                 <li key={subItem.path}>
                   <Link
                     to={subItem.path}
@@ -304,7 +333,7 @@ function Sidebar({ isOpen, onClose }) {
           </li>}
 
           {/* Communication Dropdown */}
-          {hasPermission("communication.view") && <li>
+          {visibleCommunication.length > 0 && <li>
             <button
               className={`sidebar-menu-item sidebar-dropdown-toggle ${isCommunicationActive ? "active" : ""
                 }`}
@@ -327,7 +356,7 @@ function Sidebar({ isOpen, onClose }) {
             <ul
               className={`sidebar-submenu ${communicationOpen ? "open" : ""}`}
             >
-              {communicationSubItems.map((subItem) => (
+              {visibleCommunication.map((subItem) => (
                 <li key={subItem.path}>
                   <Link
                     to={subItem.path}
@@ -343,7 +372,7 @@ function Sidebar({ isOpen, onClose }) {
           </li>}
 
           {/* Wallet Dropdown */}
-          {hasPermission("wallet.view") && <li>
+          {visibleWallet.length > 0 && <li>
             <button
               className={`sidebar-menu-item sidebar-dropdown-toggle ${isWalletActive ? "active" : ""
                 }`}
@@ -362,7 +391,7 @@ function Sidebar({ isOpen, onClose }) {
               </span>
             </button>
             <ul className={`sidebar-submenu ${walletOpen ? "open" : ""}`}>
-              {walletSubItems.map((subItem) => (
+              {visibleWallet.map((subItem) => (
                 <li key={subItem.path}>
                   <Link
                     to={subItem.path}
