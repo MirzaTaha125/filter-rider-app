@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { Loader2, X, AlertTriangle, CheckCircle, UserCog, Filter, Hash, Package, Layers, Calendar, Clock, MapPin, User } from 'lucide-react'
 import PageHeader from '../../../components/PageHeader/PageHeader'
+import LiveTrackingMap from '../../../components/LiveTrackingMap/LiveTrackingMap'
+import { useSocket } from '../../../contexts/SocketContext'
+import { useGoogleMapsApiKey } from '../../../contexts/AppSettingsContext'
 import {
   getAdminOrderDetails,
   getProviderDetails,
@@ -12,14 +15,32 @@ import {
   rebroadcastOrder,
   getProviders,
 } from '../../../api'
+import {
+  getPaymentState, formatMoney, PAYMENT_TIMING_LABELS, PAYMENT_RECORD_TONES,
+} from './paymentStatus'
 import './OrderDetail.css'
+
+const TABS = ['details', 'customer', 'provider', 'financials', 'media', 'timeline', 'tracking']
+
+/** Matches the date style already used elsewhere on this page. */
+function formatDateTime(value) {
+  if (!value) return '—'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString()
+}
 
 function OrderDetail() {
   const { orderId } = useParams()
+  const { ordersSocket } = useSocket()
+  const mapsApiKey = useGoogleMapsApiKey()
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState('details')
+  // Live provider position, seeded from the provider record and then kept
+  // current by the provider.location.updated websocket event.
+  const [providerPos, setProviderPos] = useState(null)
+  const [posUpdatedAt, setPosUpdatedAt] = useState(null)
 
   // Modal states
   const [confirmCancel, setConfirmCancel] = useState({ open: false })
@@ -90,6 +111,13 @@ function OrderDetail() {
             _name: pRes.user?.full_name || pRes.full_name || pRes.name,
             _phone: pRes.user?.phone || pRes.phone,
             _email: pRes.user?.email || pRes.email,
+            _location: pRes.location ?? null,
+          }
+          const lat = Number(pRes.location?.latitude)
+          const lng = Number(pRes.location?.longitude)
+          if (Number.isFinite(lat) && Number.isFinite(lng)) {
+            setProviderPos({ lat, lng })
+            setPosUpdatedAt(pRes.location?.updated_at ?? null)
           }
         } catch (err) {
           console.error('Failed to load provider:', err)
@@ -103,6 +131,22 @@ function OrderDetail() {
       setLoading(false)
     }
   }
+
+  // The backend fans provider.location.updated out to admins; take only the
+  // events for this order.
+  useEffect(() => {
+    if (!ordersSocket || !orderId) return
+    const onMove = (payload) => {
+      if (payload?.order_id !== orderId) return
+      const lat = Number(payload.latitude)
+      const lng = Number(payload.longitude)
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
+      setProviderPos({ lat, lng })
+      setPosUpdatedAt(payload.updated_at ?? new Date().toISOString())
+    }
+    ordersSocket.on('provider.location.updated', onMove)
+    return () => ordersSocket.off('provider.location.updated', onMove)
+  }, [ordersSocket, orderId])
 
   const getStatusClass = (status) => {
     const statusMap = {
@@ -188,6 +232,12 @@ function OrderDetail() {
   }
 
   const isTerminal = order.status === 'COMPLETED' || order.status === 'CANCELLED'
+  const hasProvider = Boolean(order.provider_id ?? order.provider?.id)
+  const orderLat = Number(order.latitude)
+  const orderLng = Number(order.longitude)
+  const destinationPos = Number.isFinite(orderLat) && Number.isFinite(orderLng)
+    ? { lat: orderLat, lng: orderLng }
+    : null
 
   return (
     <div className="order-detail-page">
@@ -235,13 +285,15 @@ function OrderDetail() {
         {/* Tabs */}
         <div className="tabs-section">
           <nav className="tabs-nav">
-            {['details', 'customer', 'provider', 'financials', 'media', 'timeline'].map(tab => (
+            {TABS.filter(tab => tab !== 'tracking' || hasProvider).map(tab => (
               <button
                 key={tab}
                 className={`tab-button ${activeTab === tab ? 'active' : ''}`}
                 onClick={() => setActiveTab(tab)}
               >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === 'tracking'
+                  ? 'Live Tracking'
+                  : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
           </nav>
@@ -391,22 +443,117 @@ function OrderDetail() {
           )}
 
           {/* FINANCIALS TAB */}
-          {activeTab === 'financials' && (
-            <div className="financial-breakdown">
-              <div className="financial-row">
-                <label>Standard Service Base Fee</label>
-                <span className="amount">{order.currency || 'SAR'} {order.base_price || '0.00'}</span>
+          {activeTab === 'financials' && (() => {
+            const pay = getPaymentState(order)
+            const cur = order.currency || 'SAR'
+            const money = (v) => formatMoney(v, cur).amount
+            const payments = Array.isArray(order.payments) ? order.payments : []
+            const tip = Number(order.tip_amount || 0)
+            const commission = Number(order.platform_commission_amount || 0)
+            const providerNet = Number(order.provider_net_amount || 0)
+
+            return (
+              <div className="financials-tab">
+                <div className={`pay-summary pay-summary--${pay.tone}`}>
+                  <div className="pay-summary-main">
+                    <span className="pay-summary-label">Payment status</span>
+                    <span className={`pay-badge pay-badge--${pay.tone}`}>{pay.label}</span>
+                  </div>
+                  <dl className="pay-summary-meta">
+                    <div>
+                      <dt>Timing</dt>
+                      <dd>{PAYMENT_TIMING_LABELS[order.payment_timing] ?? '—'}</dd>
+                    </div>
+                    <div>
+                      <dt>Paid at</dt>
+                      <dd>{order.paid_at ? formatDateTime(order.paid_at) : '—'}</dd>
+                    </div>
+                    <div>
+                      <dt>Payment required</dt>
+                      <dd>{order.is_payment_required === false ? 'No' : 'Yes'}</dd>
+                    </div>
+                  </dl>
+                </div>
+
+                <div className="financial-breakdown">
+                  <div className="financial-row">
+                    <label>Standard Service Base Fee</label>
+                    <span className="amount">{cur} {money(order.base_price)}</span>
+                  </div>
+                  <div className="financial-row">
+                    <label>Additional Add-ons &amp; Equipment</label>
+                    <span className="amount">{cur} {money(order.addons_total)}</span>
+                  </div>
+                  {tip > 0 && (
+                    <div className="financial-row">
+                      <label>Tip</label>
+                      <span className="amount">{cur} {money(tip)}</span>
+                    </div>
+                  )}
+                  <div className="financial-row total">
+                    <label>TOTAL PAYABLE AMOUNT</label>
+                    <span className="amount">{cur} {money(order.total_price)}</span>
+                  </div>
+                </div>
+
+                {(commission > 0 || providerNet > 0) && (
+                  <div className="financial-breakdown">
+                    <div className="financial-row">
+                      <label>Platform Commission</label>
+                      <span className="amount">{cur} {money(commission)}</span>
+                    </div>
+                    <div className="financial-row">
+                      <label>Provider Net Payout</label>
+                      <span className="amount">{cur} {money(providerNet)}</span>
+                    </div>
+                    <div className="financial-row">
+                      <label>Wallet Settled</label>
+                      <span className="amount">
+                        {order.wallet_processed_at ? formatDateTime(order.wallet_processed_at) : 'Pending'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="pay-records">
+                  <h3 className="pay-records-title">Payment attempts</h3>
+                  {payments.length === 0 ? (
+                    <p className="pay-records-empty">
+                      No payment records for this order yet.
+                    </p>
+                  ) : (
+                    <div className="pay-records-wrap">
+                      <table className="pay-records-table">
+                        <thead>
+                          <tr>
+                            <th>Reference</th>
+                            <th>Method</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {payments.map((p) => {
+                            const tone = PAYMENT_RECORD_TONES[String(p.status).toUpperCase()] ?? 'muted'
+                            return (
+                              <tr key={p.id}>
+                                <td><code>{p.payment_no ?? '—'}</code></td>
+                                <td>{p.payment_method?.name ?? p.provider_code ?? '—'}</td>
+                                <td>{cur} {money(p.amount)}</td>
+                                <td><span className={`pay-badge pay-badge--${tone}`}>{p.status}</span></td>
+                                <td>{formatDateTime(p.paid_at ?? p.created_at)}</td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="financial-row">
-                <label>Additional Add-ons & Equipment</label>
-                <span className="amount">{order.currency || 'SAR'} {order.addons_total || '0.00'}</span>
-              </div>
-              <div className="financial-row total">
-                <label>TOTAL PAYABLE AMOUNT</label>
-                <span className="amount">{order.currency || 'SAR'} {order.total_price || '0.00'}</span>
-              </div>
-            </div>
-          )}
+            )
+          })()}
 
           {/* MEDIA TAB */}
           {activeTab === 'media' && (
@@ -453,6 +600,51 @@ function OrderDetail() {
                 <div className="empty-state">
                   <span>No history recorded</span>
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* LIVE TRACKING TAB */}
+          {activeTab === 'tracking' && hasProvider && (
+            <div className="tracking-tab">
+              <div className="tracking-legend">
+                <span className="tracking-key">
+                  <i className="tracking-dot tracking-dot--provider" />
+                  {order.provider?._name ?? 'Service provider'}
+                  {posUpdatedAt && (
+                    <em className="tracking-stamp">updated {formatDateTime(posUpdatedAt)}</em>
+                  )}
+                </span>
+                <span className="tracking-key">
+                  <i className="tracking-pin" />
+                  Job location
+                  {order.address_text && (
+                    <em className="tracking-stamp">{order.address_text}</em>
+                  )}
+                </span>
+              </div>
+
+              {!providerPos && !destinationPos ? (
+                <div className="empty-state">
+                  <span>No coordinates recorded for this order or provider yet.</span>
+                </div>
+              ) : (
+                <>
+                  <div className="tracking-map">
+                    <LiveTrackingMap
+                      apiKey={mapsApiKey}
+                      provider={providerPos}
+                      destination={destinationPos}
+                    />
+                  </div>
+                  {!providerPos && (
+                    <p className="tracking-note">
+                      The provider has not reported a position yet — only the job
+                      location is shown. Positions arrive once the provider app
+                      starts sending them.
+                    </p>
+                  )}
+                </>
               )}
             </div>
           )}

@@ -11,6 +11,7 @@ import {
   getProviderDetails,
   getCustomerDetails,
 } from '../../../api'
+import { getPaymentState, formatMoney } from './paymentStatus'
 import './OrderManagement.css'
 
 
@@ -329,16 +330,17 @@ function OrderManagement() {
               <th>SERVICE PROVIDER</th>
               <th>SERVICE</th>
               <th>STATUS</th>
+              <th>PAYMENT</th>
               <th>ACTIONS</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="6" className="loading-message">Loading orders...</td></tr>
+              <tr><td colSpan="7" className="loading-message">Loading orders...</td></tr>
             ) : error ? (
-              <tr><td colSpan="6" className="api-error">{error}</td></tr>
+              <tr><td colSpan="7" className="api-error">{error}</td></tr>
             ) : orders.length === 0 ? (
-              <tr><td colSpan="6" className="loading-message">No orders found.</td></tr>
+              <tr><td colSpan="7" className="loading-message">No orders found.</td></tr>
             ) : (
               orders.map((order) => {
                 const service = order.service || { name: 'Unknown', color: '#6b7280' }
@@ -403,6 +405,20 @@ function OrderManagement() {
                       <span className={`status-badge ${getStatusClass(order.status)}`}>
                         {order.status}
                       </span>
+                    </td>
+                    <td className="payment-column">
+                      {(() => {
+                        const pay = getPaymentState(order)
+                        const money = formatMoney(order.total_price, order.currency)
+                        return (
+                          <div className="payment-cell">
+                            <span className={`pay-badge pay-badge--${pay.tone}`}>{pay.label}</span>
+                            <span className="pay-amount">
+                              <span className="riyal-symbol">&#x20C1;</span>{money.amount}
+                            </span>
+                          </div>
+                        )
+                      })()}
                     </td>
                     <td className="actions-column" onClick={(e) => e.stopPropagation()}>
                       <div className="actions-cell">

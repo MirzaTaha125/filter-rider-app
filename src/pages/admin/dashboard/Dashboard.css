@@ -416,12 +416,29 @@ body.dark-mode .kpi-icon-wrapper.rejected { color: #f87171; }
   font-weight: 700;
 }
 
+/* Each figure gets its own colour — blue and orange both resolved to the
+   brand yellow before, so the rows were impossible to tell apart. */
 .live-activity-value.blue {
-  color: var(--primary-color);
+  color: var(--info);
 }
 
 .live-activity-value.orange {
   color: var(--primary-color);
+}
+
+.live-activity-value.purple {
+  color: #8b5cf6;
+}
+
+.live-activity-value.green {
+  color: var(--success);
+}
+
+.live-activity-progress-note {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
 }
 
 .live-activity-progress {
@@ -720,4 +737,60 @@ body.dark-mode .kpi-icon-wrapper.rejected { color: #f87171; }
     right: auto;
     margin-top: 1rem;
   }
+}
+
+/* ── Operations map: legend pin + marker tooltips ──────────────────────── */
+
+.legend-pin {
+  width: 10px;
+  height: 14px;
+  background: #2563eb;
+  border-radius: 50% 50% 50% 50% / 42% 42% 58% 58%;
+  clip-path: polygon(50% 100%, 0 42%, 0 0, 100% 0, 100% 42%);
+  flex-shrink: 0;
+}
+
+/* InfoWindow content is injected as raw HTML, so these are global. */
+.map-tip {
+  font-family: var(--font-sans);
+  min-width: 180px;
+  padding: 2px 4px 4px;
+}
+
+.map-tip-title {
+  color: #111827;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.map-tip-row {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.map-tip-row span {
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.map-tip-row strong {
+  color: #111827;
+  font-weight: 600;
+  text-align: right;
+  word-break: break-word;
+}
+
+.map-plot-count {
+  background: var(--border-light);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 3px 10px;
+  white-space: nowrap;
 }

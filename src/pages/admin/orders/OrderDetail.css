@@ -717,3 +717,194 @@
     padding: 1.5rem;
   }
 }
+
+/* ── Financials tab ────────────────────────────────────────────────────── */
+
+.financials-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.pay-badge {
+  display: inline-block;
+  border-radius: var(--radius-sm);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 3px 9px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--border-light);
+  color: var(--text-muted);
+}
+
+.pay-badge--success { background: rgba(22, 163, 74, 0.12); color: var(--success); }
+.pay-badge--danger  { background: rgba(239, 68, 68, 0.12); color: var(--danger); }
+.pay-badge--warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+.pay-badge--muted   { background: var(--border-light); color: var(--text-muted); }
+
+.pay-summary {
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
+  border-left: 4px solid var(--border-base);
+  border-radius: var(--radius-lg);
+  padding: 1.1rem 1.25rem;
+}
+
+.pay-summary--success { border-left-color: var(--success); }
+.pay-summary--danger  { border-left-color: var(--danger); }
+.pay-summary--warning { border-left-color: var(--warning); }
+
+.pay-summary-main {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.pay-summary-label {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pay-summary-meta {
+  display: grid;
+  gap: 0.85rem 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin: 0;
+}
+
+.pay-summary-meta dt {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.2rem;
+  text-transform: uppercase;
+}
+
+.pay-summary-meta dd {
+  color: var(--text-main);
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.pay-records-title {
+  color: var(--text-main);
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0 0 0.75rem;
+}
+
+.pay-records-empty {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.pay-records-wrap {
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+}
+
+.pay-records-table {
+  border-collapse: collapse;
+  min-width: 560px;
+  width: 100%;
+}
+
+.pay-records-table th {
+  background: var(--border-light);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.7rem 1rem;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pay-records-table td {
+  border-top: 1px solid var(--border-base);
+  color: var(--text-main);
+  font-size: 0.85rem;
+  padding: 0.75rem 1rem;
+  vertical-align: middle;
+}
+
+.pay-records-table code {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+/* ── Live tracking tab ─────────────────────────────────────────────────── */
+
+.tracking-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.tracking-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.tracking-key {
+  align-items: center;
+  color: var(--text-main);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  font-weight: 600;
+  gap: 0.5rem;
+}
+
+.tracking-stamp {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-style: normal;
+  font-weight: 400;
+}
+
+.tracking-dot {
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  height: 11px;
+  width: 11px;
+  border: 2px solid var(--bg-card);
+  box-shadow: 0 0 0 1px var(--border-base);
+}
+
+.tracking-dot--provider {
+  background: #10b981;
+}
+
+.tracking-pin {
+  background: #2563eb;
+  clip-path: polygon(50% 100%, 0 42%, 0 0, 100% 0, 100% 42%);
+  display: inline-block;
+  flex-shrink: 0;
+  height: 14px;
+  width: 10px;
+}
+
+.tracking-map {
+  height: 460px;
+  width: 100%;
+}
+
+.tracking-note {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  margin: 0;
+}

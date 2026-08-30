@@ -13,6 +13,9 @@ import {
 } from '../../../api'
 import { useGoogleMapsApiKey } from '../../../contexts/AppSettingsContext'
 import { usePermissions } from '../../../contexts/PermissionsContext'
+import {
+  countOrderStatuses, countProviderPresence, normalizeStatus, isOpen,
+} from '../orders/orderStatus'
 import { isGoogleMapsKeyValid } from '../../../utils/googleMapsKey'
 import './Dashboard.css'
 
@@ -25,9 +28,113 @@ function toList(data, ...keys) {
   return []
 }
 
+const PRESENCE_COLORS = { ONLINE: '#10b981', BUSY: '#f0b020', OFFLINE: '#6b7280' }
+const ORDER_PIN_COLOR = '#2563eb'
+
+/** Providers we plot: idle/offline staff are noise on an operations map. */
+function toMappableProviders(providers) {
+  return providers
+    .map((p) => {
+      const lat = Number(p.location?.latitude ?? p.latitude)
+      const lng = Number(p.location?.longitude ?? p.longitude)
+      const availability = String(p.availability ?? p.status ?? 'OFFLINE').toUpperCase()
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+      if (availability !== 'ONLINE' && availability !== 'BUSY') return null
+      return {
+        id: p.id,
+        lat,
+        lng,
+        availability,
+        name: p.full_name ?? p.name ?? 'Provider',
+        phone: p.phone ?? null,
+        city: p.location?.city ?? null,
+        updatedAt: p.location?.updated_at ?? p.last_seen_at ?? null,
+      }
+    })
+    .filter(Boolean)
+}
+
+function toMappableOrders(orders) {
+  return orders
+    .map((o) => {
+      const lat = Number(o.latitude)
+      const lng = Number(o.longitude)
+      const status = normalizeStatus(o.status)
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+      if (!isOpen(o)) return null
+      return {
+        id: o.id,
+        lat,
+        lng,
+        status,
+        orderNo: o.order_no ?? `#${String(o.id).slice(0, 8)}`,
+        service: o.service?.name_en ?? o.service?.name ?? '—',
+        customer: o.customer?.user?.full_name ?? o.customer?.full_name ?? null,
+        provider: o.provider?.user?.full_name ?? o.provider?.full_name ?? null,
+        address: o.address_text ?? null,
+        total: o.total_price,
+        currency: o.currency ?? 'SAR',
+        scheduledAt: o.scheduled_at ?? null,
+      }
+    })
+    .filter(Boolean)
+}
+
+const escapeHtml = (value) =>
+  String(value ?? '').replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ))
+
+function orderTooltip(order) {
+  const rows = [
+    ['Service', order.service],
+    ['Status', order.status.replace(/_/g, ' ')],
+    ['Customer', order.customer],
+    ['Provider', order.provider ?? 'Unassigned'],
+    ['Address', order.address],
+    ['Total', order.total != null ? `${order.currency} ${Number(order.total).toFixed(2)}` : null],
+  ].filter(([, value]) => value)
+
+  return `
+    <div class="map-tip">
+      <div class="map-tip-title">${escapeHtml(order.orderNo)}</div>
+      ${rows.map(([label, value]) => `
+        <div class="map-tip-row">
+          <span>${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
+        </div>`).join('')}
+    </div>`
+}
+
+function providerTooltip(provider) {
+  const rows = [
+    ['Status', provider.availability],
+    ['Phone', provider.phone],
+    ['City', provider.city],
+  ].filter(([, value]) => value)
+
+  return `
+    <div class="map-tip">
+      <div class="map-tip-title">${escapeHtml(provider.name)}</div>
+      ${rows.map(([label, value]) => `
+        <div class="map-tip-row">
+          <span>${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
+        </div>`).join('')}
+    </div>`
+}
+
 // Google Maps
-function GoogleMapsAdvanced({ apiKey, center }) {
+function GoogleMapsAdvanced({ apiKey, center, mapProviders = [], mapOrders = [] }) {
   const mapRef = useRef(null)
+  const mapInstance = useRef(null)
+  const markersRef = useRef([])
+  const infoRef = useRef(null)
+  // Holds the resolved Maps libraries. Reading google.maps.Marker off the
+  // global namespace is unreliable under async loading — Marker ships in the
+  // "marker" library, so we keep what importLibrary actually handed back.
+  const libsRef = useRef(null)
+  const [mapReady, setMapReady] = useState(0)
   const hasValidKey = isGoogleMapsKeyValid(apiKey)
 
   useEffect(() => {
@@ -40,11 +147,12 @@ function GoogleMapsAdvanced({ apiKey, center }) {
       const g = window.google
       if (!g?.maps?.importLibrary) return Promise.reject(new Error('Google Maps not ready'))
       return Promise.all([g.maps.importLibrary('maps'), g.maps.importLibrary('marker')])
-        .then(([mapsLib]) => {
+        .then(([mapsLib, markerLib]) => {
           if (!isMounted || !mapRef.current) return
           const Map = mapsLib.Map
           if (!Map || typeof Map !== 'function') throw new Error('Map is not a constructor')
-          new Map(mapRef.current, {
+          libsRef.current = { mapsLib, markerLib, core: g.maps }
+          mapInstance.current = new Map(mapRef.current, {
             center,
             zoom: 12,
             disableDefaultUI: false,
@@ -54,6 +162,8 @@ function GoogleMapsAdvanced({ apiKey, center }) {
             fullscreenControl: true,
             styles: [{ featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] }]
           })
+          // Signals the marker effect that the map and libraries are ready.
+          setMapReady((n) => n + 1)
         })
     }
 
@@ -88,8 +198,105 @@ function GoogleMapsAdvanced({ apiKey, center }) {
     return () => {
       isMounted = false
       if (pollInterval) clearInterval(pollInterval)
+      mapInstance.current = null
     }
   }, [hasValidKey, apiKey, center?.lat, center?.lng])
+
+  // Markers are redrawn whenever the data changes. Classic google.maps.Marker
+  // is used rather than AdvancedMarkerElement because the latter silently
+  // renders nothing unless the map is created with a Map ID, and a Map ID also
+  // disables the inline `styles` this map relies on.
+  useEffect(() => {
+    if (!hasValidKey || !mapReady) return
+
+    const map = mapInstance.current
+    const libs = libsRef.current
+    if (!map || !libs) return
+
+    // Marker lives in the "marker" library; InfoWindow and the geometry
+    // helpers come from core. Falling back to the namespace keeps this working
+    // if Google moves things again.
+    const g = libs.core ?? window.google?.maps
+    const MarkerCtor = libs.markerLib?.Marker ?? g?.Marker
+    if (!MarkerCtor) {
+      console.error('Google Maps Marker constructor unavailable — no pins drawn')
+      return
+    }
+
+    {
+      markersRef.current.forEach((m) => m.setMap(null))
+      markersRef.current = []
+      if (!infoRef.current) infoRef.current = new g.InfoWindow()
+
+      const bounds = new g.LatLngBounds()
+      let plotted = 0
+
+      const attach = (marker, html) => {
+        marker.addListener('mouseover', () => {
+          infoRef.current.setContent(html)
+          infoRef.current.open({ anchor: marker, map })
+        })
+        marker.addListener('mouseout', () => infoRef.current.close())
+        markersRef.current.push(marker)
+        bounds.extend(marker.getPosition())
+        plotted += 1
+      }
+
+      mapProviders.forEach((provider) => {
+        attach(new MarkerCtor({
+          map,
+          position: { lat: provider.lat, lng: provider.lng },
+          title: provider.name,
+          zIndex: 1,
+          icon: {
+            path: g.SymbolPath.CIRCLE,
+            scale: 7,
+            fillColor: PRESENCE_COLORS[provider.availability] ?? PRESENCE_COLORS.OFFLINE,
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 2,
+          },
+        }), providerTooltip(provider))
+      })
+
+      // Orders sit above providers so a job pin is never hidden behind a dot.
+      mapOrders.forEach((order) => {
+        attach(new MarkerCtor({
+          map,
+          position: { lat: order.lat, lng: order.lng },
+          title: order.orderNo,
+          zIndex: 2,
+          icon: {
+            path: 'M12 0C7.03 0 3 4.03 3 9c0 6.75 9 15 9 15s9-8.25 9-15c0-4.97-4.03-9-9-9z',
+            fillColor: ORDER_PIN_COLOR,
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 1.5,
+            scale: 1.1,
+            anchor: new g.Point(12, 24),
+          },
+        }), orderTooltip(order))
+      })
+
+      // Fit the viewport to whatever we plotted. Without this the map stays on
+      // its default centre and any marker outside that view is simply not on
+      // screen — which reads as "no pins" even though they exist.
+      if (plotted > 0) {
+        map.fitBounds(bounds, 48)
+        // fitBounds on a single point zooms to street level; clamp it so the
+        // pin still sits in recognisable surroundings.
+        g.event.addListenerOnce(map, 'bounds_changed', () => {
+          if (map.getZoom() > 14) map.setZoom(14)
+        })
+      }
+    }
+  }, [hasValidKey, mapReady, mapProviders, mapOrders])
+
+  useEffect(() => () => {
+    markersRef.current.forEach((m) => m.setMap(null))
+    markersRef.current = []
+    infoRef.current?.close()
+  }, [])
 
   if (!hasValidKey) return null
   return <div ref={mapRef} className="map-visualization" />
@@ -117,7 +324,9 @@ function Dashboard() {
   const canZones = showScopedCards && hasPermission('zones.view')
 
   const [selectedPeriod, setSelectedPeriod] = useState('7days')
-  const [orderStats, setOrderStats] = useState({ total: null, active: null, pending: null })
+  const [orderStats, setOrderStats] = useState({
+    total: null, active: null, pending: null, broadcasted: null, unassigned: null,
+  })
   const [spStats, setSpStats] = useState({ total: null, online: null, busy: null, offline: null })
   const [financeStats, setFinanceStats] = useState({ totalSales: null, revenue: null })
   const [disputeStats, setDisputeStats] = useState({ total: 0, open: 0, resolved: 0, rejected: 0 })
@@ -125,6 +334,8 @@ function Dashboard() {
   const [statsLoading, setStatsLoading] = useState(true)
   // Kept so the revenue chart can be derived — there is no time-series endpoint.
   const [orders, setOrders] = useState([])
+  // Raw provider rows, for the operations map markers.
+  const [providers, setProviders] = useState([])
 
   const contextMapKey = useGoogleMapsApiKey()
   const [mapApiKey, setMapApiKey] = useState('')
@@ -193,28 +404,28 @@ function Dashboard() {
       const orderList = Array.isArray(ordersData) ? ordersData : (ordersData?.orders ?? ordersData?.items ?? [])
       const totalOrders = ordersData?.meta?.total ?? ordersData?.total ?? orderList.length
       setOrders(orderList)
-      const activeOrders = orderList.filter(o =>
-        ['ACCEPTED', 'IN_PROGRESS', 'ON_THE_WAY', 'ARRIVED', 'accepted', 'in_progress', 'on_the_way', 'arrived'].includes(o.status)
-      ).length
-      const pendingOrders = orderList.filter(o =>
-        ['PENDING', 'CREATED', 'BROADCASTING', 'pending', 'created', 'broadcasting'].includes(o.status)
-      ).length
-      setOrderStats({ total: totalOrders, active: activeOrders, pending: pendingOrders })
+      const counts = countOrderStatuses(orderList)
+      setOrderStats({
+        total: totalOrders,
+        active: counts.active,
+        pending: counts.pending,
+        broadcasted: counts.broadcasted,
+        unassigned: counts.unassigned,
+      })
 
       // Service Providers
       const spList = Array.isArray(providersData) ? providersData
         : (providersData?.providers ?? providersData?.items ?? providersData?.data ?? [])
-      const totalSP = providersData?.total ?? spList.length
-      const onlineCount = spList.filter(sp =>
-        ['ONLINE', 'online', 'AVAILABLE', 'available'].includes(sp.availability ?? sp.status)
-      ).length
-      const busyCount = spList.filter(sp =>
-        ['BUSY', 'busy', 'ON_TASK', 'on_task'].includes(sp.availability ?? sp.status)
-      ).length
-      const offlineCount = spList.filter(sp =>
-        ['OFFLINE', 'offline', 'INACTIVE', 'inactive'].includes(sp.availability ?? sp.status)
-      ).length
-      setSpStats({ total: totalSP || null, online: onlineCount, busy: busyCount, offline: offlineCount })
+      setProviders(spList)
+      // meta.total is the real count; spList is only the page we fetched.
+      const totalSP = providersData?.meta?.total ?? providersData?.total ?? spList.length
+      const presence = countProviderPresence(spList)
+      setSpStats({
+        total: totalSP || null,
+        online: presence.online,
+        busy: presence.busy,
+        offline: presence.offline,
+      })
 
       // Sales & Revenue from wallet overview (completed orders + platform fee)
       const wallet = Array.isArray(walletData) ? walletData[0] : walletData
@@ -237,6 +448,11 @@ function Dashboard() {
   ])
 
   const GOOGLE_MAPS_API_KEY = mapApiKey || contextMapKey
+
+  // Marker data lives here so the header can report what actually got plotted —
+  // an empty map is otherwise indistinguishable from a broken one.
+  const mapProviders = useMemo(() => toMappableProviders(providers), [providers])
+  const mapOrders = useMemo(() => toMappableOrders(canOrders ? orders : []), [orders, canOrders])
 
   const visibleBlocks = [
     canOrders, canProviders, canWallet, canDisputes, canServices,
@@ -525,17 +741,31 @@ function Dashboard() {
             <div className="map-title-section">
               <AlertCircle size={20} className="map-title-icon" />
               <h3 className="map-title">Real-time Operations Map</h3>
+              <span className="map-plot-count">
+                {statsLoading
+                  ? 'loading…'
+                  : `${mapProviders.length} provider${mapProviders.length === 1 ? '' : 's'} · ${mapOrders.length} order${mapOrders.length === 1 ? '' : 's'}`}
+              </span>
             </div>
             <div className="map-legend">
               <div className="legend-item"><div className="legend-dot online"></div><span>Online</span></div>
               <div className="legend-item"><div className="legend-dot busy"></div><span>Busy</span></div>
-              <div className="legend-item"><div className="legend-dot offline"></div><span>Offline</span></div>
+              {canOrders && (
+                <div className="legend-item">
+                  <div className="legend-pin" /><span>Active order</span>
+                </div>
+              )}
             </div>
           </div>
 
           <div className="map-container">
             {isGoogleMapsKeyValid(GOOGLE_MAPS_API_KEY) ? (
-              <GoogleMapsAdvanced apiKey={GOOGLE_MAPS_API_KEY} center={mapCenter} />
+              <GoogleMapsAdvanced
+                apiKey={GOOGLE_MAPS_API_KEY}
+                center={mapCenter}
+                mapProviders={mapProviders}
+                mapOrders={mapOrders}
+              />
             ) : (
               <div className="map-placeholder">
                 <MapPin size={48} />
@@ -558,6 +788,10 @@ function Dashboard() {
             <div className="live-activity-box">
               <div className="live-activity-header">LIVE ACTIVITY</div>
               <div className="live-activity-item">
+                <span className="live-activity-label">Broadcasted:</span>
+                <span className="live-activity-value purple">{orderStats.broadcasted ?? '—'}</span>
+              </div>
+              <div className="live-activity-item">
                 <span className="live-activity-label">Active Orders:</span>
                 <span className="live-activity-value blue">{orderStats.active ?? '—'}</span>
               </div>
@@ -565,14 +799,22 @@ function Dashboard() {
                 <span className="live-activity-label">Pending Orders:</span>
                 <span className="live-activity-value orange">{orderStats.pending ?? '—'}</span>
               </div>
+              <div className="live-activity-item">
+                <span className="live-activity-label">Online Providers:</span>
+                <span className="live-activity-value green">{spStats.online ?? '—'}</span>
+              </div>
               {(orderStats.active > 0 || orderStats.pending > 0) && (
                 <div className="live-activity-progress">
                   <div className="live-activity-progress-bar">
+                    {/* Share of open work still waiting on a provider. */}
                     <div
                       className="live-activity-progress-fill"
-                      style={{ width: `${orderStats.active + orderStats.pending > 0 ? (orderStats.pending / (orderStats.active + orderStats.pending)) * 100 : 0}%` }}
+                      style={{ width: `${(orderStats.pending / (orderStats.active + orderStats.pending)) * 100}%` }}
                     />
                   </div>
+                  <span className="live-activity-progress-note">
+                    {orderStats.pending} of {orderStats.active + orderStats.pending} open awaiting a provider
+                  </span>
                 </div>
               )}
             </div>

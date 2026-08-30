@@ -1892,3 +1892,51 @@
   .premium-modal-header { padding: 1.5rem; }
   .premium-modal-body { padding: 1.5rem; }
 }
+
+/* ── Payment column ────────────────────────────────────────────────────── */
+
+.payment-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-items: flex-start;
+}
+
+.pay-amount {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.pay-badge {
+  display: inline-block;
+  border-radius: var(--radius-sm);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--border-light);
+  color: var(--text-muted);
+}
+
+.pay-badge--success {
+  background: rgba(22, 163, 74, 0.12);
+  color: var(--success);
+}
+
+.pay-badge--danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger);
+}
+
+.pay-badge--warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--warning);
+}
+
+.pay-badge--muted {
+  background: var(--border-light);
+  color: var(--text-muted);
+}
