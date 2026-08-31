@@ -1,30 +1,43 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  MapPin, X, Loader2, Ticket, Percent,
-  Tag, Settings, Calendar, Check, AlertCircle,
-  Layers, CircleDollarSign, Hash, Users, Banknote, Image as ImageIcon
+  Loader2, AlertTriangle, Check, Percent, CircleDollarSign, Upload, X,
 } from 'lucide-react'
-import { createPromotion, updatePromotion, getPromotion, getZones, getServices, uploadFile } from '../../../api'
+import PageHeader from '../../../components/PageHeader/PageHeader'
+import {
+  createPromotion, updatePromotion, getPromotion,
+  getZones, getServices, uploadFile,
+} from '../../../api'
+import '../adminForm.css'
 import './CreatePromotion.css'
 
-function toDateInput(val) {
-  if (!val) return ''
-  const str = typeof val === 'string' ? val : val.iso ?? val.date ?? String(val)
-  return str.slice(0, 10) // "YYYY-MM-DD"
+const EMPTY_FORM = {
+  code: '',
+  title: '',
+  discountType: 'PERCENTAGE',
+  discountValue: '',
+  maxDiscount: '',
+  selectedZoneIds: [],
+  selectedServiceIds: [],
+  totalUsageLimit: '',
+  limitPerUser: '',
+  minOrderValue: '',
+  validFrom: '',
+  validTo: '',
+  showOnHome: true,
+  bannerBadge: '',
+  bannerTitle: '',
+  bannerSubtitle: '',
+  bannerImageUrl: '',
+  bannerSortOrder: '0',
 }
 
-function getTitle(title) {
-  if (!title) return ''
-  if (typeof title === 'string') return title
-  return title.en ?? title.ar ?? Object.values(title)[0] ?? ''
+function toArray(value) {
+  return Array.isArray(value) ? value : []
 }
 
-function onlyActiveServices(list) {
-  return (Array.isArray(list) ? list : []).filter((svc) => {
-    if (svc?.is_active === false || svc?.isActive === false) return false
-    return true
-  })
+function toDateInput(value) {
+  return value ? String(value).slice(0, 10) : ''
 }
 
 function CreatePromotion() {
@@ -32,131 +45,155 @@ function CreatePromotion() {
   const { id } = useParams()
   const isEdit = Boolean(id)
 
-  const [formData, setFormData] = useState({
-    code: '',
-    title: '',
-    discountType: 'PERCENTAGE',
-    discountValue: '',
-    maxDiscount: '',
-    selectedZoneIds: [],
-    selectedServiceIds: [],
-    totalUsageLimit: '',
-    limitPerUser: '',
-    minOrderValue: '',
-    validFrom: '',
-    validTo: '',
-    showOnHome: true,
-    bannerBadge: '',
-    bannerTitle: '',
-    bannerSubtitle: '',
-    bannerImageUrl: '',
-    bannerSortOrder: '0',
-  })
-
+  const [form, setForm] = useState(EMPTY_FORM)
   const [zones, setZones] = useState([])
   const [services, setServices] = useState([])
-  const [saving, setSaving] = useState(false)
-  const [uploadingBanner, setUploadingBanner] = useState(false)
-  const [loadingPromo, setLoadingPromo] = useState(isEdit)
-  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [loadError, setLoadError] = useState('')
+  const [formError, setFormError] = useState('')
 
-  useEffect(() => {
-    const fetchDropdowns = Promise.all([
-      getZones({}).catch(() => []),
-      getServices(null, true).catch(() => []),
-    ])
+  const load = useCallback(async () => {
+    setLoading(true)
+    setLoadError('')
+    try {
+      const [zoneData, serviceData, promo] = await Promise.all([
+        getZones({}).catch(() => []),
+        getServices(null, true).catch(() => []),
+        isEdit ? getPromotion(id) : Promise.resolve(null),
+      ])
 
-    if (isEdit) {
-      setLoadingPromo(true)
-      Promise.all([
-        fetchDropdowns,
-        getPromotion(id),
-      ]).then(([[zonesData, servicesData], promo]) => {
-        setZones(Array.isArray(zonesData) ? zonesData : [])
-        setServices(onlyActiveServices(servicesData))
-        if (promo) {
-          setFormData({
-            code: promo.code ?? '',
-            title: getTitle(promo.title),
-            discountType: promo.discount_type ?? 'PERCENTAGE',
-            discountValue: promo.discount_value ? String(parseFloat(promo.discount_value)) : '',
-            maxDiscount: promo.max_discount ? String(promo.max_discount) : '',
-            selectedZoneIds: (promo.zones ?? []).map(z => z.zone_id),
-            selectedServiceIds: (promo.services ?? []).map(s => s.service_id),
-            totalUsageLimit: promo.total_usage_limit ? String(promo.total_usage_limit) : '',
-            limitPerUser: promo.limit_per_user ? String(promo.limit_per_user) : '',
-            minOrderValue: promo.min_order_value ? String(promo.min_order_value) : '',
-            validFrom: toDateInput(promo.valid_from),
-            validTo: toDateInput(promo.valid_to),
-            showOnHome: Boolean(promo.show_on_home),
-            bannerBadge: promo.banner_badge ?? '',
-            bannerTitle: promo.banner_title ?? '',
-            bannerSubtitle: promo.banner_subtitle ?? '',
-            bannerImageUrl: promo.banner_image_url ?? '',
-            bannerSortOrder: String(promo.banner_sort_order ?? 0),
-          })
+      setZones(toArray(zoneData))
+      setServices(toArray(serviceData))
+
+      if (isEdit) {
+        if (!promo?.id) {
+          setLoadError('Promotion not found')
+          return
         }
-      }).catch(err => setError(err.message || 'Failed to load promotion'))
-        .finally(() => setLoadingPromo(false))
-    } else {
-      fetchDropdowns.then(([zonesData, servicesData]) => {
-        setZones(Array.isArray(zonesData) ? zonesData : [])
-        setServices(onlyActiveServices(servicesData))
-      })
+        setForm({
+          code: promo.code ?? '',
+          title: promo.title ?? '',
+          discountType: promo.discount_type ?? 'PERCENTAGE',
+          discountValue: promo.discount_value != null ? String(Number(promo.discount_value)) : '',
+          maxDiscount: promo.max_discount != null ? String(Number(promo.max_discount)) : '',
+          selectedZoneIds: toArray(promo.zones).map(z => z.zone_id),
+          selectedServiceIds: toArray(promo.services).map(s => s.service_id),
+          totalUsageLimit: promo.total_usage_limit != null ? String(promo.total_usage_limit) : '',
+          limitPerUser: promo.limit_per_user != null ? String(promo.limit_per_user) : '',
+          minOrderValue: promo.min_order_value != null ? String(Number(promo.min_order_value)) : '',
+          validFrom: toDateInput(promo.valid_from),
+          validTo: toDateInput(promo.valid_to),
+          showOnHome: Boolean(promo.show_on_home),
+          bannerBadge: promo.banner_badge ?? '',
+          bannerTitle: promo.banner_title ?? '',
+          bannerSubtitle: promo.banner_subtitle ?? '',
+          bannerImageUrl: promo.banner_image_url ?? '',
+          bannerSortOrder: String(promo.banner_sort_order ?? 0),
+        })
+      }
+    } catch (err) {
+      setLoadError(err.message || 'Failed to load promotion')
+    } finally {
+      setLoading(false)
     }
-  }, [id])
+  }, [id, isEdit])
 
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
-    setError('')
+  useEffect(() => { load() }, [load])
+
+  const setField = (field, value) => {
+    setForm(prev => ({ ...prev, [field]: value }))
+    setFormError('')
   }
 
-  const toggleZone = (zoneId) => {
-    setFormData(prev => ({
-      ...prev,
-      selectedZoneIds: prev.selectedZoneIds.includes(zoneId)
-        ? prev.selectedZoneIds.filter(z => z !== zoneId)
-        : [...prev.selectedZoneIds, zoneId],
-    }))
+  const toggleIn = (field, value) => {
+    setForm(prev => {
+      const list = prev[field]
+      return {
+        ...prev,
+        [field]: list.includes(value) ? list.filter(v => v !== value) : [...list, value],
+      }
+    })
   }
 
-  const toggleService = (serviceId) => {
-    setFormData(prev => ({
-      ...prev,
-      selectedServiceIds: prev.selectedServiceIds.includes(serviceId)
-        ? prev.selectedServiceIds.filter(s => s !== serviceId)
-        : [...prev.selectedServiceIds, serviceId],
-    }))
+  const isPercentage = form.discountType === 'PERCENTAGE'
+
+  /**
+   * Only active services can be picked. A service that was already targeted and
+   * has since been deactivated still shows (flagged), otherwise it would be an
+   * invisible selection the admin could not remove.
+   */
+  const selectableServices = services.filter(
+    svc => svc.is_active !== false || form.selectedServiceIds.includes(svc.id),
+  )
+
+  const validate = () => {
+    if (!form.code.trim()) return 'Promo code is required.'
+
+    const value = Number(form.discountValue)
+    if (form.discountValue === '' || Number.isNaN(value) || value < 0) {
+      return 'Discount value must be a number of 0 or more.'
+    }
+    if (isPercentage && value > 100) {
+      return 'A percentage discount cannot be more than 100%.'
+    }
+
+    for (const [field, label] of [
+      ['maxDiscount', 'Max discount cap'],
+      ['minOrderValue', 'Minimum order value'],
+    ]) {
+      if (form[field] !== '' && Number(form[field]) < 0) return `${label} cannot be negative.`
+    }
+
+    for (const [field, label] of [
+      ['totalUsageLimit', 'Total usage limit'],
+      ['limitPerUser', 'Limit per user'],
+    ]) {
+      if (form[field] === '') continue
+      const n = Number(form[field])
+      if (!Number.isInteger(n) || n < 1) return `${label} must be a whole number of 1 or more.`
+    }
+
+    if (form.validFrom && form.validTo && form.validFrom > form.validTo) {
+      return 'The “valid from” date cannot be after the “valid to” date.'
+    }
+    return ''
   }
 
   const handleSubmit = async (action) => {
-    if (!formData.code.trim()) { setError('Promo code is required.'); return }
-    if (!formData.discountValue) { setError('Discount value is required.'); return }
+    const message = validate()
+    if (message) {
+      setFormError(message)
+      return
+    }
 
-    setSaving(true)
-    setError('')
+    setSaving(action)
+    setFormError('')
+    const code = form.code.trim().toUpperCase()
     const payload = {
-      code: formData.code.trim().toUpperCase(),
-      title: formData.title.trim() || formData.code.trim().toUpperCase(),
-      discountType: formData.discountType,
-      discountValue: formData.discountValue,
-      maxDiscount: formData.maxDiscount || undefined,
-      totalUsageLimit: formData.totalUsageLimit || undefined,
-      limitPerUser: formData.limitPerUser || undefined,
-      minOrderValue: formData.minOrderValue || undefined,
-      validFrom: formData.validFrom || undefined,
-      validTo: formData.validTo || undefined,
-      zoneIds: formData.selectedZoneIds.length ? formData.selectedZoneIds : [],
-      serviceIds: formData.selectedServiceIds.length ? formData.selectedServiceIds : [],
+      code,
+      title: form.title.trim() || code,
+      discountType: form.discountType,
+      discountValue: form.discountValue,
+      maxDiscount: form.maxDiscount || undefined,
+      totalUsageLimit: form.totalUsageLimit || undefined,
+      limitPerUser: form.limitPerUser || undefined,
+      minOrderValue: form.minOrderValue || undefined,
+      validFrom: form.validFrom || undefined,
+      validTo: form.validTo || undefined,
+      zoneIds: form.selectedZoneIds,
+      serviceIds: form.selectedServiceIds,
       status: action === 'activate' ? 'ACTIVE' : 'DRAFT',
       isActive: action === 'activate',
-      showOnHome: formData.showOnHome,
-      bannerBadge: formData.bannerBadge.trim(),
-      bannerTitle: formData.bannerTitle.trim(),
-      bannerSubtitle: formData.bannerSubtitle.trim(),
-      bannerImageUrl: formData.bannerImageUrl.trim(),
-      bannerSortOrder: formData.bannerSortOrder,
+      showOnHome: form.showOnHome,
+      bannerBadge: form.bannerBadge.trim(),
+      bannerTitle: form.bannerTitle.trim(),
+      bannerSubtitle: form.bannerSubtitle.trim(),
+      bannerImageUrl: form.bannerImageUrl.trim(),
+      bannerSortOrder: form.bannerSortOrder,
     }
+
     try {
       if (isEdit) {
         await updatePromotion(id, payload)
@@ -165,9 +202,8 @@ function CreatePromotion() {
       }
       navigate('/admin/promotions')
     } catch (err) {
-      setError(err.message || `Failed to ${isEdit ? 'update' : 'create'} promotion`)
-    } finally {
-      setSaving(false)
+      setFormError(err.message || `Failed to ${isEdit ? 'update' : 'create'} promotion`)
+      setSaving('')
     }
   }
 
@@ -175,404 +211,452 @@ function CreatePromotion() {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
-    setUploadingBanner(true)
-    setError('')
+    setUploading(true)
+    setFormError('')
     try {
-      const url = await uploadFile(file)
-      handleInputChange('bannerImageUrl', url)
+      setField('bannerImageUrl', await uploadFile(file))
     } catch (err) {
-      setError(err.message || 'Failed to upload banner image')
+      setFormError(err.message || 'Failed to upload banner image')
     } finally {
-      setUploadingBanner(false)
+      setUploading(false)
     }
   }
 
-  if (loadingPromo) {
+  const title = isEdit ? 'Edit Promotion' : 'Create Promotion'
+
+  if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '48px 0', color: '#6b7280' }}>
-        <Loader2 size={20} className="spin-icon" />
-        <span>Loading promotion...</span>
+      <div className="promotion-form-page">
+        <PageHeader title={title} />
+        <div className="sf-state"><Loader2 size={32} className="spin" /><span>Loading…</span></div>
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="promotion-form-page">
+        <PageHeader title={title} />
+        <div className="sf-state sf-state--error">
+          <AlertTriangle size={32} />
+          <h2>Could not load promotion</h2>
+          <p>{loadError}</p>
+          <button className="sf-btn sf-btn--secondary" onClick={() => navigate('/admin/promotions')}>
+            Back to promotions
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="create-promotion-container">
-      <div className="promotion-header">
-        <h1 className="promotion-title">
-          <Ticket size={28} color="#FCC246" />
-          {isEdit ? 'Edit Promotion' : 'Create New Promotion'}
-        </h1>
-        <p className="promotion-subtitle">Define discount rules, targeting restrictions, and usage limits.</p>
-      </div>
+    <div className="promotion-form-page">
+      <PageHeader
+        title={title}
+        subtitle={isEdit ? form.code : 'Define discount rules, targeting, and usage limits'}
+      />
 
-      <form className="promotion-form" onSubmit={(e) => e.preventDefault()}>
-        {error && (
-          <div className="api-error-banner">
-            <AlertCircle size={20} />
-            <span>{error}</span>
+      <form className="sf-form" onSubmit={(e) => e.preventDefault()}>
+        {formError && (
+          <div className="sf-alert">
+            <AlertTriangle size={16} />
+            <span>{formError}</span>
           </div>
         )}
 
-        {/* Promo Code Details Card */}
-        <div className="form-card">
-          <div className="card-header">
-            <div className="card-icon"><Tag size={20} /></div>
-            <h2 className="card-title">Promo Code Details</h2>
-          </div>
-          <div className="card-body">
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label" htmlFor="code">Promo Code *</label>
-                <div className="input-wrapper">
-                  <div className="input-icon left"><Hash size={18} /></div>
-                  <input
-                    type="text"
-                    id="code"
-                    className="form-input has-left-icon"
-                    placeholder="e.g. SUMMER50"
-                    value={formData.code}
-                    onChange={(e) => handleInputChange('code', e.target.value.toUpperCase())}
-                  />
-                </div>
-                <span className="helper-text">Unique code customers will enter to redeem.</span>
-              </div>
+        <section className="sf-card">
+          <header className="sf-card-head">
+            <h2>Promo code</h2>
+            <p>What the customer types at checkout, and how much it takes off.</p>
+          </header>
 
-              <div className="form-group">
-                <label className="form-label" htmlFor="title">Promotion Title</label>
-                <input
-                  type="text"
-                  id="title"
-                  className="form-input"
-                  placeholder="e.g. 20% off • First Ride"
-                  value={formData.title}
-                  onChange={(e) => handleInputChange('title', e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="form-group" style={{ maxWidth: '400px' }}>
-              <label className="form-label">Discount Type</label>
-              <div className="segment-control">
-                <button
-                  type="button"
-                  className={`segment-btn ${formData.discountType === 'PERCENTAGE' ? 'active' : ''}`}
-                  onClick={() => handleInputChange('discountType', 'PERCENTAGE')}
-                >
-                  <Percent size={16} /> Percentage
-                </button>
-                <button
-                  type="button"
-                  className={`segment-btn ${formData.discountType === 'FLAT' ? 'active' : ''}`}
-                  onClick={() => handleInputChange('discountType', 'FLAT')}
-                >
-                  <CircleDollarSign size={16} /> Fixed Amount
-                </button>
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label" htmlFor="discountValue">
-                  Value {formData.discountType === 'PERCENTAGE' ? '(%)' : '(SAR)'}
-                </label>
-                <div className="input-wrapper">
-                  <input
-                    type="number"
-                    id="discountValue"
-                    className="form-input has-right-icon"
-                    placeholder="0"
-                    value={formData.discountValue}
-                    onChange={(e) => handleInputChange('discountValue', e.target.value)}
-                  />
-                  <div className="input-icon right" style={{ fontSize: '0.9rem' }}>
-                    {formData.discountType === 'PERCENTAGE' ? '%' : 'SAR'}
-                  </div>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" htmlFor="maxDiscount">Max Discount Cap</label>
-                <div className="input-wrapper">
-                  <input
-                    type="number"
-                    id="maxDiscount"
-                    className="form-input has-right-icon"
-                    placeholder="0"
-                    value={formData.maxDiscount}
-                    onChange={(e) => handleInputChange('maxDiscount', e.target.value)}
-                  />
-                  <div className="input-icon right" style={{ fontSize: '0.9rem' }}>SAR</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Targeting Restrictions Card */}
-        <div className="form-card">
-          <div className="card-header">
-            <div className="card-icon"><MapPin size={20} /></div>
-            <h2 className="card-title">Targeting Restrictions</h2>
-          </div>
-          <div className="card-body">
-            <div className="form-group">
-              <label className="form-label"><MapPin size={16} className="text-gray-500" /> Available in Zones</label>
-              {zones.length === 0 ? (
-                <div className="empty-state">No zones found</div>
-              ) : (
-                <div className="selection-grid">
-                  {zones.map(zone => (
-                    <div
-                      key={zone.id}
-                      className={`selection-pill ${formData.selectedZoneIds.includes(zone.id) ? 'selected' : ''}`}
-                      onClick={() => toggleZone(zone.id)}
-                    >
-                      {formData.selectedZoneIds.includes(zone.id) && <Check className="pill-icon" />}
-                      {zone.name ?? zone.city ?? zone.id}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="form-group" style={{ marginTop: '0.5rem' }}>
-              <label className="form-label"><Layers size={16} className="text-gray-500" /> Applicable Services</label>
-              {services.length === 0 ? (
-                <div className="empty-state">No services found</div>
-              ) : (
-                <div className="selection-grid">
-                  {services.map(svc => (
-                    <div
-                      key={svc.id}
-                      className={`selection-pill ${formData.selectedServiceIds.includes(svc.id) ? 'selected' : ''}`}
-                      onClick={() => toggleService(svc.id)}
-                    >
-                      {formData.selectedServiceIds.includes(svc.id) && <Check className="pill-icon" />}
-                      {svc.name_en ?? svc.name}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Usage & Validity Card */}
-        <div className="form-card">
-          <div className="card-header">
-            <div className="card-icon"><Settings size={20} /></div>
-            <h2 className="card-title">Usage & Validity</h2>
-          </div>
-          <div className="card-body">
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label" htmlFor="totalUsageLimit">Total Usage Limit</label>
-                <div className="input-wrapper">
-                  <div className="input-icon left"><Users size={18} /></div>
-                  <input
-                    type="number"
-                    id="totalUsageLimit"
-                    className="form-input has-left-icon"
-                    placeholder="e.g. 1000"
-                    value={formData.totalUsageLimit}
-                    onChange={(e) => handleInputChange('totalUsageLimit', e.target.value)}
-                  />
-                </div>
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label" htmlFor="limitPerUser">Limit per User</label>
-                <div className="input-wrapper">
-                  <input
-                    type="number"
-                    id="limitPerUser"
-                    className="form-input"
-                    placeholder="e.g. 1"
-                    value={formData.limitPerUser}
-                    onChange={(e) => handleInputChange('limitPerUser', e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label" htmlFor="minOrderValue">Min Order Value</label>
-                <div className="input-wrapper">
-                  <div className="input-icon left"><Banknote size={18} /></div>
-                  <input
-                    type="number"
-                    id="minOrderValue"
-                    className="form-input has-left-icon has-right-icon"
-                    placeholder="0"
-                    value={formData.minOrderValue}
-                    onChange={(e) => handleInputChange('minOrderValue', e.target.value)}
-                  />
-                  <div className="input-icon right" style={{ fontSize: '0.9rem' }}>SAR</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label" htmlFor="validFrom"><Calendar size={16} /> Valid From</label>
-                <input
-                  type="date"
-                  id="validFrom"
-                  className="form-input"
-                  value={formData.validFrom}
-                  onChange={(e) => handleInputChange('validFrom', e.target.value)}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="validTo"><Calendar size={16} /> Valid To</label>
-                <input
-                  type="date"
-                  id="validTo"
-                  className="form-input"
-                  value={formData.validTo}
-                  onChange={(e) => handleInputChange('validTo', e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Home Banner Card */}
-        <div className="form-card">
-          <div className="card-header">
-            <div className="card-icon"><ImageIcon size={20} /></div>
-            <h2 className="card-title">Customer App Home Banner</h2>
-          </div>
-          <div className="card-body">
-            <div className="form-row">
-              <div className="form-group" style={{ flex: 1 }}>
-                <label className="checkbox-label" htmlFor="showOnHome">
-                  <input
-                    type="checkbox"
-                    id="showOnHome"
-                    checked={formData.showOnHome}
-                    onChange={(e) => handleInputChange('showOnHome', e.target.checked)}
-                  />
-                  <span>Show this promotion as a home banner</span>
-                </label>
-                <span className="helper-text">Active promotions appear on the customer home carousel. Uncheck to hide from home while keeping the coupon usable.</span>
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="bannerSortOrder">Sort order</label>
-                <input
-                  type="number"
-                  id="bannerSortOrder"
-                  className="form-input"
-                  min="0"
-                  value={formData.bannerSortOrder}
-                  onChange={(e) => handleInputChange('bannerSortOrder', e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label" htmlFor="bannerBadge">Badge text</label>
-                <input
-                  type="text"
-                  id="bannerBadge"
-                  className="form-input"
-                  placeholder="e.g. 20% off"
-                  value={formData.bannerBadge}
-                  onChange={(e) => handleInputChange('bannerBadge', e.target.value)}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="bannerTitle">Banner title</label>
-                <input
-                  type="text"
-                  id="bannerTitle"
-                  className="form-input"
-                  placeholder="e.g. 20% Off First Booking"
-                  value={formData.bannerTitle}
-                  onChange={(e) => handleInputChange('bannerTitle', e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label" htmlFor="bannerSubtitle">Banner subtitle</label>
+          <div className="sf-grid sf-grid--2">
+            <div className="sf-field">
+              <label htmlFor="code">Promo code <span className="sf-req">*</span></label>
               <input
+                id="code"
                 type="text"
-                id="bannerSubtitle"
-                className="form-input"
-                placeholder="e.g. New users get 20% off their first service"
-                value={formData.bannerSubtitle}
-                onChange={(e) => handleInputChange('bannerSubtitle', e.target.value)}
+                placeholder="e.g. SUMMER50"
+                value={form.code}
+                onChange={(e) => setField('code', e.target.value.toUpperCase())}
+                disabled={Boolean(saving)}
+              />
+              <span className="sf-hint">Must be unique. Saved in uppercase.</span>
+            </div>
+
+            <div className="sf-field">
+              <label htmlFor="title">Title</label>
+              <input
+                id="title"
+                type="text"
+                placeholder="e.g. 20% off first booking"
+                value={form.title}
+                onChange={(e) => setField('title', e.target.value)}
+                disabled={Boolean(saving)}
+              />
+              <span className="sf-hint">Falls back to the code if left empty.</span>
+            </div>
+          </div>
+
+          <div className="sf-field">
+            <label>Discount type</label>
+            <div className="cp-segment">
+              <button
+                type="button"
+                className={`cp-segment-btn ${isPercentage ? 'is-active' : ''}`}
+                onClick={() => setField('discountType', 'PERCENTAGE')}
+                disabled={Boolean(saving)}
+              >
+                <Percent size={15} /> Percentage
+              </button>
+              <button
+                type="button"
+                className={`cp-segment-btn ${!isPercentage ? 'is-active' : ''}`}
+                onClick={() => setField('discountType', 'FIXED')}
+                disabled={Boolean(saving)}
+              >
+                <CircleDollarSign size={15} /> Fixed amount
+              </button>
+            </div>
+          </div>
+
+          <div className="sf-grid sf-grid--2">
+            <div className="sf-field">
+              <label htmlFor="discountValue">Discount value <span className="sf-req">*</span></label>
+              <div className="sf-input-affix">
+                {!isPercentage && <span className="sf-affix riyal-symbol">&#x20C1;</span>}
+                <input
+                  id="discountValue"
+                  type="number"
+                  min="0"
+                  max={isPercentage ? 100 : undefined}
+                  step="0.01"
+                  placeholder="0"
+                  value={form.discountValue}
+                  onChange={(e) => setField('discountValue', e.target.value)}
+                  disabled={Boolean(saving)}
+                />
+                {isPercentage && <span className="sf-affix">%</span>}
+              </div>
+            </div>
+
+            <div className="sf-field">
+              <label htmlFor="maxDiscount">Max discount cap</label>
+              <div className="sf-input-affix">
+                <span className="sf-affix riyal-symbol">&#x20C1;</span>
+                <input
+                  id="maxDiscount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="No cap"
+                  value={form.maxDiscount}
+                  onChange={(e) => setField('maxDiscount', e.target.value)}
+                  disabled={Boolean(saving) || !isPercentage}
+                />
+              </div>
+              <span className="sf-hint">
+                {isPercentage
+                  ? 'Ceiling on how much a percentage discount can take off.'
+                  : 'Not used with a fixed amount.'}
+              </span>
+            </div>
+          </div>
+        </section>
+
+        <section className="sf-card">
+          <header className="sf-card-head">
+            <h2>Targeting</h2>
+            <p>Leave both empty to make the promotion available everywhere, for every service.</p>
+          </header>
+
+          <div className="sf-field">
+            <label>
+              Zones
+              {form.selectedZoneIds.length > 0 && (
+                <span className="cp-selected">{form.selectedZoneIds.length} selected</span>
+              )}
+            </label>
+            {zones.length === 0 ? (
+              <p className="cp-empty">No zones found.</p>
+            ) : (
+              <div className="cp-pills">
+                {zones.map(zone => {
+                  const on = form.selectedZoneIds.includes(zone.id)
+                  return (
+                    <button
+                      key={zone.id}
+                      type="button"
+                      className={`cp-pill ${on ? 'is-on' : ''}`}
+                      onClick={() => toggleIn('selectedZoneIds', zone.id)}
+                      disabled={Boolean(saving)}
+                      aria-pressed={on}
+                    >
+                      {on && <Check size={13} />}
+                      {zone.zone_name}
+                      {zone.city && <em>{zone.city}</em>}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="sf-field">
+            <label>
+              Services
+              {form.selectedServiceIds.length > 0 && (
+                <span className="cp-selected">{form.selectedServiceIds.length} selected</span>
+              )}
+            </label>
+            {selectableServices.length === 0 ? (
+              <p className="cp-empty">No active services found.</p>
+            ) : (
+              <div className="cp-pills">
+                {selectableServices.map(svc => {
+                  const on = form.selectedServiceIds.includes(svc.id)
+                  const retired = svc.is_active === false
+                  return (
+                    <button
+                      key={svc.id}
+                      type="button"
+                      className={`cp-pill ${on ? 'is-on' : ''} ${retired ? 'is-retired' : ''}`}
+                      onClick={() => toggleIn('selectedServiceIds', svc.id)}
+                      disabled={Boolean(saving)}
+                      aria-pressed={on}
+                      title={retired ? 'This service is inactive — deselect to remove it' : undefined}
+                    >
+                      {on && <Check size={13} />}
+                      {svc.name_en}
+                      {retired && <em>inactive</em>}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="sf-card">
+          <header className="sf-card-head">
+            <h2>Usage &amp; validity</h2>
+            <p>Limits are optional — leave blank for unlimited.</p>
+          </header>
+
+          <div className="sf-grid sf-grid--2">
+            <div className="sf-field">
+              <label htmlFor="totalUsageLimit">Total usage limit</label>
+              <input
+                id="totalUsageLimit"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="Unlimited"
+                value={form.totalUsageLimit}
+                onChange={(e) => setField('totalUsageLimit', e.target.value)}
+                disabled={Boolean(saving)}
               />
             </div>
 
-            <div className="form-group">
-              <label className="form-label" htmlFor="bannerImageUrl">Banner image URL</label>
-              <div className="input-wrapper">
-                <input
-                  type="url"
-                  id="bannerImageUrl"
-                  className="form-input"
-                  placeholder="https://..."
-                  value={formData.bannerImageUrl}
-                  onChange={(e) => handleInputChange('bannerImageUrl', e.target.value)}
-                />
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 }}>
-                <label className="btn btn-secondary" style={{ margin: 0, cursor: uploadingBanner ? 'wait' : 'pointer' }}>
-                  {uploadingBanner ? <Loader2 size={16} className="spin-icon" /> : null}
-                  {uploadingBanner ? 'Uploading...' : 'Upload image'}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    hidden
-                    disabled={uploadingBanner}
-                    onChange={handleBannerUpload}
-                  />
-                </label>
-                {formData.bannerImageUrl ? (
-                  <img
-                    src={formData.bannerImageUrl}
-                    alt="Banner preview"
-                    style={{ height: 56, borderRadius: 8, objectFit: 'cover', background: '#f3f4f6' }}
-                  />
-                ) : null}
-              </div>
-              <span className="helper-text">Optional. If empty, the customer app uses the default banner image.</span>
+            <div className="sf-field">
+              <label htmlFor="limitPerUser">Limit per customer</label>
+              <input
+                id="limitPerUser"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="Unlimited"
+                value={form.limitPerUser}
+                onChange={(e) => setField('limitPerUser', e.target.value)}
+                disabled={Boolean(saving)}
+              />
             </div>
           </div>
-        </div>
 
-        {/* Actions */}
-        <div className="form-actions">
+          <div className="sf-grid sf-grid--2">
+            <div className="sf-field">
+              <label htmlFor="minOrderValue">Minimum order value</label>
+              <div className="sf-input-affix">
+                <span className="sf-affix riyal-symbol">&#x20C1;</span>
+                <input
+                  id="minOrderValue"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="No minimum"
+                  value={form.minOrderValue}
+                  onChange={(e) => setField('minOrderValue', e.target.value)}
+                  disabled={Boolean(saving)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="sf-grid sf-grid--2">
+            <div className="sf-field">
+              <label htmlFor="validFrom">Valid from</label>
+              <input
+                id="validFrom"
+                type="date"
+                value={form.validFrom}
+                onChange={(e) => setField('validFrom', e.target.value)}
+                disabled={Boolean(saving)}
+              />
+            </div>
+
+            <div className="sf-field">
+              <label htmlFor="validTo">Valid to</label>
+              <input
+                id="validTo"
+                type="date"
+                value={form.validTo}
+                onChange={(e) => setField('validTo', e.target.value)}
+                disabled={Boolean(saving)}
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="sf-card">
+          <header className="sf-card-head">
+            <h2>Home banner</h2>
+            <p>How this promotion appears on the customer app home screen.</p>
+          </header>
+
+          <label className="sf-toggle">
+            <input
+              type="checkbox"
+              checked={form.showOnHome}
+              onChange={(e) => setField('showOnHome', e.target.checked)}
+              disabled={Boolean(saving)}
+            />
+            <span className="sf-toggle-track"><span className="sf-toggle-thumb" /></span>
+            <span className="sf-toggle-copy">
+              <strong>Show on home</strong>
+              <em>Turn off to keep the coupon usable without featuring it on the carousel.</em>
+            </span>
+          </label>
+
+          <div className="sf-grid sf-grid--2">
+            <div className="sf-field">
+              <label htmlFor="bannerBadge">Badge text</label>
+              <input
+                id="bannerBadge"
+                type="text"
+                placeholder="e.g. 20% off"
+                value={form.bannerBadge}
+                onChange={(e) => setField('bannerBadge', e.target.value)}
+                disabled={Boolean(saving)}
+              />
+            </div>
+
+            <div className="sf-field">
+              <label htmlFor="bannerSortOrder">Sort order</label>
+              <input
+                id="bannerSortOrder"
+                type="number"
+                min="0"
+                step="1"
+                value={form.bannerSortOrder}
+                onChange={(e) => setField('bannerSortOrder', e.target.value)}
+                disabled={Boolean(saving)}
+              />
+              <span className="sf-hint">Lower numbers appear first.</span>
+            </div>
+          </div>
+
+          <div className="sf-field">
+            <label htmlFor="bannerTitle">Banner title</label>
+            <input
+              id="bannerTitle"
+              type="text"
+              placeholder="e.g. 20% Off First Booking"
+              value={form.bannerTitle}
+              onChange={(e) => setField('bannerTitle', e.target.value)}
+              disabled={Boolean(saving)}
+            />
+          </div>
+
+          <div className="sf-field">
+            <label htmlFor="bannerSubtitle">Banner subtitle</label>
+            <input
+              id="bannerSubtitle"
+              type="text"
+              placeholder="e.g. New customers get 20% off their first service"
+              value={form.bannerSubtitle}
+              onChange={(e) => setField('bannerSubtitle', e.target.value)}
+              disabled={Boolean(saving)}
+            />
+          </div>
+
+          <div className="sf-field">
+            <label htmlFor="bannerImageUrl">Banner image</label>
+            <input
+              id="bannerImageUrl"
+              type="url"
+              placeholder="https://…"
+              value={form.bannerImageUrl}
+              onChange={(e) => setField('bannerImageUrl', e.target.value)}
+              disabled={Boolean(saving)}
+            />
+            <div className="cp-upload-row">
+              <label className={`sf-btn sf-btn--secondary cp-upload ${uploading ? 'is-busy' : ''}`}>
+                {uploading ? <Loader2 size={15} className="spin" /> : <Upload size={15} />}
+                {uploading ? 'Uploading…' : 'Upload image'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  disabled={uploading || Boolean(saving)}
+                  onChange={handleBannerUpload}
+                />
+              </label>
+
+              {form.bannerImageUrl && (
+                <div className="cp-preview">
+                  <img src={form.bannerImageUrl} alt="Banner preview" />
+                  <button
+                    type="button"
+                    className="cp-preview-clear"
+                    onClick={() => setField('bannerImageUrl', '')}
+                    title="Remove image"
+                    aria-label="Remove banner image"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              )}
+            </div>
+            <span className="sf-hint">Optional — the app falls back to a default image.</span>
+          </div>
+        </section>
+
+        <div className="sf-actions">
           <button
             type="button"
-            className="btn btn-ghost"
+            className="sf-btn sf-btn--secondary"
             onClick={() => navigate('/admin/promotions')}
-            disabled={saving}
+            disabled={Boolean(saving)}
           >
             Cancel
           </button>
           <button
             type="button"
-            className="btn btn-secondary"
+            className="sf-btn sf-btn--secondary"
             onClick={() => handleSubmit('draft')}
-            disabled={saving}
+            disabled={Boolean(saving)}
           >
-            {saving ? <Loader2 size={16} className="spin-icon" /> : null}
-            {isEdit ? 'Save as Draft' : 'Save Draft'}
+            {saving === 'draft' ? <><Loader2 size={16} className="spin" /> Saving…</> : 'Save as draft'}
           </button>
           <button
             type="button"
-            className="btn btn-primary"
+            className="sf-btn sf-btn--primary"
             onClick={() => handleSubmit('activate')}
-            disabled={saving}
+            disabled={Boolean(saving)}
           >
-            {saving ? <Loader2 size={16} className="spin-icon" /> : <Check size={18} />}
-            {isEdit ? 'Update & Activate' : 'Activate Promotion'}
+            {saving === 'activate'
+              ? <><Loader2 size={16} className="spin" /> Saving…</>
+              : <><Check size={16} /> {isEdit ? 'Save & activate' : 'Create & activate'}</>}
           </button>
         </div>
       </form>

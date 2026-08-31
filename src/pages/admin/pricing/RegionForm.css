@@ -1,0 +1,7 @@
+/* Shared form primitives (.sf-*) live in ../adminForm.css. */
+
+.region-form-page {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}

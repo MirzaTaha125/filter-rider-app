@@ -1,220 +1,201 @@
-import { useState, useEffect } from 'react'
-import { Edit, Plus, X, Save, Trash2, Loader2 } from 'lucide-react'
-import { getSizeCategories, createSizeCategory, updateSizeCategory, deleteSizeCategory } from '../../../api'
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  Plus, Pencil, Trash2, Ruler, Loader2, AlertTriangle, Search,
+} from 'lucide-react'
+import ConfirmDialog from '../../../components/ConfirmDialog/ConfirmDialog'
+import { getSizeCategories, deleteSizeCategory } from '../../../api'
 import './SizeCategories.css'
 
+function toArray(value) {
+  return Array.isArray(value) ? value : []
+}
+
+function describeMultiplier(value) {
+  const n = Number(value)
+  if (Number.isNaN(n)) return '—'
+  if (n === 1) return 'Standard price'
+  if (n === 0) return 'Free'
+  const pct = Number(Math.abs((n - 1) * 100).toFixed(1))
+  return n > 1 ? `+${pct}%` : `−${pct}%`
+}
+
 function SizeCategories() {
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingSize, setEditingSize] = useState(null)
-  const [sizeCategories, setSizeCategories] = useState([])
+  const navigate = useNavigate()
+
+  const [sizes, setSizes] = useState([])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [formData, setFormData] = useState({
-    name: '',
-    multiplier: ''
-  })
+  const [search, setSearch] = useState('')
+  const [confirm, setConfirm] = useState(null)
 
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  const loadData = async () => {
-    setLoading(true)
+  const loadData = useCallback(async () => {
     setError('')
     try {
-      const data = await getSizeCategories()
-      setSizeCategories(data || [])
+      setSizes(toArray(await getSizeCategories()))
     } catch (err) {
       setError(err.message || 'Failed to load size categories')
+      setSizes([])
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const openModal = (size = null) => {
-    if (size) {
-      setEditingSize(size)
-      setFormData({
-        name: size.name,
-        multiplier: size.multiplier.toString()
-      })
-    } else {
-      setEditingSize(null)
-      setFormData({
-        name: '',
-        multiplier: ''
-      })
-    }
-    setError('')
-    setIsModalOpen(true)
-  }
+  useEffect(() => { loadData() }, [loadData])
 
-  const closeModal = () => {
-    setIsModalOpen(false)
-    setEditingSize(null)
-    setFormData({
-      name: '',
-      multiplier: ''
+  const askDelete = (size) => {
+    setConfirm({
+      size,
+      message: `Delete "${size.name}"? This is blocked if the size is used by the pricing matrix or by any customer vehicle.`,
     })
   }
 
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
-  }
-
-  const handleSave = async () => {
-    setSaving(true)
-    setError('')
+  const handleDelete = async (size) => {
+    const previous = sizes
+    setSizes(list => list.filter(s => s.id !== size.id))
     try {
-      const payload = {
-        name: formData.name,
-        multiplier: formData.multiplier
-      }
-
-      if (editingSize) {
-        await updateSizeCategory(editingSize.id, payload)
-      } else {
-        await createSizeCategory(payload)
-      }
-      await loadData()
-      closeModal()
+      await deleteSizeCategory(size.id)
     } catch (err) {
-      setError(err.message || 'Failed to save size category')
-    } finally {
-      setSaving(false)
+      // The API refuses to delete a size that is still referenced, and explains why.
+      setSizes(previous)
+      setError(err.message || 'Failed to delete size category')
     }
   }
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this size category?')) {
-      try {
-        await deleteSizeCategory(id)
-        await loadData()
-      } catch (err) {
-        alert(err.message || 'Failed to delete size category')
-      }
-    }
-  }
+  const term = search.trim().toLowerCase()
+  const visibleSizes = sizes.filter(size =>
+    !term || (size.name || '').toLowerCase().includes(term),
+  )
 
   return (
     <div className="size-categories">
-      <div className="size-categories-header-content">
+      <header className="sz-header">
         <div>
-          <h1 className="size-categories-title">Size Categories</h1>
-          <p className="size-categories-subtitle">Configure size categories and their pricing multipliers</p>
+          <h1 className="sz-title">Size Categories</h1>
+          <p className="sz-subtitle">Groups assets by size and scales the price accordingly.</p>
         </div>
-        <button className="btn-add-size" onClick={() => openModal()}>
+        <button
+          className="sz-btn sz-btn--primary"
+          onClick={() => navigate('/admin/assets/sizes/add')}
+        >
           <Plus size={18} />
-          <span>Add Category</span>
+          Add Category
         </button>
+      </header>
+
+      <div className="sz-toolbar">
+        <div className="sz-search">
+          <Search size={16} />
+          <input
+            type="search"
+            placeholder="Search size categories…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <span className="sz-count">
+          {loading ? '—' : `${sizes.length} categor${sizes.length === 1 ? 'y' : 'ies'}`}
+        </span>
       </div>
 
-      {error && !isModalOpen && <p className="api-error">{error}</p>}
+      {error && (
+        <div className="sz-alert">
+          <AlertTriangle size={16} />
+          <span>{error}</span>
+          <button onClick={() => setError('')} aria-label="Dismiss">×</button>
+        </div>
+      )}
 
-      <div className="sizes-section">
-        {loading ? (
-          <div className="loading-state">
-            <Loader2 className="animate-spin" size={32} />
-            <p>Loading size categories...</p>
-          </div>
-        ) : (
-          <div className="sizes-grid">
-            {sizeCategories.map((size) => (
-              <div key={size.id} className="size-card">
-                <div className="size-name">{size.name}</div>
-                <div className="size-multiplier">Multiplier: {size.multiplier}x</div>
-                <div className="size-actions">
-                  <button className="btn-edit" onClick={() => openModal(size)}>
-                    <Edit size={16} />
-                    Edit
-                  </button>
-                  <button className="btn-delete" onClick={() => handleDelete(size.id)}>
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-            ))}
-            {sizeCategories.length === 0 && !error && (
-              <div className="no-data">No size categories found.</div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Add/Edit Size Category Modal */}
-      {isModalOpen && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-content size-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="modal-title-section">
-                <h2 className="modal-title">
-                  {editingSize ? 'Edit Size Category' : 'Add New Size Category'}
-                </h2>
-              </div>
-              <button className="modal-close-btn" onClick={closeModal}>
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="modal-body">
-              {error && <p className="api-error">{error}</p>}
-              <div className="size-form">
-                <div className="form-group">
-                  <label htmlFor="size-name">Category Name</label>
-                  <input
-                    type="text"
-                    id="size-name"
-                    className="form-input"
-                    placeholder="e.g. SMALL, MEDIUM, LARGE"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value.toUpperCase())}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="multiplier">Multiplier</label>
-                  <div className="input-with-suffix">
-                    <input
-                      type="number"
-                      id="multiplier"
-                      className="form-input"
-                      placeholder="0.0"
-                      step="0.01"
-                      min="0"
-                      value={formData.multiplier}
-                      onChange={(e) => handleInputChange('multiplier', e.target.value)}
-                    />
-                    <span className="input-suffix">x</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button className="btn-secondary" onClick={closeModal} disabled={saving}>
-                Cancel
-              </button>
-              <button className="btn-primary" onClick={handleSave} disabled={saving || !formData.name || !formData.multiplier}>
-                {saving ? (
-                  <>
-                    <Loader2 className="animate-spin" size={18} />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save size={18} />
-                    {editingSize ? 'Update Category' : 'Add Category'}
-                  </>
-                )}
-              </button>
-            </div>
+      {loading ? (
+        <div className="sz-state">
+          <Loader2 size={32} className="spin" />
+          <span>Loading size categories…</span>
+        </div>
+      ) : sizes.length === 0 ? (
+        <div className="sz-state">
+          <Ruler size={32} />
+          <h2>No size categories yet</h2>
+          <p>Create one to price the same service differently by asset size.</p>
+          <button className="sz-btn sz-btn--primary" onClick={() => navigate('/admin/assets/sizes/add')}>
+            <Plus size={16} /> Add Category
+          </button>
+        </div>
+      ) : visibleSizes.length === 0 ? (
+        <div className="sz-state">
+          <Search size={32} />
+          <h2>No matches</h2>
+          <p>No size categories match “{search.trim()}”.</p>
+        </div>
+      ) : (
+        <div className="sz-table-card">
+          <div className="sz-table-wrap">
+            <table className="sz-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Multiplier</th>
+                  <th>Effect on price</th>
+                  <th aria-label="Actions" />
+                </tr>
+              </thead>
+              <tbody>
+                {visibleSizes.map(size => {
+                  const n = Number(size.multiplier)
+                  return (
+                    <tr key={size.id}>
+                      <td>
+                        <span className="sz-cell-name">
+                          <Ruler size={15} />
+                          {size.name}
+                        </span>
+                      </td>
+                      <td className="sz-cell-multiplier">{Number(size.multiplier)}×</td>
+                      <td>
+                        <span className={`sz-effect ${n > 1 ? 'is-up' : n < 1 ? 'is-down' : 'is-flat'}`}>
+                          {describeMultiplier(size.multiplier)}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="sz-row-actions">
+                          <button
+                            className="sz-icon-btn"
+                            onClick={() => navigate(`/admin/assets/sizes/${size.id}/edit`)}
+                            title={`Edit ${size.name}`}
+                            aria-label={`Edit ${size.name}`}
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            className="sz-icon-btn sz-icon-btn--danger"
+                            onClick={() => askDelete(size)}
+                            title={`Delete ${size.name}`}
+                            aria-label={`Delete ${size.name}`}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirm)}
+        title="Delete size category"
+        message={confirm?.message}
+        confirmLabel="Delete category"
+        onCancel={() => setConfirm(null)}
+        onConfirm={() => {
+          const pending = confirm
+          setConfirm(null)
+          if (pending) handleDelete(pending.size)
+        }}
+      />
     </div>
   )
 }

@@ -1,22 +1,28 @@
 import { apiRequest } from './client.js';
 
 /**
- * List users (admin) – filter by role e.g. role=provider for service providers
- * Query: role, page, limit, search, status, zone, availability
+ * GET /admin/users – List users (admin), e.g. for the role-assignment picker.
+ * Query: audience ('admin' | 'customer' | 'provider'), role, page, limit, search, status
+ * `audience=admin` returns everyone holding a role other than CUSTOMER/PROVIDER.
+ * Returns { data: [...], meta: { total, page, limit, total_pages } }
  */
 export async function getUsers(params = {}) {
   const query = new URLSearchParams();
+  if (params.audience) query.append('audience', params.audience);
   if (params.role) query.append('role', params.role);
   if (params.page) query.append('page', params.page);
   if (params.limit) query.append('limit', params.limit);
   if (params.search) query.append('search', params.search);
   if (params.status && params.status !== 'All') query.append('status', params.status);
-  if (params.zone && params.zone !== 'All Zones') query.append('zone', params.zone);
-  if (params.availability && params.availability !== 'All') query.append('availability', params.availability);
 
   const queryString = query.toString();
-  const url = `/users${queryString ? `?${queryString}` : ''}`;
+  const url = `/admin/users${queryString ? `?${queryString}` : ''}`;
   return apiRequest(url);
+}
+
+/** GET /admin/users/{id} – Single user with their roles (admin) */
+export async function getUser(userId) {
+  return apiRequest(`/admin/users/${userId}`);
 }
 
 /**

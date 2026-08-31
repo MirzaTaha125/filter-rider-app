@@ -45,9 +45,60 @@
 .kpi-icon-wrapper.orders,
 .kpi-icon-wrapper.revenue,
 .kpi-icon-wrapper.sales,
-.kpi-icon-wrapper.sps {
+.kpi-icon-wrapper.sps,
+.kpi-icon-wrapper.services,
+.kpi-icon-wrapper.customers,
+.kpi-icon-wrapper.zones {
   background: var(--primary-soft);
   color: #b8860b;
+}
+
+/* Dispute cards carry their own tone so an at-a-glance scan separates
+   "needs attention" from "already closed". */
+.kpi-icon-wrapper.disputes {
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+}
+
+.kpi-icon-wrapper.resolved {
+  background: rgba(22, 163, 74, 0.13);
+  color: #15803d;
+}
+
+.kpi-icon-wrapper.rejected {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+
+body.dark-mode .kpi-icon-wrapper.disputes { color: #fbbf24; }
+body.dark-mode .kpi-icon-wrapper.resolved { color: #4ade80; }
+body.dark-mode .kpi-icon-wrapper.rejected { color: #f87171; }
+
+/* Shown when a role holds no dashboard permissions at all. */
+.dash-locked {
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px dashed var(--border-base);
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1.5rem;
+  padding: 3rem 1.5rem;
+  text-align: center;
+}
+
+.dash-locked h2 {
+  color: var(--text-main);
+  font-size: 1.05rem;
+  margin: 0.5rem 0 0;
+}
+
+.dash-locked p {
+  font-size: 0.875rem;
+  margin: 0;
+  max-width: 46ch;
 }
 
 .kpi-content {
@@ -365,12 +416,29 @@
   font-weight: 700;
 }
 
+/* Each figure gets its own colour — blue and orange both resolved to the
+   brand yellow before, so the rows were impossible to tell apart. */
 .live-activity-value.blue {
-  color: var(--primary-color);
+  color: var(--info);
 }
 
 .live-activity-value.orange {
   color: var(--primary-color);
+}
+
+.live-activity-value.purple {
+  color: #8b5cf6;
+}
+
+.live-activity-value.green {
+  color: var(--success);
+}
+
+.live-activity-progress-note {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
 }
 
 .live-activity-progress {
@@ -412,8 +480,16 @@
 .trends-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 1rem;
   margin-bottom: 1.5rem;
+}
+
+.trends-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
 }
 
 .trends-title {
@@ -421,6 +497,20 @@
   font-weight: 700;
   color: var(--text-main);
   margin: 0;
+}
+
+.trends-summary {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+}
+
+.trends-summary-sub {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
 }
 
 .trends-dropdown {
@@ -458,6 +548,22 @@
   width: 100%;
   height: 250px;
   padding: 0.5rem 0;
+}
+
+.chart-empty {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.chart-empty p {
+  margin: 0;
+  font-size: 0.85rem;
 }
 
 /* Recharts custom styles */
@@ -631,4 +737,60 @@
     right: auto;
     margin-top: 1rem;
   }
+}
+
+/* ── Operations map: legend pin + marker tooltips ──────────────────────── */
+
+.legend-pin {
+  width: 10px;
+  height: 14px;
+  background: #2563eb;
+  border-radius: 50% 50% 50% 50% / 42% 42% 58% 58%;
+  clip-path: polygon(50% 100%, 0 42%, 0 0, 100% 0, 100% 42%);
+  flex-shrink: 0;
+}
+
+/* InfoWindow content is injected as raw HTML, so these are global. */
+.map-tip {
+  font-family: var(--font-sans);
+  min-width: 180px;
+  padding: 2px 4px 4px;
+}
+
+.map-tip-title {
+  color: #111827;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.map-tip-row {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.map-tip-row span {
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.map-tip-row strong {
+  color: #111827;
+  font-weight: 600;
+  text-align: right;
+  word-break: break-word;
+}
+
+.map-plot-count {
+  background: var(--border-light);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 3px 10px;
+  white-space: nowrap;
 }

@@ -119,6 +119,35 @@
   min-height: 0;
 }
 
+.sidebar-nav-notice {
+  margin: 0 0 0.5rem;
+  padding: 0.6rem 0.75rem;
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.sidebar-nav-notice--warn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: flex-start;
+  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.sidebar-nav-notice--warn button {
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 0.15rem 0.5rem;
+}
+
 .sidebar-nav::-webkit-scrollbar {
   width: 5px;
 }

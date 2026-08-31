@@ -1,360 +1,254 @@
-import { useState, useEffect } from "react";
-import { Plus, Edit, Trash2, X } from "lucide-react";
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  Plus, Pencil, Trash2, Loader2, AlertTriangle, PackagePlus, Search,
+} from 'lucide-react'
+import ConfirmDialog from '../../../components/ConfirmDialog/ConfirmDialog'
 import {
   getServices,
   getServiceAddons,
-  createServiceAddon,
-  updateServiceAddon,
   deleteServiceAddon,
-} from "../../../api";
-import "./AddonsManagement.css";
+} from '../../../api'
+import './AddonsManagement.css'
+
+function toArray(value) {
+  return Array.isArray(value) ? value : []
+}
 
 function AddonsManagement() {
-  const [services, setServices] = useState([]);
-  const [addonsByService, setAddonsByService] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingAddon, setEditingAddon] = useState(null);
-  const [selectedServiceId, setSelectedServiceId] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [formData, setFormData] = useState({
-    serviceId: "",
-    name: "",
-    nameAr: "",
-    price: "",
-    duration: "",
-  });
+  const navigate = useNavigate()
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const [services, setServices] = useState([])
+  const [addonsByService, setAddonsByService] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [search, setSearch] = useState('')
+  const [confirm, setConfirm] = useState(null)
 
-  async function loadData() {
-    setLoading(true);
-    setError("");
+  const loadData = useCallback(async () => {
+    setError('')
     try {
-      const svcs = await getServices(null, true);
-      const list = Array.isArray(svcs) ? svcs : [];
-      setServices(list);
-      setAddonsByService({});
-      setLoading(false);
-      Promise.all(
-        list.map(async (s) => {
-          try {
-            const addons = await getServiceAddons(s.id, true);
-            return { id: s.id, addons: Array.isArray(addons) ? addons : [] };
-          } catch {
-            return { id: s.id, addons: [] };
-          }
-        })
-      ).then((results) => {
-        setAddonsByService(
-          Object.fromEntries(results.map((r) => [r.id, r.addons]))
-        );
-      });
+      const serviceList = toArray(await getServices(null, true))
+      setServices(serviceList)
+
+      const results = await Promise.allSettled(
+        serviceList.map(s => getServiceAddons(s.id, true)),
+      )
+      setAddonsByService(
+        Object.fromEntries(
+          serviceList.map((s, i) => [
+            s.id,
+            results[i].status === 'fulfilled' ? toArray(results[i].value) : [],
+          ]),
+        ),
+      )
     } catch (err) {
-      setError(err.message || "Failed to load add-ons");
-      setServices([]);
-      setAddonsByService({});
+      setError(err.message || 'Failed to load add-ons')
+      setServices([])
+      setAddonsByService({})
     } finally {
-      setLoading(false);
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { loadData() }, [loadData])
+
+  const askDelete = (addon, service) => {
+    setConfirm({
+      addon,
+      serviceId: service.id,
+      message: `Delete "${addon.name_en}" from ${service.name_en}? This cannot be undone.`,
+    })
+  }
+
+  const handleDelete = async (addon, serviceId) => {
+    const previous = addonsByService
+    setAddonsByService(prev => ({
+      ...prev,
+      [serviceId]: toArray(prev[serviceId]).filter(a => a.id !== addon.id),
+    }))
+    try {
+      await deleteServiceAddon(addon.id)
+    } catch (err) {
+      setAddonsByService(previous)
+      setError(err.message || 'Failed to delete add-on')
     }
   }
 
-  const toFrontendAddon = (item) => ({
-    id: item.id,
-    name: item.name_en || item.name,
-    nameAr: item.name_ar || item.nameAr,
-    price: parseFloat(item.price || 0),
-    duration: parseInt(item.additional_duration || item.duration || 0, 10),
-  });
+  const term = search.trim().toLowerCase()
+  const matches = (addon) =>
+    !term ||
+    (addon.name_en || '').toLowerCase().includes(term) ||
+    (addon.name_ar || '').toLowerCase().includes(term)
 
-  const openModal = (addon = null, serviceId = null) => {
-    if (addon && serviceId) {
-      setEditingAddon(addon);
-      setSelectedServiceId(serviceId);
-      setFormData({
-        serviceId,
-        name: addon.name,
-        nameAr: addon.nameAr || "",
-        price: String(addon.price ?? ""),
-        duration: String(addon.duration ?? ""),
-      });
-    } else {
-      setEditingAddon(null);
-      setSelectedServiceId(null);
-      setFormData({
-        serviceId: services[0]?.id || "",
-        name: "",
-        nameAr: "",
-        price: "",
-        duration: "",
-      });
-    }
-    setError("");
-    setIsModalOpen(true);
-  };
+  // When searching, hide services that have nothing left to show.
+  const visibleServices = services.filter(service => {
+    if (!term) return true
+    return toArray(addonsByService[service.id]).some(matches)
+  })
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingAddon(null);
-    setSelectedServiceId(null);
-    setFormData({
-      serviceId: "",
-      name: "",
-      nameAr: "",
-      price: "",
-      duration: "",
-    });
-  };
+  const totalAddons = Object.values(addonsByService).reduce((n, list) => n + toArray(list).length, 0)
 
-  const handleInputChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleSave = async () => {
-    if (!formData.serviceId || !formData.name) return;
-    setSaving(true);
-    setError("");
-    try {
-      if (editingAddon && selectedServiceId) {
-        await updateServiceAddon(editingAddon.id, {
-          name: formData.name,
-          nameAr: formData.nameAr,
-          price: formData.price,
-          duration: formData.duration,
-        });
-      } else {
-        await createServiceAddon({
-          serviceId: formData.serviceId,
-          name: formData.name,
-          nameAr: formData.nameAr,
-          price: formData.price,
-          duration: formData.duration,
-        });
-      }
-      await loadData();
-      closeModal();
-    } catch (err) {
-      setError(err.message || "Failed to save add-on");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (addonId, serviceId) => {
-    if (!window.confirm("Are you sure you want to delete this add-on?")) return;
-    setError("");
-    const prev = { ...addonsByService };
-    setAddonsByService((p) => ({
-      ...p,
-      [serviceId]: (p[serviceId] || []).filter((a) => a.id !== addonId),
-    }));
-    try {
-      await deleteServiceAddon(addonId);
-    } catch (err) {
-      setAddonsByService(prev);
-      setError(err.message || "Failed to delete add-on");
-    }
-  };
+  const formatPrice = (value) =>
+    Number(value ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
   return (
     <div className="addons-management">
-      <div className="addons-header-content">
+      <header className="am-header">
         <div>
-          <h1 className="addons-title">Service Add-ons</h1>
-          <p className="addons-subtitle">Manage add-ons for each service</p>
+          <h1 className="am-title">Service Add-ons</h1>
+          <p className="am-subtitle">Optional extras customers can add to a service when booking.</p>
         </div>
         <button
-          className="btn-add-addon"
-          onClick={() => openModal()}
+          className="am-btn am-btn--primary"
+          onClick={() => navigate('/admin/services/addons/add')}
           disabled={services.length === 0}
         >
           <Plus size={18} />
-          <span>Add Add-on</span>
+          Add Add-on
         </button>
+      </header>
+
+      <div className="am-toolbar">
+        <div className="am-search">
+          <Search size={16} />
+          <input
+            type="search"
+            placeholder="Search add-ons…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <span className="am-count">
+          {loading ? '—' : `${totalAddons} add-on${totalAddons === 1 ? '' : 's'} across ${services.length} service${services.length === 1 ? '' : 's'}`}
+        </span>
       </div>
 
-      {error && !isModalOpen && <p className="api-error">{error}</p>}
+      {error && (
+        <div className="am-alert">
+          <AlertTriangle size={16} />
+          <span>{error}</span>
+        </div>
+      )}
+
       {loading ? (
-        <p className="loading-message loading-shimmer">Loading add-ons...</p>
+        <div className="am-state">
+          <Loader2 size={32} className="spin" />
+          <span>Loading add-ons…</span>
+        </div>
+      ) : services.length === 0 ? (
+        <div className="am-state">
+          <PackagePlus size={32} />
+          <h2>No services yet</h2>
+          <p>Add-ons attach to a service, so create a service first.</p>
+          <button className="am-btn am-btn--primary" onClick={() => navigate('/admin/services/add')}>
+            <Plus size={16} /> Add Service
+          </button>
+        </div>
+      ) : visibleServices.length === 0 ? (
+        <div className="am-state">
+          <Search size={32} />
+          <h2>No matches</h2>
+          <p>No add-ons match “{search.trim()}”.</p>
+        </div>
       ) : (
-        <div className="addons-sections content-fade-in">
-          {services.map((service) => {
-            const addons = (addonsByService[service.id] || []).map(
-              toFrontendAddon
-            );
+        <div className="am-sections">
+          {visibleServices.map(service => {
+            const addons = toArray(addonsByService[service.id]).filter(matches)
             return (
-              <div key={service.id} className="addon-section">
-                <h3 className="addon-section-title">
-                  {service.name_en || service.name}
-                </h3>
-                <div className="addons-table-wrapper">
-                  <table className="addons-table">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Name (Arabic)</th>
-                        <th>Price</th>
-                        <th>Duration</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {addons.length === 0 ? (
+              <section key={service.id} className="am-section">
+                <header className="am-section-head">
+                  <div>
+                    <h2 className="am-section-title">{service.name_en}</h2>
+                    <p className="am-section-meta">
+                      {addons.length} add-on{addons.length === 1 ? '' : 's'}
+                    </p>
+                  </div>
+                  <button
+                    className="am-btn am-btn--ghost"
+                    onClick={() => navigate(`/admin/services/addons/add?serviceId=${service.id}`)}
+                  >
+                    <Plus size={15} /> Add
+                  </button>
+                </header>
+
+                {addons.length === 0 ? (
+                  <p className="am-empty">No add-ons for this service yet.</p>
+                ) : (
+                  <div className="am-table-wrap">
+                    <table className="am-table">
+                      <thead>
                         <tr>
-                          <td colSpan="5">No add-ons</td>
+                          <th>Name</th>
+                          <th>Arabic</th>
+                          <th>Price</th>
+                          <th>Extra time</th>
+                          <th>Status</th>
+                          <th aria-label="Actions" />
                         </tr>
-                      ) : (
-                        addons.map((addon) => (
+                      </thead>
+                      <tbody>
+                        {addons.map(addon => (
                           <tr key={addon.id}>
-                            <td>{addon.name}</td>
-                            <td>{addon.nameAr}</td>
+                            <td className="am-cell-name">{addon.name_en}</td>
+                            <td dir="rtl" className="am-cell-ar">{addon.name_ar || '—'}</td>
                             <td>
-                              <span className="riyal-symbol">&#x20C1;</span>
-                              {(addon.price ?? 0).toFixed(2)}
+                              <span className="riyal-symbol">&#x20C1;</span>{formatPrice(addon.price)}
                             </td>
-                            <td>{addon.duration ?? 0} min</td>
+                            <td>{addon.additional_duration ?? 0} min</td>
                             <td>
-                              <button
-                                className="btn-edit"
-                                onClick={() => openModal(addon, service.id)}
-                              >
-                                <Edit size={14} />
-                              </button>
-                              <button
-                                className="btn-delete"
-                                onClick={() =>
-                                  handleDelete(addon.id, service.id)
-                                }
-                              >
-                                <Trash2 size={14} />
-                              </button>
+                              <span className={`am-badge ${addon.is_active ? 'is-active' : 'is-inactive'}`}>
+                                {addon.is_active ? 'Active' : 'Inactive'}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="am-row-actions">
+                                <button
+                                  className="am-icon-btn"
+                                  onClick={() => navigate(`/admin/services/addons/${addon.id}/edit`, {
+                                    state: { serviceId: service.id },
+                                  })}
+                                  title={`Edit ${addon.name_en}`}
+                                  aria-label={`Edit ${addon.name_en}`}
+                                >
+                                  <Pencil size={15} />
+                                </button>
+                                <button
+                                  className="am-icon-btn am-icon-btn--danger"
+                                  onClick={() => askDelete(addon, service)}
+                                  title={`Delete ${addon.name_en}`}
+                                  aria-label={`Delete ${addon.name_en}`}
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-                <button
-                  className="btn-add-addon-small"
-                  onClick={() => {
-                    setFormData({
-                      serviceId: service.id,
-                      name: "",
-                      nameAr: "",
-                      price: "",
-                      duration: "",
-                    });
-                    setEditingAddon(null);
-                    setSelectedServiceId(null);
-                    setError("");
-                    setIsModalOpen(true);
-                  }}
-                >
-                  <Plus size={14} />
-                  Add Add-on
-                </button>
-              </div>
-            );
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            )
           })}
         </div>
       )}
 
-      {isModalOpen && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 className="modal-title">
-                {editingAddon ? "Edit Add-on" : "Add Add-on"}
-              </h2>
-              <button className="modal-close-btn" onClick={closeModal}>
-                <X size={24} />
-              </button>
-            </div>
-            <div className="modal-body">
-              {error && <p className="api-error">{error}</p>}
-              <div className="form-group">
-                <label>Service</label>
-                <select
-                  className="form-select"
-                  value={formData.serviceId}
-                  onChange={(e) =>
-                    handleInputChange("serviceId", e.target.value)
-                  }
-                  disabled={!!editingAddon}
-                >
-                  {services.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name_en || s.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Name (English)</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange("name", e.target.value)}
-                  placeholder="e.g. Wax"
-                />
-              </div>
-              <div className="form-group">
-                <label>Name (Arabic)</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={formData.nameAr}
-                  onChange={(e) => handleInputChange("nameAr", e.target.value)}
-                  placeholder="e.g. تلميع"
-                />
-              </div>
-              <div className="form-group">
-                <label>Price</label>
-                <input
-                  type="number"
-                  className="form-input"
-                  value={formData.price}
-                  onChange={(e) => handleInputChange("price", e.target.value)}
-                  placeholder="0.00"
-                  step="0.01"
-                />
-              </div>
-              <div className="form-group">
-                <label>Duration (min)</label>
-                <input
-                  type="number"
-                  className="form-input"
-                  value={formData.duration}
-                  onChange={(e) =>
-                    handleInputChange("duration", e.target.value)
-                  }
-                  placeholder="15"
-                  min="0"
-                />
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn-secondary" onClick={closeModal}>
-                Cancel
-              </button>
-              <button
-                className="btn-primary"
-                onClick={handleSave}
-                disabled={saving || !formData.name}
-              >
-                {saving ? "Saving..." : editingAddon ? "Update" : "Add"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={Boolean(confirm)}
+        title="Delete add-on"
+        message={confirm?.message}
+        confirmLabel="Delete add-on"
+        onCancel={() => setConfirm(null)}
+        onConfirm={() => {
+          const pending = confirm
+          setConfirm(null)
+          if (pending) handleDelete(pending.addon, pending.serviceId)
+        }}
+      />
     </div>
-  );
+  )
 }
 
-export default AddonsManagement;
+export default AddonsManagement

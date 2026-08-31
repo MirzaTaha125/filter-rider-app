@@ -14,6 +14,15 @@ export async function getServiceCategories(admin = false) {
   return toList(data);
 }
 
+/**
+ * Single category for the edit form. The admin API exposes no GET /:id, so the
+ * list is filtered instead — it is small and already the page's source of truth.
+ */
+export async function getServiceCategory(id) {
+  const list = await getServiceCategories(true);
+  return list.find((item) => String(item.id) === String(id)) ?? null;
+}
+
 export async function createServiceCategory(payload) {
   const data = await apiRequest('/admin/service-categories', {
     method: 'POST',

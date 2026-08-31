@@ -118,7 +118,7 @@
   padding: 0.5rem 1rem;
   border: 1px solid var(--border-base);
   border-radius: 8px;
-  background: var(--bg-card);
+  background: var(--action-btn-bg);
   color: var(--text-main);
   font-weight: 600;
   font-size: 0.875rem;
@@ -131,7 +131,7 @@
 }
 
 .btn-edit:hover {
-  background: var(--border-light);
+  background: var(--action-btn-bg-hover);
   border-color: var(--border-base);
   transform: translateY(-1px);
 }

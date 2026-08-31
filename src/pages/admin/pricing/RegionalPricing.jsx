@@ -1,35 +1,44 @@
 import { useState, useEffect, useCallback } from 'react'
-import { MapPin, Edit, Plus, X, Save, Trash2 } from 'lucide-react'
-import { getRegionalPricing, createRegionalPricing, updateRegionalPricing, deleteRegionalPricing } from '../../../api/pricing.js'
+import { useNavigate } from 'react-router-dom'
+import {
+  Plus, Pencil, Trash2, MapPin, Loader2, AlertTriangle, Search,
+} from 'lucide-react'
+import ConfirmDialog from '../../../components/ConfirmDialog/ConfirmDialog'
+import { getRegionalPricing, deleteRegionalPricing } from '../../../api/pricing.js'
 import { getZones } from '../../../api/zones.js'
 import './RegionalPricing.css'
 
-const EMPTY_FORM = { zoneId: '', basePrice: '', commissionPercent: '', isActive: true }
+function toZoneList(data) {
+  if (Array.isArray(data)) return data
+  return data?.zones ?? data?.items ?? data?.data ?? []
+}
+
+function toArray(value) {
+  return Array.isArray(value) ? value : []
+}
 
 function RegionalPricing() {
+  const navigate = useNavigate()
+
   const [regions, setRegions] = useState([])
   const [zones, setZones] = useState([])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState(null)
-
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingRegion, setEditingRegion] = useState(null)
-  const [formData, setFormData] = useState(EMPTY_FORM)
+  const [error, setError] = useState('')
+  const [search, setSearch] = useState('')
+  const [confirm, setConfirm] = useState(null)
 
   const loadData = useCallback(async () => {
-    setLoading(true)
-    setError(null)
+    setError('')
     try {
       const [regionsData, zonesData] = await Promise.all([
         getRegionalPricing(),
         getZones(),
       ])
-      setRegions(regionsData)
-      const zoneList = Array.isArray(zonesData) ? zonesData : (zonesData?.zones ?? zonesData?.items ?? [])
-      setZones(zoneList)
+      setRegions(toArray(regionsData))
+      setZones(toZoneList(zonesData))
     } catch (err) {
-      setError(err.message || 'Failed to load data')
+      setError(err.message || 'Failed to load regional pricing')
+      setRegions([])
     } finally {
       setLoading(false)
     }
@@ -37,217 +46,193 @@ function RegionalPricing() {
 
   useEffect(() => { loadData() }, [loadData])
 
-  const openModal = (region = null) => {
-    if (region) {
-      setEditingRegion(region)
-      setFormData({
-        zoneId:            region.zone_id || '',
-        basePrice:         String(parseFloat(region.base_price) || ''),
-        commissionPercent: String(parseFloat(region.commission_percent) || ''),
-        isActive:          region.is_active ?? true,
-      })
-    } else {
-      setEditingRegion(null)
-      setFormData(EMPTY_FORM)
-    }
-    setIsModalOpen(true)
+  const zoneOf = (region) => zones.find(z => z.id === region.zone_id)
+
+  const zoneName = (region) =>
+    region.zone?.zone_name ?? zoneOf(region)?.zone_name ?? '—'
+
+  const zoneCity = (region) =>
+    region.zone?.city ?? zoneOf(region)?.city ?? ''
+
+  const askDelete = (region) => {
+    setConfirm({
+      region,
+      message: `Delete regional pricing for ${zoneName(region)}? Bookings in that zone will fall back to standard platform pricing.`,
+    })
   }
 
-  const closeModal = () => {
-    setIsModalOpen(false)
-    setEditingRegion(null)
-    setFormData(EMPTY_FORM)
-  }
-
-  const handleSave = async () => {
-    if (!formData.zoneId || !formData.basePrice) return
-    setSaving(true)
+  const handleDelete = async (region) => {
+    const previous = regions
+    setRegions(list => list.filter(r => r.id !== region.id))
     try {
-      if (editingRegion) {
-        const updated = await updateRegionalPricing(editingRegion.id, formData)
-        setRegions(prev => prev.map(r => r.id === editingRegion.id ? updated : r))
-      } else {
-        const created = await createRegionalPricing(formData)
-        setRegions(prev => [...prev, created])
-      }
-      closeModal()
+      await deleteRegionalPricing(region.id)
     } catch (err) {
-      setError(err.message || 'Failed to save')
-    } finally {
-      setSaving(false)
+      setRegions(previous)
+      setError(err.message || 'Failed to delete regional pricing')
     }
   }
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this regional pricing?')) return
-    try {
-      await deleteRegionalPricing(id)
-      setRegions(prev => prev.filter(r => r.id !== id))
-    } catch (err) {
-      setError(err.message || 'Failed to delete')
-    }
-  }
+  const term = search.trim().toLowerCase()
+  const visibleRegions = regions.filter(region =>
+    !term ||
+    zoneName(region).toLowerCase().includes(term) ||
+    String(zoneCity(region)).toLowerCase().includes(term),
+  )
 
-  const getZoneName = (region) =>
-    region.zone?.zone_name || region.zone?.city || zones.find(z => z.id === region.zone_id)?.zone_name || '—'
+  const formatPrice = (value) =>
+    Number(value ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-  // Zones not yet assigned (only for create form)
-  const assignedZoneIds = new Set(regions.map(r => r.zone_id))
-  const availableZones = editingRegion ? zones : zones.filter(z => !assignedZoneIds.has(z.id))
+  const unpricedZones = zones.length - regions.length
 
   return (
     <div className="regional-pricing">
-      <div className="regional-pricing-header-content">
+      <header className="rp-header">
         <div>
-          <h1 className="regional-pricing-title">Regional Pricing</h1>
-          <p className="regional-pricing-subtitle">Set different pricing and fees per city/region</p>
+          <h1 className="rp-title">Regional Pricing</h1>
+          <p className="rp-subtitle">Per-zone base price and commission overrides.</p>
         </div>
-        <button className="btn-add-region" onClick={() => openModal()}>
+        <button
+          className="rp-btn rp-btn--primary"
+          onClick={() => navigate('/admin/pricing/regional/add')}
+          disabled={loading || zones.length === 0 || unpricedZones <= 0}
+        >
           <Plus size={18} />
-          <span>Add Region</span>
+          Add Region
         </button>
+      </header>
+
+      <div className="rp-toolbar">
+        <div className="rp-search">
+          <Search size={16} />
+          <input
+            type="search"
+            placeholder="Search by zone or city…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <span className="rp-count">
+          {loading
+            ? '—'
+            : `${regions.length} of ${zones.length} zone${zones.length === 1 ? '' : 's'} configured`}
+        </span>
       </div>
 
       {error && (
-        <div className="regional-error">
-          {error}
-          <button onClick={() => setError(null)}><X size={14} /></button>
+        <div className="rp-alert">
+          <AlertTriangle size={16} />
+          <span>{error}</span>
         </div>
       )}
 
-      <div className="regional-config-section">
-        <div className="config-card">
-          <div className="config-card-header">
-            <div className="config-icon">
-              <MapPin size={24} />
-            </div>
-            <div>
-              <h3 className="config-title">Regional Pricing</h3>
-              <p className="config-description">Set different pricing and fees per city/region</p>
-            </div>
+      {loading ? (
+        <div className="rp-state">
+          <Loader2 size={32} className="spin" />
+          <span>Loading regional pricing…</span>
+        </div>
+      ) : zones.length === 0 ? (
+        <div className="rp-state">
+          <MapPin size={32} />
+          <h2>No zones yet</h2>
+          <p>Regional pricing attaches to a zone, so create a zone first.</p>
+          <button className="rp-btn rp-btn--primary" onClick={() => navigate('/admin/zones')}>
+            Go to Zones
+          </button>
+        </div>
+      ) : regions.length === 0 ? (
+        <div className="rp-state">
+          <MapPin size={32} />
+          <h2>No regional pricing yet</h2>
+          <p>Every zone currently uses the standard platform pricing.</p>
+          <button className="rp-btn rp-btn--primary" onClick={() => navigate('/admin/pricing/regional/add')}>
+            <Plus size={16} /> Add Region
+          </button>
+        </div>
+      ) : visibleRegions.length === 0 ? (
+        <div className="rp-state">
+          <Search size={32} />
+          <h2>No matches</h2>
+          <p>No regions match “{search.trim()}”.</p>
+        </div>
+      ) : (
+        <div className="rp-table-card">
+          <div className="rp-table-wrap">
+            <table className="rp-table">
+              <thead>
+                <tr>
+                  <th>Zone</th>
+                  <th>City</th>
+                  <th>Base price</th>
+                  <th>Commission</th>
+                  <th>Status</th>
+                  <th aria-label="Actions" />
+                </tr>
+              </thead>
+              <tbody>
+                {visibleRegions.map(region => (
+                  <tr key={region.id}>
+                    <td>
+                      <span className="rp-cell-name">
+                        <MapPin size={15} />
+                        {zoneName(region)}
+                      </span>
+                    </td>
+                    <td className="rp-cell-muted">{zoneCity(region) || '—'}</td>
+                    <td>
+                      <span className="riyal-symbol">&#x20C1;</span>{formatPrice(region.base_price)}
+                    </td>
+                    <td>{Number(region.commission_percent ?? 0)}%</td>
+                    <td>
+                      <span className={`rp-badge ${region.is_active !== false ? 'is-active' : 'is-inactive'}`}>
+                        {region.is_active !== false ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="rp-row-actions">
+                        <button
+                          className="rp-icon-btn"
+                          onClick={() => navigate(`/admin/pricing/regional/${region.id}/edit`)}
+                          title={`Edit ${zoneName(region)}`}
+                          aria-label={`Edit ${zoneName(region)}`}
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        <button
+                          className="rp-icon-btn rp-icon-btn--danger"
+                          onClick={() => askDelete(region)}
+                          title={`Delete ${zoneName(region)}`}
+                          aria-label={`Delete ${zoneName(region)}`}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
-          {loading ? (
-            <div className="regional-loading">Loading regional pricing...</div>
-          ) : regions.length === 0 ? (
-            <div className="regional-empty">No regional pricing configured yet.</div>
-          ) : (
-            <div className="regional-list">
-              {regions.map(region => (
-                <div key={region.id} className="regional-item">
-                  <div className="regional-info">
-                    <MapPin size={18} />
-                    <span className="regional-name">{getZoneName(region)}</span>
-                    {region.zone?.city && (
-                      <span className="regional-city">{region.zone.city}</span>
-                    )}
-                  </div>
-                  <div className="regional-details">
-                    <span>Base: <span className="riyal-symbol">&#x20C1;</span>{parseFloat(region.base_price).toFixed(2)}</span>
-                    <span>Commission: {parseFloat(region.commission_percent)}%</span>
-                    {!region.is_active && <span className="region-inactive">Inactive</span>}
-                  </div>
-                  <div className="regional-actions">
-                    <button className="btn-edit-small" onClick={() => openModal(region)}>
-                      <Edit size={14} />
-                      Edit
-                    </button>
-                    <button className="btn-delete-small" onClick={() => handleDelete(region.id)}>
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+          {unpricedZones > 0 && (
+            <p className="rp-footnote">
+              {unpricedZones} zone{unpricedZones === 1 ? '' : 's'} still use the standard platform pricing.
+            </p>
           )}
         </div>
-      </div>
-
-      {/* Add/Edit Region Modal */}
-      {isModalOpen && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-content regional-modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="modal-title-section">
-                <h2 className="modal-title">
-                  {editingRegion ? 'Edit Region' : 'Add New Region'}
-                </h2>
-              </div>
-              <button className="modal-close-btn" onClick={closeModal}>
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="modal-body">
-              <div className="regional-form">
-                <div className="form-group">
-                  <label>Zone *</label>
-                  <select
-                    className="form-select"
-                    value={formData.zoneId}
-                    onChange={e => setFormData(p => ({ ...p, zoneId: e.target.value }))}
-                    disabled={!!editingRegion}
-                  >
-                    <option value="">Select a zone...</option>
-                    {availableZones.map(z => (
-                      <option key={z.id} value={z.id}>
-                        {z.zone_name}{z.city ? ` (${z.city})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Base Price (<span className="riyal-symbol">&#x20C1;</span>) *</label>
-                  <div className="input-with-prefix">
-                    <span className="input-prefix riyal-symbol">&#x20C1;</span>
-                    <input
-                      type="number"
-                      className="form-input"
-                      placeholder="0.00"
-                      step="0.01"
-                      min="0"
-                      value={formData.basePrice}
-                      onChange={e => setFormData(p => ({ ...p, basePrice: e.target.value }))}
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Commission (%)</label>
-                  <div className="input-with-suffix">
-                    <input
-                      type="number"
-                      className="form-input"
-                      placeholder="0"
-                      step="0.1"
-                      min="0"
-                      max="100"
-                      value={formData.commissionPercent}
-                      onChange={e => setFormData(p => ({ ...p, commissionPercent: e.target.value }))}
-                    />
-                    <span className="input-suffix">%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button className="btn-secondary" onClick={closeModal} disabled={saving}>
-                Cancel
-              </button>
-              <button
-                className="btn-primary"
-                onClick={handleSave}
-                disabled={saving || !formData.zoneId || !formData.basePrice}
-              >
-                <Save size={18} />
-                {saving ? 'Saving...' : editingRegion ? 'Update Region' : 'Add Region'}
-              </button>
-            </div>
-          </div>
-        </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirm)}
+        title="Delete regional pricing"
+        message={confirm?.message}
+        confirmLabel="Delete region"
+        onCancel={() => setConfirm(null)}
+        onConfirm={() => {
+          const pending = confirm
+          setConfirm(null)
+          if (pending) handleDelete(pending.region)
+        }}
+      />
     </div>
   )
 }

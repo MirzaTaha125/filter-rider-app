@@ -1,0 +1,92 @@
+/* Extras used by the settings form pages, on top of ../adminForm.css */
+
+.sf-affix-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary, #6b7280);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0 0.75rem;
+}
+
+.sf-affix-btn:hover {
+  color: var(--text-primary, #111827);
+}
+
+.sfx-empty {
+  color: var(--text-secondary, #6b7280);
+  font-size: 14px;
+  margin: 0;
+}
+
+.sfx-table-wrap {
+  overflow-x: auto;
+}
+
+.sfx-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 14px;
+}
+
+.sfx-table th,
+.sfx-table td {
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+}
+
+.sfx-table th {
+  color: var(--text-secondary, #6b7280);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.sfx-table tr:last-child td {
+  border-bottom: none;
+}
+
+.sfx-col-action {
+  width: 110px;
+}
+
+.sfx-muted {
+  color: var(--text-secondary, #6b7280);
+}
+
+.sfx-btn-danger {
+  align-items: center;
+  background: none;
+  border: 1px solid var(--danger, #ef4444);
+  border-radius: 6px;
+  color: var(--danger, #ef4444);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 11px;
+  gap: 4px;
+  padding: 4px 8px;
+}
+
+.sfx-btn-danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.sfx-btn-danger:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.sfx-assign-row {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.sfx-assign-row .sf-field {
+  flex: 1 1 260px;
+  margin: 0;
+}

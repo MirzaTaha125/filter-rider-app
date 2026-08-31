@@ -7,9 +7,9 @@
   --radius-round: 50%;
 
   /* Brand */
-  --primary-color: #fcc246;
-  --primary-hover: #f0b020;
-  --primary-soft: rgba(252, 194, 70, 0.18);
+  --primary-color: #f0b020;
+  --primary-hover: #d39a18;
+  --primary-soft: rgba(240, 176, 32, 0.18);
   --secondary-color: #25262c;
   --secondary-hover: #1a1b20;
   --danger: #ef4444;
@@ -32,13 +32,17 @@
   --topbar-text: #1a1a2e;
   --sidebar-text: rgba(255, 255, 255, 0.88);
   --sidebar-muted: rgba(255, 255, 255, 0.52);
-  --sidebar-active-bg: #fcc246;
+  --sidebar-active-bg: #f0b020;
   --sidebar-active-text: #1a1a1a;
   --sidebar-hover-bg: rgba(255, 255, 255, 0.06);
 
   /* Borders & shadows */
   --border-base: #e8eaef;
   --border-light: #f0f1f5;
+
+  /* Table / row action buttons (view, edit, delete icons) */
+  --action-btn-bg: #e9ebf0;
+  --action-btn-bg-hover: #dde0e8;
   --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
   --shadow-md: 0 4px 14px rgba(15, 23, 42, 0.07);
   --shadow-lg: 0 12px 28px rgba(15, 23, 42, 0.1);
@@ -68,6 +72,9 @@ body.dark-mode {
 
   --border-base: #2a2f3a;
   --border-light: #222632;
+
+  --action-btn-bg: #222632;
+  --action-btn-bg-hover: #2a2f3a;
 
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.4);

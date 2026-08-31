@@ -194,6 +194,8 @@
   font-size: 0.875rem;
   color: var(--text-muted);
   margin: 0.5rem 0 0 0;
+  max-width: 62ch;
+  line-height: 1.5;
 }
 
 .permissions-content {
@@ -543,6 +545,245 @@
   font-size: 0.85rem;
   color: var(--text-muted);
   line-height: 1.4;
+}
+
+/* Group header inside the role-permissions table — toggles the whole group. */
+.perm-group-row td {
+  background: var(--border-light);
+  border-top: 1px solid var(--border-base);
+  padding: 0.6rem 1rem;
+}
+
+.perm-group-label {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  font-size: 0.8rem;
+  font-weight: 700;
+  gap: 0.6rem;
+  letter-spacing: 0.02em;
+  color: var(--text-main);
+}
+
+.perm-group-count {
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 1px 8px;
+}
+
+/* ── Admin Users table ─────────────────────────────────────────────────── */
+
+.au-count {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+}
+
+.au-table-wrapper {
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+}
+
+.au-table {
+  border-collapse: collapse;
+  min-width: 640px;
+  width: 100%;
+}
+
+.au-table thead {
+  background: var(--border-light);
+}
+
+.au-table th {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0.8rem 1.15rem;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.au-table td {
+  border-top: 1px solid var(--border-base);
+  padding: 0.9rem 1.15rem;
+  vertical-align: middle;
+}
+
+.au-table tbody tr {
+  transition: background 0.15s;
+}
+
+.au-table tbody tr:hover {
+  background: var(--border-light);
+}
+
+.au-col-action {
+  text-align: right;
+  width: 1%;
+  white-space: nowrap;
+}
+
+/* User cell */
+.au-user-cell {
+  align-items: center;
+  display: flex;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.au-avatar {
+  align-items: center;
+  background: var(--primary-soft);
+  border-radius: var(--radius-round);
+  color: var(--primary-hover);
+  display: flex;
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  font-weight: 700;
+  height: 36px;
+  justify-content: center;
+  width: 36px;
+}
+
+.au-user-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.au-user-name {
+  color: var(--text-main);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.au-user-email {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Role chips */
+.au-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.au-chip {
+  background: var(--border-light);
+  border: 1px solid var(--border-base);
+  border-radius: 999px;
+  color: var(--text-main);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.au-chip--primary {
+  background: var(--primary-soft);
+  border-color: transparent;
+  color: var(--primary-hover);
+}
+
+.au-muted {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+/* Status badge */
+.au-status {
+  border-radius: var(--radius-sm);
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 4px 9px;
+  text-transform: uppercase;
+  background: var(--border-light);
+  color: var(--text-muted);
+}
+
+.au-status--active {
+  background: rgba(22, 163, 74, 0.12);
+  color: var(--success);
+}
+
+.au-status--suspended,
+.au-status--deleted {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger);
+}
+
+.au-status--inactive {
+  background: rgba(245, 158, 11, 0.14);
+  color: var(--warning);
+}
+
+/* Row action */
+.au-action-btn {
+  background: var(--action-btn-bg);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.au-action-btn:hover {
+  background: var(--action-btn-bg-hover);
+}
+
+/* Empty state */
+.au-empty {
+  align-items: center;
+  border: 1px dashed var(--border-base);
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 2.5rem 1rem;
+  text-align: center;
+}
+
+.au-empty p {
+  color: var(--text-main);
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0.35rem 0 0;
+}
+
+.au-empty span {
+  font-size: 0.84rem;
+}
+
+@media (max-width: 640px) {
+  .au-table th,
+  .au-table td {
+    padding: 0.75rem 0.85rem;
+  }
 }
 
 /* User Role Lookup */

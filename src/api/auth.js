@@ -29,7 +29,7 @@ export async function signupAdmin(payload) {
       full_name: payload.fullName,
       email: payload.email,
       phone: payload.phone,
-      country_code: payload.countryCode || 'SA',
+      country_code: payload.countryCode || '+966',
       password: payload.password,
       admin_role: payload.adminRole,
       department: payload.department || undefined,
@@ -72,8 +72,14 @@ export async function resetPassword(destination, otp, newPassword) {
 
 /** GET /auth/me – already used via getAdminProfile(); alias if needed */
 
-/** GET /auth/permissions – Get user permissions */
-export async function getPermissions() {
+/**
+ * GET /auth/permissions – Permissions of the *logged-in* user.
+ * Named distinctly from roles.js `getPermissions()` (which lists every
+ * permission in the system) — both used to be exported as `getPermissions`
+ * and the star-export in index.js silently resolved to this one.
+ * Returns { roles, is_super_admin, permissions: [{ id, name, slug, description }] }.
+ */
+export async function getMyPermissions() {
   return apiRequest('/auth/permissions');
 }
 

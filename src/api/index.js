@@ -5,7 +5,7 @@ export {
   signupAdmin,
   forgotPassword,
   resetPassword,
-  getPermissions,
+  getMyPermissions,
   getSessions,
   revokeSession,
   getFailedLoginAttempts,

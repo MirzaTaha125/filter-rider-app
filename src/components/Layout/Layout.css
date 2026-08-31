@@ -1,13 +1,20 @@
 .layout-container {
   display: flex;
-  min-height: 100vh;
   height: 100vh;
+  height: 100dvh; /* accounts for mobile browser chrome */
   width: 100%;
   padding: 0;
   box-sizing: border-box;
   background: var(--bg-admin);
   margin: 0;
   position: relative;
+  /* The shell owns scrolling — .layout-main is the only scroll container.
+     `clip` rather than `hidden`: hidden still creates a scroll container that
+     scripts can scroll (scrollIntoView walks up and scrolls every scrollable
+     ancestor), which strands the sidebar off-screen with no scrollbar to
+     recover. `clip` creates no scroll container at all. */
+  overflow: hidden; /* fallback for browsers without overflow: clip */
+  overflow: clip;
 }
 
 .sidebar-overlay {
@@ -34,7 +41,10 @@
   flex-direction: column;
   background: var(--bg-admin);
   border-radius: 0;
-  overflow: hidden;
+  /* clip, not hidden — see .layout-container. This one holds the topbar, so a
+     stray programmatic scroll here pushes the topbar out of reach. */
+  overflow: hidden; /* fallback for browsers without overflow: clip */
+  overflow: clip;
   height: 100%;
   min-width: 0;
   transition: margin-left 0.3s ease;
@@ -42,6 +52,10 @@
 
 .layout-main {
   flex: 1;
+  /* Flex children default to min-height:auto, which stops this from shrinking
+     below its content — the page then overflows the 100vh shell and the whole
+     document scrolls instead of just the main area. */
+  min-height: 0;
   padding: 1.5rem 1.75rem 2rem;
   background: var(--bg-admin);
   overflow-y: auto;
