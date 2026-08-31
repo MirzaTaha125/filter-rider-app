@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
-import { createPresenceSocket, createOrdersSocket, createCatalogSocket } from '../socket/socketFactory'
+import { createPresenceSocket, createOrdersSocket, createCatalogSocket, createDisputesSocket } from '../socket/socketFactory'
 
 const SocketContext = createContext({
   presenceSocket: null,
   ordersSocket: null,
   catalogSocket: null,
-  connected: { presence: false, orders: false, catalog: false },
+  disputesSocket: null,
+  connected: { presence: false, orders: false, catalog: false, disputes: false },
   reconnectAll: () => {},
 })
 
@@ -13,8 +14,9 @@ export function SocketProvider({ children }) {
   const presenceRef = useRef(null)
   const ordersRef   = useRef(null)
   const catalogRef  = useRef(null)
+  const disputesRef = useRef(null)
   const heartbeatRef = useRef(null)
-  const [connected, setConnected] = useState({ presence: false, orders: false, catalog: false })
+  const [connected, setConnected] = useState({ presence: false, orders: false, catalog: false, disputes: false })
 
   const setConn = (ns, val) => setConnected((prev) => ({ ...prev, [ns]: val }))
 
@@ -23,10 +25,12 @@ export function SocketProvider({ children }) {
     presenceRef.current?.disconnect()
     ordersRef.current?.disconnect()
     catalogRef.current?.disconnect()
+    disputesRef.current?.disconnect()
     presenceRef.current = null
     ordersRef.current   = null
     catalogRef.current  = null
-    setConnected({ presence: false, orders: false, catalog: false })
+    disputesRef.current = null
+    setConnected({ presence: false, orders: false, catalog: false, disputes: false })
   }, [])
 
   const connectAll = useCallback((token) => {
@@ -60,6 +64,12 @@ export function SocketProvider({ children }) {
     catalogRef.current = catalog
     catalog.on('connect',    () => setConn('catalog', true))
     catalog.on('disconnect', () => setConn('catalog', false))
+
+    // ── Disputes (real-time chat & status) ────────────────────────────────────
+    const disputes = createDisputesSocket(token)
+    disputesRef.current = disputes
+    disputes.on('connect',    () => setConn('disputes', true))
+    disputes.on('disconnect', () => setConn('disputes', false))
   }, [disconnectAll])
 
   // Connect on mount using stored token.
@@ -86,6 +96,7 @@ export function SocketProvider({ children }) {
       presenceSocket: presenceRef.current,
       ordersSocket:   ordersRef.current,
       catalogSocket:  catalogRef.current,
+      disputesSocket: disputesRef.current,
       connected,
       reconnectAll: () => connectAll(localStorage.getItem('adminToken')),
     }}>

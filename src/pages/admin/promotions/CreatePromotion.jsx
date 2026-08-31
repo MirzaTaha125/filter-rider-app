@@ -20,6 +20,13 @@ function getTitle(title) {
   return title.en ?? title.ar ?? Object.values(title)[0] ?? ''
 }
 
+function onlyActiveServices(list) {
+  return (Array.isArray(list) ? list : []).filter((svc) => {
+    if (svc?.is_active === false || svc?.isActive === false) return false
+    return true
+  })
+}
+
 function CreatePromotion() {
   const navigate = useNavigate()
   const { id } = useParams()
@@ -66,7 +73,7 @@ function CreatePromotion() {
         getPromotion(id),
       ]).then(([[zonesData, servicesData], promo]) => {
         setZones(Array.isArray(zonesData) ? zonesData : [])
-        setServices(Array.isArray(servicesData) ? servicesData : [])
+        setServices(onlyActiveServices(servicesData))
         if (promo) {
           setFormData({
             code: promo.code ?? '',
@@ -94,7 +101,7 @@ function CreatePromotion() {
     } else {
       fetchDropdowns.then(([zonesData, servicesData]) => {
         setZones(Array.isArray(zonesData) ? zonesData : [])
-        setServices(Array.isArray(servicesData) ? servicesData : [])
+        setServices(onlyActiveServices(servicesData))
       })
     }
   }, [id])

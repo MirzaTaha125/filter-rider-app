@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Eye, X, Save, User, Package, Shield, Send, X as XIcon } from 'lucide-react'
 import { getDisputes, getDispute, updateDisputeStatus, addDisputeMessage } from '../../../api/disputes.js'
+import { useSocket } from '../../../contexts/SocketContext.jsx'
 import './DisputeManagement.css'
 
 const STATUS_OPTIONS = ['PENDING', 'UNDER_REVIEW', 'RESOLVED', 'REJECTED']
@@ -37,6 +38,7 @@ function formatDate(iso) {
 }
 
 function DisputeManagement() {
+  const { disputesSocket } = useSocket()
   const [disputes, setDisputes] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -53,21 +55,68 @@ function DisputeManagement() {
   const [sendingMessage, setSendingMessage] = useState(false)
 
   const messagesEndRef = useRef(null)
+  const selectedDisputeRef = useRef(null)
+  selectedDisputeRef.current = selectedDispute
 
-  const loadDisputes = useCallback(async () => {
-    setLoading(true)
+  const loadDisputes = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
     setError(null)
     try {
       const data = await getDisputes()
       setDisputes(data)
     } catch (err) {
-      setError(err.message || 'Failed to load disputes')
+      if (!silent) setError(err.message || 'Failed to load disputes')
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [])
 
   useEffect(() => { loadDisputes() }, [loadDisputes])
+
+  // Real-time socket event listeners
+  useEffect(() => {
+    if (!disputesSocket) return
+
+    const handleNewMessage = (payload) => {
+      const current = selectedDisputeRef.current
+      if (current && payload?.dispute_id === current.id) {
+        if (payload.dispute) {
+          setSelectedDispute(payload.dispute)
+        } else if (payload.message) {
+          setSelectedDispute(prev => {
+            if (!prev) return prev
+            const msgs = prev.messages || []
+            const exists = msgs.some(m => m.id === payload.message.id)
+            if (exists) return prev
+            return {
+              ...prev,
+              messages: [...msgs, payload.message],
+            }
+          })
+        }
+        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+      }
+      // Refresh disputes list silently to update counts or latest preview
+      loadDisputes(true)
+    }
+
+    const handleDisputeUpdated = (updated) => {
+      if (!updated) return
+      const current = selectedDisputeRef.current
+      if (current && (updated.id === current.id || updated.dispute_id === current.id)) {
+        setSelectedDispute(prev => ({ ...prev, ...updated }))
+      }
+      setDisputes(prev => prev.map(d => (d.id === (updated.id || updated.dispute_id)) ? { ...d, ...updated } : d))
+    }
+
+    disputesSocket.on('dispute.new_message', handleNewMessage)
+    disputesSocket.on('dispute.updated', handleDisputeUpdated)
+
+    return () => {
+      disputesSocket.off('dispute.new_message', handleNewMessage)
+      disputesSocket.off('dispute.updated', handleDisputeUpdated)
+    }
+  }, [disputesSocket, loadDisputes])
 
   const openModal = async (dispute) => {
     setSelectedDispute(dispute)
@@ -76,6 +125,11 @@ function DisputeManagement() {
     setIsInternalNote(false)
     setIsModalOpen(true)
     setDetailLoading(true)
+
+    if (disputesSocket) {
+      disputesSocket.emit('join_dispute', { dispute_id: dispute.id })
+    }
+
     try {
       const detail = await getDispute(dispute.id)
       setSelectedDispute(detail)
@@ -88,6 +142,9 @@ function DisputeManagement() {
   }
 
   const closeModal = () => {
+    if (disputesSocket && selectedDispute) {
+      disputesSocket.emit('leave_dispute', { dispute_id: selectedDispute.id })
+    }
     setIsModalOpen(false)
     setSelectedDispute(null)
     setStatusChange('')
