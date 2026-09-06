@@ -275,3 +275,85 @@
   .an-header { flex-direction: column; align-items: stretch; }
   .an-btn { width: 100%; justify-content: center; }
 }
+
+/* ── Date range filter ───────────────────────────────────────────────────── */
+
+.an-filters {
+  align-items: flex-end;
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+}
+
+.an-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 150px;
+}
+
+.an-filter-field label {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.an-filter-field select,
+.an-filter-field input {
+  background: var(--bg-input);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.7rem;
+}
+
+.an-filter-field select:focus,
+.an-filter-field input:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+.an-filter-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.an-btn--primary {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #1a1a1a;
+}
+
+.an-btn--primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+/* A full-width note under the controls, so it never squeezes them. */
+.an-filter-note {
+  color: var(--text-muted);
+  flex-basis: 100%;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 76ch;
+}
+
+/* Marks a card the date range does not reach. */
+.an-card-note {
+  background: var(--border-light);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 3px 9px;
+  text-transform: uppercase;
+}
