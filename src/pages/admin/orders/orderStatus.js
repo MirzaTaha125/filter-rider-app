@@ -61,6 +61,30 @@ export function countOrderStatuses(orders = []) {
   return counts
 }
 
+/**
+ * Maps an order status onto one of the shared table status tones, so every
+ * page shows the same colour for the same state.
+ */
+export function orderStatusTone(status) {
+  switch (normalizeStatus(status)) {
+    case 'CREATED':
+    case 'BROADCASTED':
+      return 'brand'
+    case 'ASSIGNED':
+    case 'ACCEPTED':
+    case 'ON_THE_WAY':
+    case 'ARRIVED':
+    case 'IN_PROGRESS':
+      return 'info'
+    case 'COMPLETED':
+      return 'success'
+    case 'CANCELLED':
+      return 'danger'
+    default:
+      return 'neutral'
+  }
+}
+
 /** Presence values come from the PresenceStatus enum: ONLINE | BUSY | OFFLINE. */
 export function countProviderPresence(providers = []) {
   const counts = { total: providers.length, online: 0, busy: 0, offline: 0 }

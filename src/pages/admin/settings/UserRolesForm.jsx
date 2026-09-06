@@ -5,6 +5,7 @@ import PageHeader from '../../../components/PageHeader/PageHeader'
 import { getUser, getRoles, assignRole, removeRole } from '../../../api'
 import '../adminForm.css'
 import './SettingsForm.css'
+import TableScroll from '../../../components/DataTable/TableScroll'
 
 function UserRolesForm() {
   const { userId } = useParams()
@@ -142,24 +143,24 @@ function UserRolesForm() {
           {userRoles.length === 0 ? (
             <p className="sfx-empty">No roles assigned to this user.</p>
           ) : (
-            <div className="sfx-table-wrap">
-              <table className="sfx-table">
+            <TableScroll>
+              <table className="dt-table">
                 <thead>
                   <tr>
                     <th>Role</th>
                     <th>Description</th>
-                    <th className="sfx-col-action">Action</th>
+                    <th className="dt-col-actions">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {userRoles.map((role) => (
                     <tr key={role.id}>
                       <td><strong>{role.name}</strong></td>
-                      <td className="sfx-muted">{role.description ?? '—'}</td>
+                      <td className="dt-muted">{role.description ?? '—'}</td>
                       <td>
                         <button
                           type="button"
-                          className="sfx-btn-danger"
+                          className="dt-btn"
                           onClick={() => handleRemove(role)}
                           disabled={removingId === role.id}
                         >
@@ -173,7 +174,7 @@ function UserRolesForm() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TableScroll>
           )}
         </section>
 

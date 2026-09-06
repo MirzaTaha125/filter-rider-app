@@ -173,7 +173,6 @@ function ContentManagement() {
     <div className="content-management">
       <div className="content-management-header-content">
         <div>
-          <h1 className="content-management-title">Content Management</h1>
           <p className="content-management-subtitle">Manage platform content and documentation</p>
         </div>
         <button className="btn-create-page" onClick={() => setIsCreateOpen(true)}>

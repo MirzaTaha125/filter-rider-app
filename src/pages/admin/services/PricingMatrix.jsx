@@ -11,6 +11,7 @@ import {
   deletePricingMatrix,
 } from '../../../api'
 import './PricingMatrix.css'
+import TableScroll from '../../../components/DataTable/TableScroll'
 
 function toArray(value) {
   return Array.isArray(value) ? value : []
@@ -105,13 +106,12 @@ function PricingMatrix() {
 
   return (
     <div className="pricing-matrix">
-      <header className="pm-header">
+      <header className="dt-page-head">
         <div>
-          <h1 className="pm-title">Pricing Matrix</h1>
-          <p className="pm-subtitle">Per-size pricing that overrides a service’s base price.</p>
+          <p className="dt-page-sub">Per-size pricing that overrides a service’s base price.</p>
         </div>
         <button
-          className="pm-btn pm-btn--primary"
+          className="dt-btn dt-btn--primary"
           onClick={() => navigate('/admin/services/pricing-matrix/add')}
           disabled={services.length === 0}
         >
@@ -120,8 +120,8 @@ function PricingMatrix() {
         </button>
       </header>
 
-      <div className="pm-toolbar">
-        <div className="pm-search">
+      <div className="dt-toolbar">
+        <div className="dt-search">
           <Search size={16} />
           <input
             type="search"
@@ -143,21 +143,21 @@ function PricingMatrix() {
       )}
 
       {loading ? (
-        <div className="pm-state">
+        <div className="dt-empty">
           <Loader2 size={32} className="spin" />
           <span>Loading pricing matrix…</span>
         </div>
       ) : services.length === 0 ? (
-        <div className="pm-state">
+        <div className="dt-empty">
           <Ruler size={32} />
           <h2>No services yet</h2>
           <p>Pricing attaches to a service, so create a service first.</p>
-          <button className="pm-btn pm-btn--primary" onClick={() => navigate('/admin/services/add')}>
+          <button className="dt-btn dt-btn--primary" onClick={() => navigate('/admin/services/add')}>
             <Plus size={16} /> Add Service
           </button>
         </div>
       ) : visibleServices.length === 0 ? (
-        <div className="pm-state">
+        <div className="dt-empty">
           <Search size={32} />
           <h2>No matches</h2>
           <p>No pricing entries match “{search.trim()}”.</p>
@@ -176,7 +176,7 @@ function PricingMatrix() {
                     </p>
                   </div>
                   <button
-                    className="pm-btn pm-btn--ghost"
+                    className="dt-btn dt-btn--ghost"
                     onClick={() => navigate(`/admin/services/pricing-matrix/add?serviceId=${service.id}`)}
                   >
                     <Plus size={15} /> Add
@@ -184,10 +184,10 @@ function PricingMatrix() {
                 </header>
 
                 {rows.length === 0 ? (
-                  <p className="pm-empty">No size-specific pricing for this service yet.</p>
+                  <p className="dt-empty">No size-specific pricing for this service yet.</p>
                 ) : (
-                  <div className="pm-table-wrap">
-                    <table className="pm-table">
+                  <TableScroll>
+                    <table className="dt-table">
                       <thead>
                         <tr>
                           <th>Size category</th>
@@ -206,14 +206,14 @@ function PricingMatrix() {
                             </td>
                             <td>{row.duration_min ?? 0} min</td>
                             <td>
-                              <span className={`pm-badge ${row.status !== false ? 'is-active' : 'is-inactive'}`}>
+                              <span className={`dt-status ${row.status !== false ? 'is-active' : 'is-inactive'}`}>
                                 {row.status !== false ? 'Active' : 'Inactive'}
                               </span>
                             </td>
                             <td>
-                              <div className="pm-row-actions">
+                              <div className="dt-row-actions">
                                 <button
-                                  className="pm-icon-btn"
+                                  className="dt-icon-btn"
                                   onClick={() => navigate(
                                     `/admin/services/pricing-matrix/${row.service_id}/${row.size_category_id}/edit`,
                                   )}
@@ -223,7 +223,7 @@ function PricingMatrix() {
                                   <Pencil size={15} />
                                 </button>
                                 <button
-                                  className="pm-icon-btn pm-icon-btn--danger"
+                                  className="dt-icon-btn dt-icon-btn--danger"
                                   onClick={() => askDelete(row, service)}
                                   title={`Delete ${sizeLabel(row)} pricing`}
                                   aria-label={`Delete ${sizeLabel(row)} pricing`}
@@ -236,7 +236,7 @@ function PricingMatrix() {
                         ))}
                       </tbody>
                     </table>
-                  </div>
+                  </TableScroll>
                 )}
               </section>
             )

@@ -15,6 +15,9 @@ import {
   unwrapList,
 } from './withdrawals.js'
 import './PaymentApproval.css'
+import SortableTh from '../../../components/DataTable/SortableTh'
+import { useTableSort } from '../../../components/DataTable/useTableSort'
+import TableScroll from '../../../components/DataTable/TableScroll'
 
 const PAGE_SIZE = 20
 
@@ -23,6 +26,7 @@ function PaymentApproval() {
 
   const [status, setStatus] = useState('PENDING')
   const [items, setItems] = useState([])
+  const sort = useTableSort()
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
@@ -54,12 +58,19 @@ function PaymentApproval() {
   // it is the total across every page.
   const pageTotal = items.reduce((sum, i) => sum + Number(i.amount || 0), 0)
 
+  const sortedItems = sort.apply(items, {
+    provider: (i) => providerName(i),
+    bank: (i) => bankLabel(i),
+    amount: (i) => Number(i.amount ?? 0),
+    requested: (i) => new Date(i.requested_at ?? 0).getTime(),
+    status: (i) => i.status,
+  })
+
   return (
     <div className="payment-approval">
-      <header className="pv-header">
+      <header className="dt-page-head">
         <div>
-          <h1 className="pv-title">Payment Approval</h1>
-          <p className="pv-subtitle">Provider withdrawal requests awaiting review.</p>
+          <p className="dt-page-sub">Provider withdrawal requests awaiting review.</p>
         </div>
       </header>
 
@@ -100,36 +111,36 @@ function PaymentApproval() {
       )}
 
       {loading ? (
-        <div className="pv-state">
+        <div className="dt-empty">
           <Loader2 size={32} className="spin" />
           <span>Loading requests…</span>
         </div>
       ) : items.length === 0 ? (
-        <div className="pv-state">
+        <div className="dt-empty">
           <Wallet size={32} />
           <h2>Nothing here</h2>
           <p>No {status.toLowerCase()} withdrawal requests.</p>
         </div>
       ) : (
         <>
-          <div className="pv-table-card">
-            <div className="pv-table-wrap">
-              <table className="pv-table">
+          <div className="dt-card">
+            <TableScroll>
+              <table className="dt-table">
                 <thead>
                   <tr>
-                    <th>Provider</th>
-                    <th>Bank</th>
-                    <th>Amount</th>
-                    <th>Requested</th>
-                    <th>Status</th>
+                    <SortableTh sortKey="provider" sort={sort}>Provider</SortableTh>
+                    <SortableTh sortKey="bank" sort={sort}>Bank</SortableTh>
+                    <SortableTh sortKey="amount" sort={sort}>Amount</SortableTh>
+                    <SortableTh sortKey="requested" sort={sort}>Requested</SortableTh>
+                    <SortableTh sortKey="status" sort={sort}>Status</SortableTh>
                     <th aria-label="Open" />
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map(item => (
+                  {sortedItems.map(item => (
                     <tr
                       key={item.id}
-                      className="pv-row"
+                      className="is-clickable"
                       onClick={() => navigate(`/admin/wallet/payment-approval/${item.id}`)}
                       tabIndex={0}
                       onKeyDown={(e) => {
@@ -148,31 +159,31 @@ function PaymentApproval() {
                           </span>
                         </span>
                       </td>
-                      <td className="pv-muted">
+                      <td className="dt-muted">
                         {bankLabel(item)}
                         <span className="pv-account">{accountLabel(item)}</span>
                       </td>
                       <td className="pv-amount">
                         <span className="riyal-symbol">&#x20C1;</span>{formatMoney(item.amount)}
                       </td>
-                      <td className="pv-muted">{formatDate(item.requested_at)}</td>
+                      <td className="dt-muted">{formatDate(item.requested_at)}</td>
                       <td>
-                        <span className={`pv-badge pv-badge--${statusTone(item.status)}`}>
+                        <span className={`dt-status dt-status--${statusTone(item.status)}`}>
                           {item.status}
                         </span>
                       </td>
-                      <td className="pv-chevron"><ChevronRight size={16} /></td>
+                      <td className="dt-col-actions"><ChevronRight size={16} /></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TableScroll>
           </div>
 
           {hasMore && (
             <div className="pv-more">
               <button
-                className="pv-btn"
+                className="dt-btn"
                 onClick={() => load(page + 1, false)}
                 disabled={loadingMore}
               >

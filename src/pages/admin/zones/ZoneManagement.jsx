@@ -91,7 +91,6 @@ function ZoneManagement() {
     <div className="zone-management">
       <header className="zm-header">
         <div>
-          <h1 className="zm-title">Zones</h1>
           <p className="zm-subtitle">Service areas and their coverage.</p>
         </div>
         <div className="zm-header-actions">

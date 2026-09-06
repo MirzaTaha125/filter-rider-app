@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search, Mail, Phone, Building2 } from 'lucide-react'
+// Plus is only used by the commented-out "Add customer" button below.
+import { Search, Phone, Building2 } from 'lucide-react'
 import { getCustomers } from '../../../api'
+import Pager from '../../../components/DataTable/Pager'
+import SortableTh from '../../../components/DataTable/SortableTh'
+import { useTableSort } from '../../../components/DataTable/useTableSort'
 import './CustomerManagement.css'
+import TableScroll from '../../../components/DataTable/TableScroll'
 
 function CustomerManagement() {
   const navigate = useNavigate()
@@ -11,6 +16,7 @@ function CustomerManagement() {
     accountStatus: 'All Status',
     walletRange: 'All Ranges'
   })
+  const sort = useTableSort()
   const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -58,173 +64,145 @@ function CustomerManagement() {
     navigate(`/admin/customers/${customer.id}`)
   }
 
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + customers.length
+  // Pager derives the "showing x – y" range itself now.
+
+  // Wallet sorts on the number behind the formatted amount. The endpoint is
+  // paginated server-side, so this orders the page that is loaded.
+  const sortedCustomers = sort.apply(customers, {
+    name: (c) => c.name,
+    contact: (c) => c.phone,
+    wallet: (c) => Number(c.walletBalance ?? c.wallet_balance ?? 0),
+    status: (c) => c.status,
+  })
 
   return (
-    <div className="customer-management">
-      {/* Header */}
-      <div className="customer-header">
-        <div className="customer-header-content">
-          <div>
-            <h1 className="customer-title">Customer Management</h1>
-            <p className="customer-subtitle">
-              Manage and monitor your platform's customer base of {totalCustomers.toLocaleString()} active users.
-            </p>
-          </div>
-          <button
-            className="btn-add-customer"
-            onClick={() => navigate('/admin/customers/add')}
-          >
-            <Plus size={18} />
-            Add Customer
-          </button>
+    <div className="dt-page-layout">
+      <header className="dt-page-head">
+        <div>
+          <p className="dt-page-sub">
+            Manage and monitor your platform&apos;s customer base of{' '}
+            {totalCustomers.toLocaleString()} accounts.
+          </p>
         </div>
-      </div>
+        {/* Hidden for now — the /admin/customers/add route and its form are
+            still in place, so restoring this is just uncommenting it (and the
+            Plus icon import above).
+        <button className="dt-btn dt-btn--primary" onClick={() => navigate('/admin/customers/add')}>
+          <Plus size={16} />
+          Add customer
+        </button>
+        */}
+      </header>
 
-      <div className="customer-filters-section">
-        <div className="search-wrapper">
-          <Search size={18} className="search-icon" />
-          <input
-            type="text"
-            className="search-input-customer"
-            placeholder="Search by name, email, or phone number..."
-            value={filters.search}
-            onChange={(e) => handleFilterChange('search', e.target.value)}
-          />
-        </div>
-        <div className="filter-dropdowns">
-          <div className="filter-dropdown">
-            <select
-              className="filter-select"
-              value={filters.accountStatus}
-              onChange={(e) => handleFilterChange('accountStatus', e.target.value)}
-            >
-              <option>All Status</option>
-              <option>Active</option>
-              <option>Disabled</option>
-            </select>
+      <div className="dt-card">
+        <div className="dt-toolbar">
+          <div className="dt-search">
+            <Search size={16} />
+            <input
+              type="search"
+              placeholder="Search by name, email or phone…"
+              value={filters.search}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
+            />
           </div>
-          <div className="filter-dropdown">
-            <select
-              className="filter-select"
-              value={filters.walletRange}
-              onChange={(e) => handleFilterChange('walletRange', e.target.value)}
-            >
-              <option>All Ranges</option>
-              <option>0-100</option>
-              <option>100-500</option>
-              <option>500-1000</option>
-              <option>1000+</option>
-            </select>
-          </div>
-        </div>
-      </div>
 
-      {/* Customers Table */}
-      <div className="customers-table-container">
-        <table className="customers-table">
-          <thead>
-            <tr>
-              <th>CUSTOMER PROFILE</th>
-              <th>CONTACT INFO</th>
-              <th>WALLET BALANCE</th>
-              <th>STATUS</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan="4" className="loading-message">Loading customers...</td></tr>
-            ) : error ? (
-              <tr><td colSpan="4" className="api-error">{error}</td></tr>
-            ) : customers.length === 0 ? (
-              <tr><td colSpan="4" className="loading-message">No customers found.</td></tr>
-            ) : (
-              customers.map((customer) => (
-                <tr
-                  key={customer.id}
-                  className="table-row"
-                  onClick={() => handleRowClick(customer)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <td className="customer-profile-column">
-                    <div className="customer-profile-cell">
-                      {customer.accountType === 'CORPORATE' ? (
-                        <div className="customer-avatar corporate">
-                          <Building2 size={20} />
+          <div className="dt-toolbar-actions">
+            <div className="dt-field">
+              <select
+                value={filters.accountStatus}
+                onChange={(e) => handleFilterChange('accountStatus', e.target.value)}
+                aria-label="Account status"
+              >
+                <option>All Status</option>
+                <option>Active</option>
+                <option>Disabled</option>
+              </select>
+            </div>
+            <div className="dt-field">
+              <select
+                value={filters.walletRange}
+                onChange={(e) => handleFilterChange('walletRange', e.target.value)}
+                aria-label="Wallet range"
+              >
+                <option>All Ranges</option>
+                <option>0-100</option>
+                <option>100-500</option>
+                <option>500-1000</option>
+                <option>1000+</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <TableScroll>
+          <table className="dt-table" style={{ minWidth: 760 }}>
+            <thead>
+              <tr>
+                <SortableTh sortKey="name" sort={sort}>Customer</SortableTh>
+                <SortableTh sortKey="contact" sort={sort}>Phone</SortableTh>
+                <SortableTh sortKey="wallet" sort={sort}>Wallet balance</SortableTh>
+                <SortableTh sortKey="status" sort={sort}>Status</SortableTh>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan="4" className="dt-state">Loading customers…</td></tr>
+              ) : error ? (
+                <tr><td colSpan="4" className="dt-state dt-state--error">{error}</td></tr>
+              ) : customers.length === 0 ? (
+                <tr><td colSpan="4" className="dt-state">No customers match this view.</td></tr>
+              ) : (
+                sortedCustomers.map((customer) => (
+                  <tr
+                    key={customer.id}
+                    className="is-clickable"
+                    onClick={() => handleRowClick(customer)}
+                  >
+                    <td>
+                      <div className="cm-profile">
+                        <div className={`cm-avatar ${customer.accountType === 'CORPORATE' ? 'is-corporate' : ''}`}>
+                          {customer.accountType === 'CORPORATE'
+                            ? <Building2 size={18} />
+                            : (customer.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'C')}
                         </div>
-                      ) : (
-                        <div className="customer-avatar">
-                          {customer.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'C'}
+                        <div className="dt-cell-stack">
+                          <strong>{customer.name}</strong>
+                          <em>#{customer.id}</em>
                         </div>
-                      )}
-                      <div className="customer-info">
-                        <div className="customer-name">{customer.name}</div>
-                        <div className="customer-id">#{customer.id}</div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="contact-info-column">
-                    <div className="contact-info-cell">
-                      <div className="contact-item">
-                        <Mail size={14} />
-                        <span>{customer.email}</span>
-                      </div>
-                      <div className="contact-item">
-                        <Phone size={14} />
-                        <span>{customer.phone || 'N/A'}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="wallet-balance-column">
-                    <div className="wallet-balance">
-                      <span className="riyal-symbol">&#x20C1;</span>
-                      {(customer.walletBalance || customer.wallet_balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </div>
-                  </td>
-                  <td className="status-column">
-                    <span className={`status-badge ${customer.status === 'Active' ? 'active' : 'inactive'}`}>
-                      {customer.status}
-                    </span>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+                    </td>
+                    <td>
+                      <span className="cm-contact">
+                        <Phone size={13} />{customer.phone || 'N/A'}
+                      </span>
+                    </td>
+                    <td>
+                      <strong>
+                        <span className="riyal-symbol">&#x20C1;</span>
+                        {(customer.walletBalance || customer.wallet_balance || 0)
+                          .toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </strong>
+                    </td>
+                    <td>
+                      <span className={`dt-status dt-status--${customer.status === 'Active' ? 'success' : 'neutral'}`}>
+                        {customer.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </TableScroll>
 
-      {/* Pagination */}
-      <div className="pagination">
-        <div className="pagination-info">
-          SHOWING {startIndex + 1}-{Math.min(endIndex, totalCustomers)} OF {totalCustomers.toLocaleString()}
-        </div>
-        <div className="pagination-controls">
-          <button
-            className="pagination-btn"
-            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-            disabled={currentPage === 1 || loading}
-          >
-            ‹
-          </button>
-          {[...Array(Math.ceil(totalCustomers / itemsPerPage))].map((_, i) => (
-            <button
-              key={i}
-              className={`pagination-btn ${currentPage === i + 1 ? 'active' : ''}`}
-              onClick={() => setCurrentPage(i + 1)}
-              disabled={loading}
-            >
-              {i + 1}
-            </button>
-          )).slice(Math.max(0, currentPage - 3), Math.min(Math.ceil(totalCustomers / itemsPerPage), currentPage + 2))}
-          <button
-            className="pagination-btn"
-            onClick={() => setCurrentPage(prev => prev + 1)}
-            disabled={currentPage >= Math.ceil(totalCustomers / itemsPerPage) || loading}
-          >
-            ›
-          </button>
-        </div>
+        <Pager
+          page={currentPage}
+          total={totalCustomers}
+          limit={itemsPerPage}
+          onChange={setCurrentPage}
+          unit="customers"
+          disabled={loading}
+        />
       </div>
     </div>
   )

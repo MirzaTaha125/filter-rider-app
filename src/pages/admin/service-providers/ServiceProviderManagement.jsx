@@ -19,8 +19,11 @@ import {
   formatMoney,
   mapProviderRow,
 } from './providers.js'
+import SortableTh from '../../../components/DataTable/SortableTh'
+import { useTableSort } from '../../../components/DataTable/useTableSort'
 import ProviderRequests from './ProviderRequests'
 import './ServiceProviderManagement.css'
+import TableScroll from '../../../components/DataTable/TableScroll'
 
 function toArray(value) {
   if (Array.isArray(value)) return value
@@ -42,7 +45,10 @@ function ServiceProviderManagement() {
   const [filters, setFilters] = useState({
     search: '', status: 'All', zoneId: 'All', liveStatus: 'All',
   })
+  const sort = useTableSort()
   const [providers, setProviders] = useState([])
+  // Avatar ids whose image failed to load, so the row can show initials instead.
+  const [brokenAvatars, setBrokenAvatars] = useState({})
   const [zones, setZones] = useState([])
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -108,18 +114,30 @@ function ServiceProviderManagement() {
 
   const openProvider = (id) => navigate(`/admin/service-providers/${id}`)
 
+  // Rating and earnings sort numerically, not on their rendered text.
+  const sortedProviders = sort.apply(providers, {
+    name: (p) => p.name,
+    contact: (p) => p.phone,
+    status: (p) => p.status,
+    availability: (p) => p.availability,
+    zone: (p) => p.zone,
+    rating: (p) => Number(p.rating ?? 0),
+    earnings: (p) => Number(p.totalEarnings ?? 0),
+  })
+
   return (
     <div className="sp-management">
-      <header className="spm-header">
+      <header className="dt-page-head">
         <div>
-          <h1 className="spm-title">
-            Service Providers
+          {/* The page name is in the topbar; the socket indicator is not, so it
+              moves up beside the description rather than being dropped. */}
+          <p className="dt-page-sub">
+            Approved providers on the platform.
             <span className={`spm-live ${wsConnected ? 'is-on' : ''}`}>
               <span className="spm-live-dot" />
               {wsConnected ? 'Live' : 'Connecting…'}
             </span>
-          </h1>
-          <p className="spm-subtitle">Approved providers on the platform.</p>
+          </p>
         </div>
       </header>
 
@@ -164,8 +182,8 @@ function ServiceProviderManagement() {
         <ProviderRequests />
       ) : (
       <>
-      <div className="spm-toolbar">
-        <div className="spm-search">
+      <div className="dt-toolbar">
+        <div className="dt-search">
           <Search size={16} />
           <input
             type="search"
@@ -174,21 +192,38 @@ function ServiceProviderManagement() {
             onChange={(e) => setFilter('search', e.target.value)}
           />
         </div>
-        <select className="spm-filter" value={filters.status} onChange={(e) => setFilter('status', e.target.value)}>
-          <option value="All">All statuses</option>
-          {PROVIDER_STATUSES.map(s => <option key={s} value={s}>{titleCase(s)}</option>)}
-        </select>
-        <select className="spm-filter" value={filters.zoneId} onChange={(e) => setFilter('zoneId', e.target.value)}>
-          <option value="All">All zones</option>
-          {zones.map(z => (
-            <option key={z.id} value={z.id}>{zoneLabel(z)}</option>
-          ))}
-        </select>
-        <select className="spm-filter" value={filters.liveStatus} onChange={(e) => setFilter('liveStatus', e.target.value)}>
-          <option value="All">Any availability</option>
-          {LIVE_STATUSES.map(s => <option key={s} value={s}>{titleCase(s)}</option>)}
-        </select>
-        <span className="spm-count">{loading ? '—' : `${providers.length} shown`}</span>
+        <div className="dt-toolbar-actions">
+          <select
+            className="dt-field"
+            value={filters.status}
+            onChange={(e) => setFilter('status', e.target.value)}
+            aria-label="Status"
+          >
+            <option value="All">All statuses</option>
+            {PROVIDER_STATUSES.map(s => <option key={s} value={s}>{titleCase(s)}</option>)}
+          </select>
+          <select
+            className="dt-field"
+            value={filters.zoneId}
+            onChange={(e) => setFilter('zoneId', e.target.value)}
+            aria-label="Zone"
+          >
+            <option value="All">All zones</option>
+            {zones.map(z => (
+              <option key={z.id} value={z.id}>{zoneLabel(z)}</option>
+            ))}
+          </select>
+          <select
+            className="dt-field"
+            value={filters.liveStatus}
+            onChange={(e) => setFilter('liveStatus', e.target.value)}
+            aria-label="Availability"
+          >
+            <option value="All">Any availability</option>
+            {LIVE_STATUSES.map(s => <option key={s} value={s}>{titleCase(s)}</option>)}
+          </select>
+          <span className="spm-count">{loading ? '—' : `${providers.length} shown`}</span>
+        </div>
       </div>
 
       {error && (
@@ -199,37 +234,37 @@ function ServiceProviderManagement() {
       )}
 
       {loading ? (
-        <div className="spm-state">
+        <div className="dt-empty">
           <Loader2 size={32} className="spin" />
           <span>Loading service providers…</span>
         </div>
       ) : providers.length === 0 ? (
-        <div className="spm-state">
+        <div className="dt-empty">
           <Users size={32} />
           <h2>No providers found</h2>
           <p>Try clearing the filters, or check the SP Requests page for pending applications.</p>
         </div>
       ) : (
-        <div className="spm-table-card">
-          <div className="spm-table-wrap">
-            <table className="spm-table">
+        <div className="dt-card">
+          <TableScroll>
+            <table className="dt-table">
               <thead>
                 <tr>
-                  <th>Provider</th>
-                  <th>Contact</th>
-                  <th>Status</th>
-                  <th>Availability</th>
-                  <th>Zone</th>
-                  <th>Rating</th>
-                  <th className="spm-num">Earnings</th>
+                  <SortableTh sortKey="name" sort={sort}>Provider</SortableTh>
+                  <SortableTh sortKey="contact" sort={sort}>Contact</SortableTh>
+                  <SortableTh sortKey="status" sort={sort}>Status</SortableTh>
+                  <SortableTh sortKey="availability" sort={sort}>Availability</SortableTh>
+                  <SortableTh sortKey="zone" sort={sort}>Zone</SortableTh>
+                  <SortableTh sortKey="rating" sort={sort}>Rating</SortableTh>
+                  <SortableTh sortKey="earnings" sort={sort} className="spm-num">Earnings</SortableTh>
                   <th aria-label="Open" />
                 </tr>
               </thead>
               <tbody>
-                {providers.map(sp => (
+                {sortedProviders.map(sp => (
                   <tr
                     key={sp.id}
-                    className="spm-row"
+                    className="is-clickable"
                     onClick={() => openProvider(sp.id)}
                     tabIndex={0}
                     onKeyDown={(e) => {
@@ -242,14 +277,27 @@ function ServiceProviderManagement() {
                     <td>
                       <span className="spm-profile">
                         <span className="spm-avatar">
-                          {sp.avatar ? <img src={sp.avatar} alt="" /> : initials(sp.name)}
+                          {/* A photo that will not load leaves an empty circle,
+                              so a failed load falls back to the initials. */}
+                          {sp.avatar && !brokenAvatars[sp.id]
+                            ? (
+                              <img
+                                src={sp.avatar}
+                                alt=""
+                                onError={() => setBrokenAvatars(prev => ({ ...prev, [sp.id]: true }))}
+                              />
+                            )
+                            : initials(sp.name)}
                         </span>
                         <span className="spm-profile-text">
                           <strong>
                             {sp.name}
                             {sp.verified && <CheckCircle size={14} className="spm-verified" />}
                           </strong>
-                          <em>{sp.totalOrders} orders</em>
+                          <em>
+                            {sp.totalOrders} order{sp.totalOrders === 1 ? '' : 's'}
+                            {sp.completedJobs > 0 && ` · ${sp.completedJobs} done`}
+                          </em>
                         </span>
                       </span>
                     </td>
@@ -258,17 +306,17 @@ function ServiceProviderManagement() {
                       <em>{sp.email}</em>
                     </td>
                     <td>
-                      <span className={`spm-badge spm-badge--${statusTone(sp.status)}`}>
+                      <span className={`dt-status dt-status--${statusTone(sp.status)}`}>
                         {titleCase(sp.status)}
                       </span>
                     </td>
                     <td>
-                      <span className={`spm-avail spm-avail--${availabilityTone(sp.availability)}`}>
-                        <span className="spm-avail-dot" />
+                      <span className={`dt-dot-label dt-tone--${availabilityTone(sp.availability)}`}>
+                        <span className="dt-dot" />
                         {titleCase(sp.availability)}
                       </span>
                     </td>
-                    <td className="spm-muted">
+                    <td className="dt-muted">
                       <span className="spm-zone"><MapPin size={13} /> {sp.zone}</span>
                     </td>
                     <td>
@@ -280,12 +328,12 @@ function ServiceProviderManagement() {
                     <td className="spm-num spm-earnings">
                       <span className="riyal-symbol">&#x20C1;</span>{formatMoney(sp.totalEarnings)}
                     </td>
-                    <td className="spm-chevron"><ChevronRight size={16} /></td>
+                    <td className="dt-col-actions"><ChevronRight size={16} /></td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScroll>
         </div>
       )}
       </>

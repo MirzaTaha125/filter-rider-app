@@ -88,7 +88,6 @@ function FeeConfiguration() {
       <div className="fee-config">
         <div className="fee-config-header-content">
           <div>
-            <h1 className="fee-config-title">Fee Configuration</h1>
             <p className="fee-config-subtitle">Configure platform fees and commissions</p>
           </div>
         </div>
@@ -101,7 +100,6 @@ function FeeConfiguration() {
     <div className="fee-config">
       <div className="fee-config-header-content">
         <div>
-          <h1 className="fee-config-title">Fee Configuration</h1>
           <p className="fee-config-subtitle">Configure platform fees and commissions</p>
         </div>
       </div>

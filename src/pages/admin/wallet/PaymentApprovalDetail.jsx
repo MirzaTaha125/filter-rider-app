@@ -16,6 +16,7 @@ import {
 } from './withdrawals.js'
 import '../adminForm.css'
 import './PaymentApprovalDetail.css'
+import TableScroll from '../../../components/DataTable/TableScroll'
 
 function PaymentApprovalDetail() {
   const { approvalId } = useParams()
@@ -174,8 +175,8 @@ function PaymentApprovalDetail() {
                 <p>Ledger entries linked to this withdrawal.</p>
               </header>
 
-              <div className="pa-tx-wrap">
-                <table className="pa-tx">
+              <TableScroll>
+                <table className="dt-table">
                   <thead>
                     <tr>
                       <th>Type</th>
@@ -195,7 +196,7 @@ function PaymentApprovalDetail() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </TableScroll>
             </section>
           )}
         </div>

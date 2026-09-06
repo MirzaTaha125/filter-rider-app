@@ -116,7 +116,6 @@ function PromotionsManagement() {
     <div className="promotions-management">
       <header className="pm2-header">
         <div>
-          <h1 className="pm2-title">Promotions &amp; Coupons</h1>
           <p className="pm2-subtitle">Discount codes and promotional campaigns.</p>
         </div>
         <button

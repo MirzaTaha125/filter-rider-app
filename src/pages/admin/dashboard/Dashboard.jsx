@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
-  ShoppingCart, TrendingUp,
-  Users, DollarSign, Percent,
-  AlertCircle, MapPin,
-  ChevronDown, ShieldAlert, CheckCircle2, XCircle,
-  Wrench, UserRound, Lock
+  TrendingUp, TrendingDown, MapPin, Calendar, Filter,
+  ChevronDown, CheckCircle2, Lock,
 } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import {
+  BarChart, Bar, LineChart, Line, XAxis, YAxis,
+  CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+} from 'recharts'
 import {
   getGoogleMapsKeyFromSettings, getAdminOrders, getProviders, getWalletOverview,
   getDisputes, getServices, getCustomers, getZones,
@@ -16,6 +17,8 @@ import { usePermissions } from '../../../contexts/PermissionsContext'
 import {
   countOrderStatuses, countProviderPresence, normalizeStatus, isOpen,
 } from '../orders/orderStatus'
+import StatTile from '../../../components/StatTile/StatTile'
+import { providerMarkerIcon } from '../../../components/map/providerPin'
 import { isGoogleMapsKeyValid } from '../../../utils/googleMapsKey'
 import './Dashboard.css'
 
@@ -30,6 +33,33 @@ function toList(data, ...keys) {
 
 const PRESENCE_COLORS = { ONLINE: '#10b981', BUSY: '#f0b020', OFFLINE: '#6b7280' }
 const ORDER_PIN_COLOR = '#2563eb'
+
+/**
+ * Single ratio against a limit — a meter, drawn as a ring. The unfilled track
+ * is a lighter step of the same hue so the state reads across the whole arc.
+ */
+function Ring({ label, value, pct, sub }) {
+  const safe = Math.max(0, Math.min(100, Number(pct) || 0))
+  return (
+    <div className="dash-ring">
+      <div
+        className="dash-ring-arc"
+        style={{
+          background: `conic-gradient(var(--primary-color) ${safe * 3.6}deg, var(--primary-soft) 0deg)`,
+        }}
+        role="img"
+        aria-label={`${label}: ${value}`}
+      >
+        <span className="dash-ring-hole" />
+      </div>
+      <div className="dash-ring-text">
+        <span className="dash-ring-label">{label}</span>
+        <strong className="dash-ring-value">{value}</strong>
+        {sub && <em className="dash-ring-sub">{sub}</em>}
+      </div>
+    </div>
+  )
+}
 
 /** Providers we plot: idle/offline staff are noise on an operations map. */
 function toMappableProviders(providers) {
@@ -243,20 +273,30 @@ function GoogleMapsAdvanced({ apiKey, center, mapProviders = [], mapOrders = [] 
       }
 
       mapProviders.forEach((provider) => {
-        attach(new MarkerCtor({
+        const ring = PRESENCE_COLORS[provider.availability] ?? PRESENCE_COLORS.OFFLINE
+        const marker = new MarkerCtor({
           map,
           position: { lat: provider.lat, lng: provider.lng },
           title: provider.name,
           zIndex: 1,
+          // The plain dot is drawn first so pins appear immediately; the pin
+          // artwork swaps in once its canvas is ready. If the artwork fails to
+          // load the dot simply stays, which is the old behaviour.
           icon: {
             path: g.SymbolPath.CIRCLE,
             scale: 7,
-            fillColor: PRESENCE_COLORS[provider.availability] ?? PRESENCE_COLORS.OFFLINE,
+            fillColor: ring,
             fillOpacity: 1,
             strokeColor: '#ffffff',
             strokeWeight: 2,
           },
-        }), providerTooltip(provider))
+        })
+        providerMarkerIcon(g, ring).then((icon) => {
+          // The effect may have torn down and rebuilt markers while the canvas
+          // was rasterising; only dress a marker still on a map.
+          if (icon && marker.getMap()) marker.setIcon(icon)
+        })
+        attach(marker, providerTooltip(provider))
       })
 
       // Orders sit above providers so a job pin is never hidden behind a dot.
@@ -303,7 +343,14 @@ function GoogleMapsAdvanced({ apiKey, center, mapProviders = [], mapOrders = [] 
 }
 
 function Dashboard() {
+  const navigate = useNavigate()
   const { hasPermission, loadingPermissions, isSuperAdmin, gatingUnavailable } = usePermissions()
+  // Greeting name — the profile call lives in TopBar, so fall back to the role.
+  const adminName = isSuperAdmin ? 'Super Admin' : 'Admin'
+  // One reference clock per mount: deriving "now" during render would make the
+  // week-on-week figures shift on every incidental re-render.
+  const [nowTs] = useState(() => Date.now())
+
 
   // Each dashboard block is gated on the same slug as its sidebar entry, so a
   // role only ever sees — and only ever fetches — what it is allowed to read.
@@ -312,6 +359,13 @@ function Dashboard() {
   const canOrders = hasPermission('orders.view')
   const canProviders = hasPermission('providers.view')
   const canWallet = hasPermission('wallet.view')
+
+  // The money tiles open Analytics, where the sales and revenue breakdowns
+  // live. A role with wallet access but no analytics would land on a page it
+  // cannot read, so those fall back to the wallet they can see.
+  const salesTarget = hasPermission('analytics.view')
+    ? '/admin/analytics'
+    : '/admin/wallet'
 
   // The scoped cards below exist to give a limited role something useful in
   // place of the platform-wide KPIs. A super admin already gets the full
@@ -323,7 +377,54 @@ function Dashboard() {
   const canCustomers = showScopedCards && hasPermission('customers.view')
   const canZones = showScopedCards && hasPermission('zones.view')
 
-  const [selectedPeriod, setSelectedPeriod] = useState('7days')
+  // Date range + service. Both are real query params on GET /admin/orders, so
+  // they narrow the data at the source rather than filtering what came back.
+  const [preset, setPreset] = useState('7days')
+  const [customRange, setCustomRange] = useState({ from: '', to: '' })
+  const [serviceFilter, setServiceFilter] = useState('All Services')
+  const [serviceOptions, setServiceOptions] = useState([])
+  const [filtersOpen, setFiltersOpen] = useState(false)
+
+  /**
+   * Resolves the chosen preset (or custom dates) into a concrete window.
+   * `to` is the end of its day so an inclusive date picker behaves as read.
+   */
+  const range = useMemo(() => {
+    const dayMs = 24 * 60 * 60 * 1000
+    const end = new Date(nowTs)
+    end.setHours(23, 59, 59, 999)
+
+    if (preset === 'custom' && (customRange.from || customRange.to)) {
+      const from = customRange.from ? new Date(`${customRange.from}T00:00:00`) : null
+      const to = customRange.to ? new Date(`${customRange.to}T23:59:59`) : end
+      return {
+        from,
+        to,
+        label: from
+          ? `${from.toLocaleDateString()} – ${to.toLocaleDateString()}`
+          : `Up to ${to.toLocaleDateString()}`,
+      }
+    }
+
+    if (preset === 'mtd') {
+      const from = new Date(nowTs)
+      from.setDate(1)
+      from.setHours(0, 0, 0, 0)
+      return { from, to: end, label: 'This month' }
+    }
+
+    const days = { '7days': 7, '30days': 30, '90days': 90 }[preset] ?? 7
+    const from = new Date(end.getTime() - (days - 1) * dayMs)
+    from.setHours(0, 0, 0, 0)
+    return { from, to: end, label: `Last ${days} days` }
+  }, [preset, customRange.from, customRange.to, nowTs])
+
+  // ISO strings rather than the Date objects: stable identities the fetch
+  // effect can depend on directly.
+  const fromIso = range.from ? range.from.toISOString() : undefined
+  const toIso = range.to.toISOString()
+  const activeFilterCount = (preset !== '7days' ? 1 : 0)
+    + (serviceFilter !== 'All Services' ? 1 : 0)
   const [orderStats, setOrderStats] = useState({
     total: null, active: null, pending: null, broadcasted: null, unassigned: null,
   })
@@ -364,7 +465,12 @@ function Dashboard() {
     Promise.all([
       // A page of orders large enough to drive the revenue chart. The list
       // endpoint caps at its own default (10) when no limit is given.
-      canOrders ? getAdminOrders({ limit: 500 }).catch(() => null) : null,
+      canOrders ? getAdminOrders({
+        limit: 500,
+        from: fromIso,
+        to: toIso,
+        serviceId: serviceFilter,
+      }).catch(() => null) : null,
       canProviders ? getProviders({ limit: 100 }).catch(() => null) : null,
       canWallet ? getWalletOverview().catch(() => null) : null,
       canDisputes ? getDisputes().catch(() => null) : null,
@@ -389,6 +495,7 @@ function Dashboard() {
       }
 
       const servicesList = servicesData ? toList(servicesData, 'services', 'items', 'data') : null
+      if (servicesList) setServiceOptions(servicesList)
       const zonesList = zonesData ? toList(zonesData, 'zones', 'items', 'data') : null
       const customersTotal = customersData
         ? (customersData?.meta?.total ?? customersData?.total
@@ -411,6 +518,7 @@ function Dashboard() {
         pending: counts.pending,
         broadcasted: counts.broadcasted,
         unassigned: counts.unassigned,
+        completed: counts.completed,
       })
 
       // Service Providers
@@ -445,6 +553,7 @@ function Dashboard() {
     loadingPermissions, hasPermission,
     canOrders, canProviders, canWallet, canDisputes, canServices,
     canCustomers, canZones,
+    fromIso, toIso, serviceFilter,
   ])
 
   const GOOGLE_MAPS_API_KEY = mapApiKey || contextMapKey
@@ -460,37 +569,36 @@ function Dashboard() {
   ].filter(Boolean).length
 
   const totalSPs = spStats.total ?? ((spStats.online + spStats.busy + spStats.offline) || 0)
-  const spStatusData = {
-    busy:    { count: spStats.busy ?? 0,    percentage: totalSPs ? Math.round((spStats.busy ?? 0)    / totalSPs * 100) : 0, color: '#F0B020' },
-    online:  { count: spStats.online ?? 0,  percentage: totalSPs ? Math.round((spStats.online ?? 0)  / totalSPs * 100) : 0, color: '#10b981' },
-    offline: { count: spStats.offline ?? 0, percentage: totalSPs ? Math.round((spStats.offline ?? 0) / totalSPs * 100) : 0, color: '#6b7280' },
-  }
 
   /**
    * Order-value chart, derived from the order list above — there is no
    * time-series endpoint. Cancelled orders are excluded because they were
    * never worth anything; everything else counts.
-   * 90 days is grouped into weeks — 90 daily bars is unreadable.
+   *
+   * Buckets span whatever range is selected. Anything past ~5 weeks is grouped
+   * weekly — 90 daily bars is unreadable.
    */
   const revenueTrendsData = useMemo(() => {
     const dayMs = 24 * 60 * 60 * 1000
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
 
-    const config = {
-      '7days': { count: 7, step: 1 },
-      '30days': { count: 30, step: 1 },
-      '90days': { count: 13, step: 7 },
-    }[selectedPeriod] ?? { count: 7, step: 1 }
+    const end = new Date(range.to)
+    end.setHours(0, 0, 0, 0)
+    const start = new Date(range.from ?? end.getTime() - 6 * dayMs)
+    start.setHours(0, 0, 0, 0)
 
-    const buckets = Array.from({ length: config.count }, (_, i) => {
-      const start = new Date(today.getTime() - (config.count - 1 - i) * config.step * dayMs)
+    const spanDays = Math.max(1, Math.round((end - start) / dayMs) + 1)
+    const step = spanDays > 35 ? 7 : 1
+    const count = Math.max(1, Math.ceil(spanDays / step))
+
+    const buckets = Array.from({ length: count }, (_, i) => {
+      const bucketStart = new Date(start.getTime() + i * step * dayMs)
       return {
-        start,
-        end: new Date(start.getTime() + config.step * dayMs),
-        day: config.step === 1
-          ? start.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
-          : start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        start: bucketStart,
+        day: step === 1
+          ? (spanDays <= 8
+            ? bucketStart.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
+            : bucketStart.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }))
+          : bucketStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         value: 0,
         count: 0,
       }
@@ -502,18 +610,95 @@ function Dashboard() {
       if (!order.created_at) continue
       const time = new Date(order.created_at).getTime()
       if (Number.isNaN(time) || time < windowStart) continue
-      const index = Math.floor((time - windowStart) / (config.step * dayMs))
+      const index = Math.floor((time - windowStart) / (step * dayMs))
       if (index < 0 || index >= buckets.length) continue
       buckets[index].value += Number(order.total_price || 0)
       buckets[index].count += 1
     }
 
     return buckets
-  }, [selectedPeriod, orders])
+  }, [range, orders])
 
   const revenueHasData = revenueTrendsData.some(b => b.value > 0)
   const periodTotal = revenueTrendsData.reduce((sum, b) => sum + b.value, 0)
   const periodOrders = revenueTrendsData.reduce((sum, b) => sum + b.count, 0)
+
+  /**
+   * Week-on-week movement, derived from the same order list. There is no
+   * historical endpoint, so a delta is only shown when both weeks are inside
+   * the fetched window — a made-up "+0%" would be worse than no delta.
+   */
+  const weekly = useMemo(() => {
+    const dayMs = 24 * 60 * 60 * 1000
+    const now = nowTs
+    const thisWeek = { count: 0, value: 0 }
+    const lastWeek = { count: 0, value: 0 }
+
+    for (const order of orders) {
+      if (normalizeStatus(order.status) === 'CANCELLED') continue
+      const time = new Date(order.created_at).getTime()
+      if (Number.isNaN(time)) continue
+      const age = now - time
+      const bucket = age < 7 * dayMs ? thisWeek : age < 14 * dayMs ? lastWeek : null
+      if (!bucket) continue
+      bucket.count += 1
+      bucket.value += Number(order.total_price || 0)
+    }
+
+    const delta = (current, previous) => {
+      if (!previous) return null
+      return ((current - previous) / previous) * 100
+    }
+
+    return {
+      orders: delta(thisWeek.count, lastWeek.count),
+      sales: delta(thisWeek.value, lastWeek.value),
+    }
+  }, [orders, nowTs])
+
+  /** 12-point sparkline of order volume for the accent tile. */
+  const sparkline = useMemo(() => {
+    const dayMs = 24 * 60 * 60 * 1000
+    const today = new Date(nowTs)
+    today.setHours(0, 0, 0, 0)
+    const points = Array.from({ length: 12 }, (_, i) => ({
+      start: today.getTime() - (11 - i) * dayMs,
+      v: 0,
+    }))
+    for (const order of orders) {
+      const time = new Date(order.created_at).getTime()
+      if (Number.isNaN(time)) continue
+      const index = Math.floor((time - points[0].start) / dayMs)
+      if (index >= 0 && index < points.length) points[index].v += 1
+    }
+    return points
+  }, [orders, nowTs])
+
+  /** Open orders still waiting on a provider — the dashboard's action list. */
+  const needsAttention = useMemo(() => (
+    orders
+      .filter(o => isOpen(o) && !(o.provider_id ?? o.provider?.id))
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, 6)
+  ), [orders])
+
+  const avgOrderValue = orderStats.total && periodOrders
+    ? periodTotal / periodOrders
+    : null
+
+  const onlinePct = totalSPs ? Math.round(((spStats.online ?? 0) / totalSPs) * 100) : 0
+  const completionPct = orderStats.total
+    ? Math.round(((orderStats.completed ?? 0) / orderStats.total) * 100)
+    : 0
+
+  const greeting = (() => {
+    const hour = new Date(nowTs).getHours()
+    if (hour < 12) return 'Good morning'
+    if (hour < 18) return 'Good afternoon'
+    return 'Good evening'
+  })()
+
+  const periodLabel = range.label
 
   return (
     <div className="dashboard">
@@ -528,425 +713,388 @@ function Dashboard() {
         </div>
       )}
 
-      {/* Top Row - KPI Cards */}
-      <div className="dashboard-top-row">
+      {visibleBlocks > 0 && (
+      <>
+      {/* ── Greeting ─────────────────────────────────────────────────────── */}
+      <header className="dash-head">
+        <div className="dash-head-text">
+          <h1 className="dash-greeting">
+            {greeting}, <strong>{adminName}</strong>
+          </h1>
+          <p className="dash-head-sub">Your platform summary · {periodLabel.toLowerCase()}</p>
+        </div>
+        <div className="dash-head-tools">
+          <div className="dash-period">
+            <Calendar size={15} />
+            <select
+              value={preset}
+              onChange={(e) => setPreset(e.target.value)}
+              aria-label="Reporting period"
+            >
+              <option value="7days">Last 7 days</option>
+              <option value="30days">Last 30 days</option>
+              <option value="90days">Last 90 days</option>
+              <option value="mtd">This month</option>
+              <option value="custom">Custom range…</option>
+            </select>
+            <ChevronDown size={15} />
+          </div>
+
+          <button
+            className={`dash-filter-btn ${filtersOpen ? 'is-active' : ''}`}
+            onClick={() => setFiltersOpen(o => !o)}
+          >
+            <Filter size={15} />
+            Filters
+            {activeFilterCount > 0 && <span className="dash-filter-count">{activeFilterCount}</span>}
+            <ChevronDown size={15} className={filtersOpen ? 'is-flipped' : ''} />
+          </button>
+        </div>
+      </header>
+
+      {(filtersOpen || preset === 'custom') && (
+        <div className="dash-filters">
+          <div className="dash-filter-field">
+            <label htmlFor="dash-from">From</label>
+            <input
+              id="dash-from"
+              type="date"
+              value={customRange.from}
+              max={customRange.to || undefined}
+              onChange={(e) => {
+                setCustomRange(r => ({ ...r, from: e.target.value }))
+                setPreset('custom')
+              }}
+            />
+          </div>
+          <div className="dash-filter-field">
+            <label htmlFor="dash-to">To</label>
+            <input
+              id="dash-to"
+              type="date"
+              value={customRange.to}
+              min={customRange.from || undefined}
+              onChange={(e) => {
+                setCustomRange(r => ({ ...r, to: e.target.value }))
+                setPreset('custom')
+              }}
+            />
+          </div>
+
+          {canServices && (
+            <div className="dash-filter-field">
+              <label htmlFor="dash-service">Service</label>
+              <select
+                id="dash-service"
+                value={serviceFilter}
+                onChange={(e) => setServiceFilter(e.target.value)}
+              >
+                <option value="All Services">All services</option>
+                {serviceOptions.map((service) => (
+                  <option key={service.id} value={service.id}>
+                    {service.name_en ?? service.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {activeFilterCount > 0 && (
+            <button
+              className="dash-filter-btn dash-filter-btn--ghost"
+              onClick={() => {
+                setPreset('7days')
+                setCustomRange({ from: '', to: '' })
+                setServiceFilter('All Services')
+              }}
+            >
+              Reset
+            </button>
+          )}
+
+          {/* Honest about scope: only the orders endpoint takes these params. */}
+          <p className="dash-filter-note">
+            Applies to order figures and the map. Provider, wallet and catalog
+            counts are current totals and are not date-filtered.
+          </p>
+        </div>
+      )}
+
+      {/* ── KPI strip ────────────────────────────────────────────────────── */}
+      <div className="stat-tile-row">
         {canOrders && (
-        <div className="kpi-card">
-          <div className="kpi-icon-wrapper orders">
-            <ShoppingCart size={24} />
-          </div>
-          <div className="kpi-content">
-            <div className="kpi-label">Total Orders</div>
-            <div className="kpi-value">
-              {statsLoading ? '—' : (orderStats.total ?? 0).toLocaleString()}
-            </div>
-            <div className="kpi-trend positive">
-              <TrendingUp size={14} />
-              <span>Active: {orderStats.active ?? 0} · Pending: {orderStats.pending ?? 0}</span>
-            </div>
-          </div>
-        </div>
+          <StatTile
+            label="Total orders"
+            value={statsLoading ? null : orderStats.total}
+            delta={weekly.orders}
+            deltaLabel="vs last week"
+            onClick={() => navigate('/admin/orders')}
+          />
         )}
-
+        {canOrders && (
+          <StatTile
+            label="Active orders"
+            value={statsLoading ? null : orderStats.active}
+            hint={`${orderStats.broadcasted ?? 0} broadcasted`}
+            onClick={() => navigate('/admin/orders?status=Broadcasted')}
+          />
+        )}
         {canProviders && (
-        <div className="kpi-card">
-          <div className="kpi-icon-wrapper sps">
-            <Users size={24} />
-          </div>
-          <div className="kpi-content">
-            <div className="kpi-label">Service Providers</div>
-            <div className="kpi-value">
-              {statsLoading ? '—' : totalSPs.toLocaleString()}
-            </div>
-            <div className="kpi-trend yellow">
-              <TrendingUp size={14} />
-              <span>Online: {spStats.online ?? 0} · Busy: {spStats.busy ?? 0}</span>
-            </div>
-          </div>
-        </div>
+          <StatTile
+            label="Service providers"
+            value={statsLoading ? null : totalSPs}
+            hint={`${spStats.online ?? 0} online · ${spStats.busy ?? 0} busy`}
+            onClick={() => navigate('/admin/service-providers')}
+          />
         )}
-
         {canWallet && (
-        <div className="kpi-card">
-          <div className="kpi-icon-wrapper sales">
-            <DollarSign size={24} />
-          </div>
-          <div className="kpi-content">
-            <div className="kpi-label">Total Sales</div>
-            <div className="kpi-value">
-              {statsLoading
-                ? '—'
-                : financeStats.totalSales != null
-                  ? <><span className="riyal-symbol">&#x20C1;</span>{fmtMoney(financeStats.totalSales)}</>
-                  : '—'}
-            </div>
-            <div className="kpi-trend positive">
-              <TrendingUp size={14} />
-              <span>Completed orders gross</span>
-            </div>
-          </div>
-        </div>
+          <StatTile
+            label="Total sales"
+            value={statsLoading ? null : financeStats.totalSales}
+            money
+            delta={weekly.sales}
+            deltaLabel="vs last week"
+            onClick={() => navigate(salesTarget)}
+          />
         )}
-
         {canWallet && (
-        <div className="kpi-card">
-          <div className="kpi-icon-wrapper revenue">
-            <Percent size={24} />
-          </div>
-          <div className="kpi-content">
-            <div className="kpi-label">Revenue</div>
-            <div className="kpi-value">
-              {statsLoading
-                ? '—'
-                : financeStats.revenue != null
-                  ? <><span className="riyal-symbol">&#x20C1;</span>{fmtMoney(financeStats.revenue)}</>
-                  : '—'}
-            </div>
-            <div className="kpi-trend yellow">
-              <TrendingUp size={14} />
-              <span>Platform commission</span>
-            </div>
-          </div>
-        </div>
+          <StatTile
+            label="Revenue"
+            value={statsLoading ? null : financeStats.revenue}
+            money
+            hint="Platform commission"
+            onClick={() => navigate(salesTarget)}
+          />
+        )}
+        {canOrders && (
+          <StatTile
+            label="Avg order value"
+            value={statsLoading ? null : avgOrderValue}
+            money
+            hint={periodLabel.toLowerCase()}
+          />
         )}
 
         {canDisputes && (
           <>
-            <div className="kpi-card">
-              <div className="kpi-icon-wrapper disputes">
-                <ShieldAlert size={24} />
-              </div>
-              <div className="kpi-content">
-                <div className="kpi-label">Open Disputes</div>
-                <div className="kpi-value">
-                  {statsLoading ? '—' : disputeStats.open.toLocaleString()}
-                </div>
-                <div className="kpi-trend yellow">
-                  <AlertCircle size={14} />
-                  <span>Pending &amp; under review</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="kpi-card">
-              <div className="kpi-icon-wrapper disputes">
-                <AlertCircle size={24} />
-              </div>
-              <div className="kpi-content">
-                <div className="kpi-label">Total Disputes</div>
-                <div className="kpi-value">
-                  {statsLoading ? '—' : disputeStats.total.toLocaleString()}
-                </div>
-                <div className="kpi-trend">
-                  <TrendingUp size={14} />
-                  <span>All time</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="kpi-card">
-              <div className="kpi-icon-wrapper resolved">
-                <CheckCircle2 size={24} />
-              </div>
-              <div className="kpi-content">
-                <div className="kpi-label">Resolved Disputes</div>
-                <div className="kpi-value">
-                  {statsLoading ? '—' : disputeStats.resolved.toLocaleString()}
-                </div>
-                <div className="kpi-trend positive">
-                  <TrendingUp size={14} />
-                  <span>Closed successfully</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="kpi-card">
-              <div className="kpi-icon-wrapper rejected">
-                <XCircle size={24} />
-              </div>
-              <div className="kpi-content">
-                <div className="kpi-label">Rejected Disputes</div>
-                <div className="kpi-value">
-                  {statsLoading ? '—' : disputeStats.rejected.toLocaleString()}
-                </div>
-                <div className="kpi-trend">
-                  <TrendingUp size={14} />
-                  <span>Closed without action</span>
-                </div>
-              </div>
-            </div>
+            <StatTile label="Open disputes" value={statsLoading ? null : disputeStats.open} hint="Pending & under review" onClick={() => navigate('/admin/disputes')} />
+            <StatTile label="Resolved disputes" value={statsLoading ? null : disputeStats.resolved} hint={`${disputeStats.total} all time`} onClick={() => navigate('/admin/disputes')} />
+            <StatTile label="Rejected disputes" value={statsLoading ? null : disputeStats.rejected} hint="Closed without action" onClick={() => navigate('/admin/disputes')} />
           </>
         )}
-
         {canServices && (
-          <div className="kpi-card">
-            <div className="kpi-icon-wrapper services">
-              <Wrench size={24} />
-            </div>
-            <div className="kpi-content">
-              <div className="kpi-label">Services</div>
-              <div className="kpi-value">
-                {statsLoading ? '—' : (catalogStats.services ?? 0).toLocaleString()}
-              </div>
-              <div className="kpi-trend">
-                <TrendingUp size={14} />
-                <span>In the catalog</span>
-              </div>
-            </div>
-          </div>
+          <StatTile label="Services" value={statsLoading ? null : catalogStats.services} hint="In the catalog" onClick={() => navigate('/admin/services')} />
         )}
-
         {canCustomers && (
-          <div className="kpi-card">
-            <div className="kpi-icon-wrapper customers">
-              <UserRound size={24} />
-            </div>
-            <div className="kpi-content">
-              <div className="kpi-label">Customers</div>
-              <div className="kpi-value">
-                {statsLoading ? '—' : (catalogStats.customers ?? 0).toLocaleString()}
-              </div>
-              <div className="kpi-trend">
-                <TrendingUp size={14} />
-                <span>Registered accounts</span>
-              </div>
-            </div>
-          </div>
+          <StatTile label="Customers" value={statsLoading ? null : catalogStats.customers} hint="Registered accounts" onClick={() => navigate('/admin/customers')} />
         )}
-
         {canZones && (
-          <div className="kpi-card">
-            <div className="kpi-icon-wrapper zones">
-              <MapPin size={24} />
-            </div>
-            <div className="kpi-content">
-              <div className="kpi-label">Service Zones</div>
-              <div className="kpi-value">
-                {statsLoading ? '—' : (catalogStats.zones ?? 0).toLocaleString()}
-              </div>
-              <div className="kpi-trend">
-                <TrendingUp size={14} />
-                <span>Configured areas</span>
-              </div>
-            </div>
-          </div>
+          <StatTile label="Service zones" value={statsLoading ? null : catalogStats.zones} hint="Configured areas" onClick={() => navigate('/admin/zones')} />
         )}
       </div>
 
-      {/* Map Section — provider positions, so it follows providers.view */}
-      {canProviders && (
-      <div className="dashboard-map-section">
-        <div className="map-card">
-          <div className="map-header">
-            <div className="map-title-section">
-              <AlertCircle size={20} className="map-title-icon" />
-              <h3 className="map-title">Real-time Operations Map</h3>
-              <span className="map-plot-count">
-                {statsLoading
-                  ? 'loading…'
-                  : `${mapProviders.length} provider${mapProviders.length === 1 ? '' : 's'} · ${mapOrders.length} order${mapOrders.length === 1 ? '' : 's'}`}
-              </span>
-            </div>
-            <div className="map-legend">
-              <div className="legend-item"><div className="legend-dot online"></div><span>Online</span></div>
-              <div className="legend-item"><div className="legend-dot busy"></div><span>Busy</span></div>
-              {canOrders && (
-                <div className="legend-item">
-                  <div className="legend-pin" /><span>Active order</span>
+      {/* ── Map + side column ────────────────────────────────────────────── */}
+      <div className="dash-main">
+        {/* Full-bleed map: the title, legend and plotted-count line were moved
+            out on request — mapProviders/mapOrders still carry the counts for
+            wherever they land next. */}
+        {canProviders && (
+          <section className="dash-card dash-map">
+            <div className="dash-map-body">
+              {isGoogleMapsKeyValid(GOOGLE_MAPS_API_KEY) ? (
+                <GoogleMapsAdvanced
+                  apiKey={GOOGLE_MAPS_API_KEY}
+                  center={mapCenter}
+                  mapProviders={mapProviders}
+                  mapOrders={mapOrders}
+                />
+              ) : (
+                <div className="map-placeholder">
+                  <MapPin size={40} />
+                  <p className="map-placeholder-title">Map not available</p>
+                  <p className="map-placeholder-text">
+                    Add a valid <strong>Google Maps API key</strong> in <strong>Settings → API Keys</strong>,
+                    with <strong>Maps JavaScript API</strong> enabled for it.
+                  </p>
                 </div>
               )}
             </div>
-          </div>
+          </section>
+        )}
 
-          <div className="map-container">
-            {isGoogleMapsKeyValid(GOOGLE_MAPS_API_KEY) ? (
-              <GoogleMapsAdvanced
-                apiKey={GOOGLE_MAPS_API_KEY}
-                center={mapCenter}
-                mapProviders={mapProviders}
-                mapOrders={mapOrders}
-              />
-            ) : (
-              <div className="map-placeholder">
-                <MapPin size={48} />
-                <p className="map-placeholder-title">Map not available</p>
-                <p className="map-placeholder-text">
-                  Add a valid <strong>Google Maps API key</strong> in <strong>Settings → API Keys</strong>.
-                  You must enable <strong>Maps JavaScript API</strong> for your key in Google Cloud Console.
-                </p>
-                <a
-                  className="map-placeholder-link"
-                  href="https://console.cloud.google.com/apis/library/maps-javascript-backend.googleapis.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Enable Maps JavaScript API →
-                </a>
-              </div>
-            )}
-
-            <div className="live-activity-box">
-              <div className="live-activity-header">LIVE ACTIVITY</div>
-              <div className="live-activity-item">
-                <span className="live-activity-label">Broadcasted:</span>
-                <span className="live-activity-value purple">{orderStats.broadcasted ?? '—'}</span>
-              </div>
-              <div className="live-activity-item">
-                <span className="live-activity-label">Active Orders:</span>
-                <span className="live-activity-value blue">{orderStats.active ?? '—'}</span>
-              </div>
-              <div className="live-activity-item">
-                <span className="live-activity-label">Pending Orders:</span>
-                <span className="live-activity-value orange">{orderStats.pending ?? '—'}</span>
-              </div>
-              <div className="live-activity-item">
-                <span className="live-activity-label">Online Providers:</span>
-                <span className="live-activity-value green">{spStats.online ?? '—'}</span>
-              </div>
-              {(orderStats.active > 0 || orderStats.pending > 0) && (
-                <div className="live-activity-progress">
-                  <div className="live-activity-progress-bar">
-                    {/* Share of open work still waiting on a provider. */}
-                    <div
-                      className="live-activity-progress-fill"
-                      style={{ width: `${(orderStats.pending / (orderStats.active + orderStats.pending)) * 100}%` }}
+        <div className="dash-side">
+          {canOrders && (
+            <section className="dash-accent">
+              <h2>Live right now</h2>
+              <p className="dash-accent-label">Orders in flight</p>
+              <div className="dash-hero">{statsLoading ? '—' : (orderStats.active ?? 0)}</div>
+              <p className="dash-accent-foot">
+                {orderStats.pending ?? 0} waiting to be broadcast
+              </p>
+              <div className="dash-spark">
+                <ResponsiveContainer width="100%" height={64}>
+                  <LineChart data={sparkline} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
+                    <Line
+                      type="monotone"
+                      dataKey="v"
+                      stroke="#1a1a1a"
+                      strokeOpacity={0.55}
+                      strokeWidth={2}
+                      dot={false}
+                      isAnimationActive={false}
                     />
-                  </div>
-                  <span className="live-activity-progress-note">
-                    {orderStats.pending} of {orderStats.active + orderStats.pending} open awaiting a provider
-                  </span>
-                </div>
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </section>
+          )}
+
+          {(canProviders || canOrders) && (
+            <section className="dash-card dash-rings">
+              {canProviders && (
+                <Ring
+                  label="Providers online"
+                  value={`${onlinePct}%`}
+                  pct={onlinePct}
+                  sub={`${spStats.online ?? 0} of ${totalSPs}`}
+                />
               )}
-            </div>
-          </div>
+              {canOrders && (
+                <Ring
+                  label="Orders completed"
+                  value={`${completionPct}%`}
+                  pct={completionPct}
+                  sub={`${orderStats.completed ?? 0} of ${orderStats.total ?? 0}`}
+                />
+              )}
+            </section>
+          )}
+
+          {/* The map's own caption lives here rather than over the map, so the
+              map itself stays full-bleed. */}
+          {canProviders && (
+            <section className="dash-card dash-mapinfo">
+              <h2>Real-time operations map</h2>
+              <p>Online providers and the jobs currently in flight</p>
+
+              <div className="dash-legend">
+                <span><i className="dash-dot dash-dot--online" />Online</span>
+                <span><i className="dash-dot dash-dot--busy" />Busy</span>
+                {canOrders && <span><i className="dash-pin" />Active order</span>}
+              </div>
+
+              <p className="dash-mapinfo-count">
+                {statsLoading
+                  ? 'Loading…'
+                  : `${mapProviders.length} provider${mapProviders.length === 1 ? '' : 's'} · ${mapOrders.length} active order${mapOrders.length === 1 ? '' : 's'} plotted`}
+              </p>
+            </section>
+          )}
         </div>
       </div>
-      )}
 
-      {/* Bottom Row — the trend chart is derived from orders, the donut from
-          providers, so each follows its own permission. */}
-      {(canOrders || canProviders) && (
-      <div className="dashboard-bottom-row">
-        {/* Revenue Trends */}
-        {canOrders && (
-        <div className="trends-card">
-          <div className="trends-header">
-            <div className="trends-heading">
-              <h3 className="trends-title">Order Value</h3>
-              <p className="trends-summary">
+      {/* ── Bottom row ───────────────────────────────────────────────────── */}
+      {canOrders && (
+      <div className="dash-bottom">
+        <section className="dash-card">
+          <header className="dash-card-head">
+            <div>
+              <h2>Order value</h2>
+              <p>
                 {statsLoading ? '—' : (
                   <>
                     <span className="riyal-symbol">&#x20C1;</span>
-                    {fmtMoney(periodTotal)}
-                    <span className="trends-summary-sub">
-                      {' '}from {periodOrders.toLocaleString()} order{periodOrders === 1 ? '' : 's'}
-                    </span>
+                    {fmtMoney(periodTotal)} from {periodOrders.toLocaleString()} order{periodOrders === 1 ? '' : 's'}
                   </>
                 )}
               </p>
             </div>
-            <div className="trends-dropdown">
-              <select value={selectedPeriod} onChange={(e) => setSelectedPeriod(e.target.value)} className="period-select">
-                <option value="7days">Last 7 Days</option>
-                <option value="30days">Last 30 Days</option>
-                <option value="90days">Last 90 Days</option>
-              </select>
-              <ChevronDown size={16} className="dropdown-icon" />
-            </div>
-          </div>
-          <div className="chart-container">
-            {!statsLoading && !revenueHasData ? (
-              <div className="chart-empty">
-                <TrendingUp size={32} />
-                <p>No orders in this period.</p>
+          </header>
+
+          <div className="dash-chart">
+            {!revenueHasData ? (
+              <div className="dash-empty">
+                <TrendingUp size={26} />
+                <span>No order value in this period yet.</span>
               </div>
             ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={revenueTrendsData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                <XAxis dataKey="day" tick={{ fill: '#6b7280', fontSize: 12, fontWeight: 600 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fill: '#6b7280', fontSize: 12, fontWeight: 600 }} tickLine={false} axisLine={false} tickFormatter={(v) => `\u20C1${v.toLocaleString()}`} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-base)', borderRadius: '8px', boxShadow: 'var(--shadow-md)', padding: '8px 12px' }}
-                  formatter={(v, _name, item) => [
-                    `\u20C1${Number(v).toLocaleString()} \u00B7 ${item?.payload?.count ?? 0} orders`,
-                    'Order value',
-                  ]}
-                  labelStyle={{ color: 'var(--text-main)', fontWeight: 600, marginBottom: '4px' }}
-                />
-                <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                  {revenueTrendsData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={index === revenueTrendsData.length - 1 ? '#D39A18' : '#F0B020'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={revenueTrendsData} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-base)" />
+                  <XAxis
+                    dataKey="day"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
+                  />
+                  <Tooltip
+                    cursor={{ fill: 'var(--border-light)' }}
+                    contentStyle={{
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border-base)',
+                      borderRadius: 10,
+                      fontFamily: 'var(--font-sans)',
+                      fontSize: 12,
+                    }}
+                    formatter={(value) => [`SAR ${fmtMoney(value)}`, 'Order value']}
+                  />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={34}>
+                    {revenueTrendsData.map((entry, index) => (
+                      <Cell key={index} fill="var(--primary-color)" />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             )}
           </div>
-        </div>
-        )}
+        </section>
 
-        {/* SP Status */}
-        {canProviders && (
-        <div className="sp-status-card">
-          <div className="sp-status-header">
-            <h3 className="sp-status-title">Service Provider Status</h3>
-            <span className="live-badge">LIVE</span>
-          </div>
-
-          <div className="sp-status-content">
-            <div className="donut-chart-wrapper">
-              <div className="donut-chart">
-                <svg viewBox="0 0 120 120" className="donut-svg">
-                  <circle cx="60" cy="60" r="50" fill="none" stroke="#e5e7eb" strokeWidth="12" />
-                  {totalSPs > 0 && <>
-                    <circle cx="60" cy="60" r="50" fill="none" stroke={spStatusData.busy.color} strokeWidth="12"
-                      strokeDasharray={`${(spStatusData.busy.percentage / 100) * 314.16} ${314.16}`}
-                      strokeDashoffset="0" transform="rotate(-90 60 60)" />
-                    <circle cx="60" cy="60" r="50" fill="none" stroke={spStatusData.online.color} strokeWidth="12"
-                      strokeDasharray={`${(spStatusData.online.percentage / 100) * 314.16} ${314.16}`}
-                      strokeDashoffset={`-${(spStatusData.busy.percentage / 100) * 314.16}`}
-                      transform="rotate(-90 60 60)" />
-                    <circle cx="60" cy="60" r="50" fill="none" stroke={spStatusData.offline.color} strokeWidth="12"
-                      strokeDasharray={`${(spStatusData.offline.percentage / 100) * 314.16} ${314.16}`}
-                      strokeDashoffset={`-${((spStatusData.busy.percentage + spStatusData.online.percentage) / 100) * 314.16}`}
-                      transform="rotate(-90 60 60)" />
-                  </>}
-                </svg>
-                <div className="donut-center">
-                  <div className="donut-total">{statsLoading ? '—' : totalSPs}</div>
-                  <div className="donut-label">TOTAL SPS</div>
-                </div>
-              </div>
+        <section className="dash-card">
+          <header className="dash-card-head">
+            <div>
+              <h2>Needs a provider</h2>
+              <p>Open orders nobody has accepted yet</p>
             </div>
+            {needsAttention.length > 0 && (
+              <span className="dash-count">{needsAttention.length}</span>
+            )}
+          </header>
 
-            <div className="sp-status-breakdown">
-              <div className="breakdown-item">
-                <div className="breakdown-dot" style={{ backgroundColor: spStatusData.busy.color }}></div>
-                <div className="breakdown-content">
-                  <div className="breakdown-label">Busy (On-task)</div>
-                  <div className="breakdown-value">{spStatusData.busy.count} Providers ({spStatusData.busy.percentage}%)</div>
-                </div>
+          <div className="dash-list">
+            {statsLoading ? (
+              <div className="dash-empty"><span>Loading…</span></div>
+            ) : needsAttention.length === 0 ? (
+              <div className="dash-empty">
+                <CheckCircle2 size={26} />
+                <span>Every open order has a provider.</span>
               </div>
-              <div className="breakdown-item">
-                <div className="breakdown-dot" style={{ backgroundColor: spStatusData.online.color }}></div>
-                <div className="breakdown-content">
-                  <div className="breakdown-label">Online (Available)</div>
-                  <div className="breakdown-value">{spStatusData.online.count} Providers ({spStatusData.online.percentage}%)</div>
-                </div>
-              </div>
-              <div className="breakdown-item">
-                <div className="breakdown-dot" style={{ backgroundColor: spStatusData.offline.color }}></div>
-                <div className="breakdown-content">
-                  <div className="breakdown-label">Offline</div>
-                  <div className="breakdown-value">{spStatusData.offline.count} Providers ({spStatusData.offline.percentage}%)</div>
-                </div>
-              </div>
-            </div>
+            ) : (
+              needsAttention.map((order) => (
+                <button
+                  key={order.id}
+                  className="dash-list-row"
+                  onClick={() => navigate(`/admin/orders/${order.id}`)}
+                >
+                  <span className="dash-list-main">
+                    <strong>{order.order_no ?? `#${String(order.id).slice(0, 8)}`}</strong>
+                    <em>{order.service?.name_en ?? order.service?.name ?? 'Service'}</em>
+                  </span>
+                  <span className={`dash-chip dash-chip--${normalizeStatus(order.status).toLowerCase()}`}>
+                    {normalizeStatus(order.status).replace(/_/g, ' ')}
+                  </span>
+                </button>
+              ))
+            )}
           </div>
-        </div>
-        )}
+        </section>
       </div>
+      )}
+      </>
       )}
     </div>
   )

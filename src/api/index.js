@@ -34,6 +34,7 @@ export * from './maps.js';
 export * from './settings.js';
 export * from './promotions.js';
 export * from './communication.js';
+export * from './chat.js';
 export * from './disputes.js';
 export * from './pricing.js';
 export * from './wallet.js';

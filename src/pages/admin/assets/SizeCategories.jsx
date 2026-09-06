@@ -6,6 +6,9 @@ import {
 import ConfirmDialog from '../../../components/ConfirmDialog/ConfirmDialog'
 import { getSizeCategories, deleteSizeCategory } from '../../../api'
 import './SizeCategories.css'
+import SortableTh from '../../../components/DataTable/SortableTh'
+import { useTableSort } from '../../../components/DataTable/useTableSort'
+import TableScroll from '../../../components/DataTable/TableScroll'
 
 function toArray(value) {
   return Array.isArray(value) ? value : []
@@ -24,6 +27,7 @@ function SizeCategories() {
   const navigate = useNavigate()
 
   const [sizes, setSizes] = useState([])
+  const sort = useTableSort()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
@@ -67,15 +71,20 @@ function SizeCategories() {
     !term || (size.name || '').toLowerCase().includes(term),
   )
 
+  const sortedSizes = sort.apply(visibleSizes, {
+    name: (s) => s.name,
+    multiplier: (s) => Number(s.multiplier ?? 0),
+    effect: (s) => Number(s.multiplier ?? 0),
+  })
+
   return (
     <div className="size-categories">
-      <header className="sz-header">
+      <header className="dt-page-head">
         <div>
-          <h1 className="sz-title">Size Categories</h1>
-          <p className="sz-subtitle">Groups assets by size and scales the price accordingly.</p>
+          <p className="dt-page-sub">Groups assets by size and scales the price accordingly.</p>
         </div>
         <button
-          className="sz-btn sz-btn--primary"
+          className="dt-btn dt-btn--primary"
           onClick={() => navigate('/admin/assets/sizes/add')}
         >
           <Plus size={18} />
@@ -83,8 +92,8 @@ function SizeCategories() {
         </button>
       </header>
 
-      <div className="sz-toolbar">
-        <div className="sz-search">
+      <div className="dt-toolbar">
+        <div className="dt-search">
           <Search size={16} />
           <input
             type="search"
@@ -107,39 +116,39 @@ function SizeCategories() {
       )}
 
       {loading ? (
-        <div className="sz-state">
+        <div className="dt-empty">
           <Loader2 size={32} className="spin" />
           <span>Loading size categories…</span>
         </div>
       ) : sizes.length === 0 ? (
-        <div className="sz-state">
+        <div className="dt-empty">
           <Ruler size={32} />
           <h2>No size categories yet</h2>
           <p>Create one to price the same service differently by asset size.</p>
-          <button className="sz-btn sz-btn--primary" onClick={() => navigate('/admin/assets/sizes/add')}>
+          <button className="dt-btn dt-btn--primary" onClick={() => navigate('/admin/assets/sizes/add')}>
             <Plus size={16} /> Add Category
           </button>
         </div>
       ) : visibleSizes.length === 0 ? (
-        <div className="sz-state">
+        <div className="dt-empty">
           <Search size={32} />
           <h2>No matches</h2>
           <p>No size categories match “{search.trim()}”.</p>
         </div>
       ) : (
-        <div className="sz-table-card">
-          <div className="sz-table-wrap">
-            <table className="sz-table">
+        <div className="dt-card">
+          <TableScroll>
+            <table className="dt-table">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Multiplier</th>
-                  <th>Effect on price</th>
+                  <SortableTh sortKey="name" sort={sort}>Name</SortableTh>
+                  <SortableTh sortKey="multiplier" sort={sort}>Multiplier</SortableTh>
+                  <SortableTh sortKey="effect" sort={sort}>Effect on price</SortableTh>
                   <th aria-label="Actions" />
                 </tr>
               </thead>
               <tbody>
-                {visibleSizes.map(size => {
+                {sortedSizes.map(size => {
                   const n = Number(size.multiplier)
                   return (
                     <tr key={size.id}>
@@ -156,9 +165,9 @@ function SizeCategories() {
                         </span>
                       </td>
                       <td>
-                        <div className="sz-row-actions">
+                        <div className="dt-row-actions">
                           <button
-                            className="sz-icon-btn"
+                            className="dt-icon-btn"
                             onClick={() => navigate(`/admin/assets/sizes/${size.id}/edit`)}
                             title={`Edit ${size.name}`}
                             aria-label={`Edit ${size.name}`}
@@ -166,7 +175,7 @@ function SizeCategories() {
                             <Pencil size={15} />
                           </button>
                           <button
-                            className="sz-icon-btn sz-icon-btn--danger"
+                            className="dt-icon-btn dt-icon-btn--danger"
                             onClick={() => askDelete(size)}
                             title={`Delete ${size.name}`}
                             aria-label={`Delete ${size.name}`}
@@ -180,7 +189,7 @@ function SizeCategories() {
                 })}
               </tbody>
             </table>
-          </div>
+          </TableScroll>
         </div>
       )}
 

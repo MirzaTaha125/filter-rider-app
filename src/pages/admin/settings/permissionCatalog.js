@@ -163,6 +163,13 @@ export const PERMISSION_GROUPS = [
     ],
   },
   {
+    group: 'Chat',
+    permissions: [
+      { name: 'Chat View', slug: 'chat.view', description: 'Read customer ↔ provider conversations' },
+      { name: 'Chat Reply', slug: 'chat.reply', description: 'Reply in a conversation as support' },
+    ],
+  },
+  {
     group: 'Disputes',
     permissions: [
       { name: 'Disputes View', slug: 'disputes.view', description: 'View dispute cases and their threads' },

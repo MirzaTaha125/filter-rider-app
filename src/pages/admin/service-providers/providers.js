@@ -27,14 +27,15 @@ export function statusTone(status) {
   }
 }
 
+/** Maps live availability onto the shared dt-tone-- colour names. */
 export function availabilityTone(value) {
   switch (normalizeAvailability(value)) {
     case 'ONLINE':
-      return 'online'
+      return 'success'
     case 'BUSY':
-      return 'busy'
+      return 'warning'
     default:
-      return 'offline'
+      return 'muted'
   }
 }
 
@@ -75,9 +76,14 @@ export function mapProviderRow(item) {
     status: item.provider_status ?? item.user_status ?? item.status ?? 'PENDING',
     availability: normalizeAvailability(item.liveStatus ?? item.live_status ?? item.availability),
     zone: zoneLabel(item.zone),
-    rating: item.stats?.rating ?? item.rating ?? 0,
-    totalOrders: item.stats?.totalOrders ?? item.total_orders ?? item.totalOrders ?? 0,
-    totalEarnings: item.stats?.totalEarnings ?? item.total_earnings ?? item.totalEarnings ?? 0,
+    // The stats row stores avg_rating / total_jobs_done; the list endpoint also
+    // sends flattened totals. Read both names so neither shape falls through to
+    // a silent zero.
+    rating: Number(item.rating ?? item.stats?.avg_rating ?? 0),
+    ratingCount: item.rating_count ?? item.stats?.rating_count ?? 0,
+    totalOrders: item.total_orders ?? item.totalOrders ?? 0,
+    completedJobs: item.completed_jobs ?? item.stats?.total_jobs_done ?? 0,
+    totalEarnings: Number(item.total_earnings ?? item.totalEarnings ?? 0),
     verified: item.verification_status === 'VERIFIED' || item.verified === true,
     joinDate: item.created_at ?? item.joinDate ?? item.join_date ?? null,
     avatar: item.avatar ?? null,

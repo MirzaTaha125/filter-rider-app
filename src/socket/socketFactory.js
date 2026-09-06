@@ -25,3 +25,6 @@ export const createCatalogSocket = (accessToken) =>
 
 export const createDisputesSocket = (accessToken) =>
   io(`${BACKEND_URL}/api/v1/ws/disputes`, opts(accessToken))
+
+export const createChatSocket = (accessToken) =>
+  io(`${BACKEND_URL}/api/v1/ws/chat`, opts(accessToken))

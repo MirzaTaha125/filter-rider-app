@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Plus, Edit, X, Save, Trash2 } from 'lucide-react'
 import './AssetDefinitions.css'
+import TableScroll from '../../../components/DataTable/TableScroll'
 
 function AssetDefinitions() {
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -101,7 +102,6 @@ function AssetDefinitions() {
     <div className="asset-definitions">
       <div className="asset-definitions-header-content">
         <div>
-          <h1 className="asset-definitions-title">Asset Definitions</h1>
           <p className="asset-definitions-subtitle">Define specific assets and their size categories</p>
         </div>
         <button className="btn-add" onClick={() => openModal()}>
@@ -114,8 +114,8 @@ function AssetDefinitions() {
         <div className="definitions-header">
           <h2>Vehicle Definitions</h2>
         </div>
-        <div className="definitions-table-container">
-          <table className="definitions-table">
+        <TableScroll>
+          <table className="dt-table">
             <thead>
               <tr>
                 <th>Make</th>
@@ -146,7 +146,7 @@ function AssetDefinitions() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TableScroll>
       </div>
 
       {/* Add/Edit Definition Modal */}

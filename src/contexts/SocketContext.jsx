@@ -1,12 +1,13 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
-import { createPresenceSocket, createOrdersSocket, createCatalogSocket, createDisputesSocket } from '../socket/socketFactory'
+import { createPresenceSocket, createOrdersSocket, createCatalogSocket, createDisputesSocket, createChatSocket } from '../socket/socketFactory'
 
 const SocketContext = createContext({
   presenceSocket: null,
   ordersSocket: null,
   catalogSocket: null,
   disputesSocket: null,
-  connected: { presence: false, orders: false, catalog: false, disputes: false },
+  chatSocket: null,
+  connected: { presence: false, orders: false, catalog: false, disputes: false, chat: false },
   reconnectAll: () => {},
 })
 
@@ -15,8 +16,9 @@ export function SocketProvider({ children }) {
   const ordersRef   = useRef(null)
   const catalogRef  = useRef(null)
   const disputesRef = useRef(null)
+  const chatRef     = useRef(null)
   const heartbeatRef = useRef(null)
-  const [connected, setConnected] = useState({ presence: false, orders: false, catalog: false, disputes: false })
+  const [connected, setConnected] = useState({ presence: false, orders: false, catalog: false, disputes: false, chat: false })
 
   const setConn = (ns, val) => setConnected((prev) => ({ ...prev, [ns]: val }))
 
@@ -26,11 +28,13 @@ export function SocketProvider({ children }) {
     ordersRef.current?.disconnect()
     catalogRef.current?.disconnect()
     disputesRef.current?.disconnect()
+    chatRef.current?.disconnect()
     presenceRef.current = null
     ordersRef.current   = null
     catalogRef.current  = null
     disputesRef.current = null
-    setConnected({ presence: false, orders: false, catalog: false, disputes: false })
+    chatRef.current     = null
+    setConnected({ presence: false, orders: false, catalog: false, disputes: false, chat: false })
   }, [])
 
   const connectAll = useCallback((token) => {
@@ -70,6 +74,12 @@ export function SocketProvider({ children }) {
     disputesRef.current = disputes
     disputes.on('connect',    () => setConn('disputes', true))
     disputes.on('disconnect', () => setConn('disputes', false))
+
+    // ── Chat (customer ↔ provider threads, admin joins read-only) ────────────
+    const chat = createChatSocket(token)
+    chatRef.current = chat
+    chat.on('connect',    () => setConn('chat', true))
+    chat.on('disconnect', () => setConn('chat', false))
   }, [disconnectAll])
 
   // Connect on mount using stored token.
@@ -97,6 +107,7 @@ export function SocketProvider({ children }) {
       ordersSocket:   ordersRef.current,
       catalogSocket:  catalogRef.current,
       disputesSocket: disputesRef.current,
+      chatSocket:     chatRef.current,
       connected,
       reconnectAll: () => connectAll(localStorage.getItem('adminToken')),
     }}>

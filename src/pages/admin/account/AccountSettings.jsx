@@ -184,7 +184,6 @@ function AccountSettings() {
     <div className="account-settings">
       <div className="account-settings-header">
         <div>
-          <h1 className="account-settings-title">Account Settings</h1>
           <p className="account-settings-subtitle">
             Manage your account information and preferences
           </p>

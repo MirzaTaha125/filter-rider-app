@@ -1,0 +1,621 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Shared list-page furniture: card, toolbar, filters, table, footer, pager.
+   Imported once from index.css — every admin list uses these classes so the
+   tables stay identical instead of drifting per page.
+
+   Layout of a page that uses it:
+
+     <div className="dt-card">
+       <div className="dt-toolbar"> search + buttons </div>
+       <div className="dt-filters"> optional fields </div>
+       <div className="dt-table-wrap"><table className="dt-table"> … </table></div>
+       <footer className="dt-foot"> count + pager </footer>
+     </div>
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dt-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-sans);
+  overflow: hidden;
+}
+
+/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+
+/* A toolbar carries its own surface, so pages that keep the filter bar as a
+   separate block above the table still read as a card rather than floating on
+   the page background. Inside a card it flattens into a header strip. */
+.dt-toolbar {
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: space-between;
+  padding: 1rem 1.1rem;
+}
+
+.dt-card > .dt-toolbar {
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border-base);
+  border-radius: 0;
+}
+
+.dt-search {
+  align-items: center;
+  background: var(--bg-input);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  display: flex;
+  flex: 1 1 300px;
+  gap: 0.55rem;
+  max-width: 420px;
+  padding: 0.55rem 0.8rem;
+}
+
+.dt-search:focus-within {
+  border-color: var(--primary-color);
+}
+
+.dt-search input {
+  background: none;
+  border: none;
+  color: var(--text-main);
+  flex: 1;
+  font-family: inherit;
+  font-size: 0.875rem;
+  min-width: 0;
+  outline: none;
+}
+
+.dt-toolbar-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.dt-btn {
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  gap: 0.45rem;
+  padding: 0.55rem 0.9rem;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.dt-btn:hover:not(:disabled) {
+  background: var(--border-light);
+}
+
+.dt-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.dt-btn.is-active {
+  border-color: var(--primary-color);
+}
+
+.dt-btn svg.is-flipped {
+  transform: rotate(180deg);
+}
+
+.dt-btn--primary {
+  background: var(--primary-color);
+  border-color: transparent;
+  color: #1a1a1a;
+}
+
+.dt-btn--primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.dt-btn--ghost {
+  background: none;
+  border-color: transparent;
+  color: var(--text-muted);
+}
+
+.dt-badge {
+  background: var(--primary-soft);
+  border-radius: 999px;
+  color: var(--primary-hover);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 7px;
+}
+
+/* ── Collapsible filter row ──────────────────────────────────────────────── */
+
+.dt-filters {
+  align-items: end;
+  background: var(--border-light);
+  border-top: 1px solid var(--border-base);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  padding: 1rem 1.1rem;
+}
+
+.dt-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 150px;
+}
+
+.dt-field label {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+/* `.dt-field` is normally a labelled wrapper, but a toolbar with no labels puts
+   it straight on the control. Style both so a bare <select class="dt-field">
+   is not left unstyled. */
+.dt-field input,
+.dt-field select,
+input.dt-field,
+select.dt-field {
+  background: var(--bg-input);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.7rem;
+}
+
+input.dt-field,
+select.dt-field {
+  display: block;
+  height: 38px;
+}
+
+.dt-field input:focus,
+.dt-field select:focus,
+input.dt-field:focus,
+select.dt-field:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+/* ── Table ───────────────────────────────────────────────────────────────── */
+
+/* A table wider than its card scrolls sideways inside this, never pushing the
+   page itself sideways.
+
+   The bar is styled rather than left to the platform: the default overlay
+   scrollbar fades out when idle, so a table that scrolls looked identical to
+   one that does not, and there was nothing to tell you columns were missing. */
+.dt-table-wrap {
+  overflow-x: auto;
+  /* Without this, a horizontal bar can provoke a spurious vertical one. */
+  overflow-y: hidden;
+  scrollbar-color: var(--border-base) transparent;
+  scrollbar-width: thin;
+}
+
+/* The mirrored bar above the table. Same chrome as the one below it, so the
+   pair reads as one control rather than two different things. */
+.dt-scroll-top {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-color: var(--border-base) transparent;
+  scrollbar-width: thin;
+}
+
+.dt-table-wrap::-webkit-scrollbar,
+.dt-scroll-top::-webkit-scrollbar {
+  height: 10px;
+}
+
+.dt-scroll-top::-webkit-scrollbar-track {
+  background: var(--bg-admin);
+  border-bottom: 1px solid var(--border-base);
+}
+
+.dt-scroll-top::-webkit-scrollbar-thumb {
+  background: var(--border-base);
+  border: 2px solid var(--bg-admin);
+  border-radius: 999px;
+}
+
+.dt-scroll-top::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+.dt-table-wrap::-webkit-scrollbar-track {
+  background: var(--bg-admin);
+  border-top: 1px solid var(--border-base);
+}
+
+.dt-table-wrap::-webkit-scrollbar-thumb {
+  background: var(--border-base);
+  border: 2px solid var(--bg-admin);
+  border-radius: 999px;
+}
+
+.dt-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+.dt-table {
+  border-collapse: collapse;
+  /* A floor, so a table squeezed by a narrow window or a wide sidebar scrolls
+     in its wrapper instead of crushing every column into a word per line.
+     Pages whose tables need more room set a larger min-width inline. */
+  min-width: 640px;
+  width: 100%;
+}
+
+/* Tinted header band: separates the column names from the rows without a
+   heavy rule. */
+.dt-table thead th {
+  background: var(--primary-soft);
+  border-bottom: 1px solid var(--border-base);
+  border-top: 1px solid var(--border-base);
+  color: var(--text-main);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.85rem 1.1rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+/* ── Sortable header ─────────────────────────────────────────────────────── */
+
+/* The whole cell is the hit target, so the padding moves onto the button and
+   the header keeps the same height as a plain one. */
+.dt-table thead th.dt-th-sort {
+  padding: 0;
+}
+
+.dt-th-sort button {
+  align-items: center;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  gap: 0.4rem;
+  padding: 0.85rem 1.1rem;
+  text-align: left;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.dt-th-sort button:hover .dt-sort-glyph path {
+  fill: var(--text-muted);
+}
+
+.dt-th-sort button:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: -2px;
+}
+
+/* Grey by default; the active half takes the text colour so the direction
+   reads without hunting for which column is sorted. */
+.dt-sort-glyph {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.dt-sort-glyph path {
+  fill: var(--text-muted);
+  opacity: 0.4;
+  transition: opacity 0.12s, fill 0.12s;
+}
+
+.dt-sort-glyph path.is-on {
+  fill: var(--text-main);
+  opacity: 1;
+}
+
+.dt-table tbody td {
+  border-bottom: 1px solid var(--border-base);
+  color: var(--text-main);
+  font-size: 0.875rem;
+  padding: 0.85rem 1.1rem;
+  vertical-align: middle;
+}
+
+.dt-table tbody tr {
+  transition: background 0.15s;
+}
+
+.dt-table tbody tr:hover {
+  background: var(--border-light);
+}
+
+.dt-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Rows that navigate somewhere get the pointer; static ones do not. */
+.dt-table tbody tr.is-clickable {
+  cursor: pointer;
+}
+
+/* Two lines in one cell: a strong primary line over a muted secondary. */
+.dt-cell-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.dt-cell-stack strong {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.dt-cell-stack em {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-style: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dt-muted {
+  color: var(--text-muted);
+}
+
+.dt-mono {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.dt-col-actions {
+  text-align: right;
+  white-space: nowrap;
+  width: 1%;
+}
+
+.dt-row-actions {
+  display: inline-flex;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+.dt-icon-btn {
+  align-items: center;
+  background: var(--action-btn-bg);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  height: 32px;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+  width: 32px;
+}
+
+.dt-icon-btn:hover:not(:disabled) {
+  background: var(--action-btn-bg-hover);
+  color: var(--text-main);
+}
+
+.dt-icon-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.dt-icon-btn--danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger);
+}
+
+/* ── Status pills ────────────────────────────────────────────────────────── */
+
+.dt-status {
+  border-radius: 999px;
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 3px 9px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--border-light);
+  color: var(--text-muted);
+}
+
+.dt-status--neutral { background: var(--border-light); color: var(--text-muted); }
+.dt-status--brand { background: var(--primary-soft); color: var(--primary-hover); }
+.dt-status--info { background: rgba(37, 99, 235, 0.12); color: var(--info); }
+.dt-status--success { background: rgba(22, 163, 74, 0.12); color: var(--success); }
+.dt-status--warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+.dt-status--danger { background: rgba(239, 68, 68, 0.12); color: var(--danger); }
+
+/* Aliases for tone names the existing statusTone() helpers already return, so
+   those helpers keep working unchanged across the wallet/pricing pages. */
+.dt-status--pending { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+.dt-status--muted { background: var(--border-light); color: var(--text-muted); }
+
+/* A coloured dot beside a label, so state is never colour-alone. */
+.dt-dot-label {
+  align-items: center;
+  display: inline-flex;
+  font-size: 0.8rem;
+  font-weight: 600;
+  gap: 0.35rem;
+}
+
+.dt-dot {
+  background: currentColor;
+  border-radius: 50%;
+  flex-shrink: 0;
+  height: 8px;
+  width: 8px;
+}
+
+.dt-tone--success { color: var(--success); }
+.dt-tone--danger { color: var(--danger); }
+.dt-tone--warning { color: var(--warning); }
+.dt-tone--muted { color: var(--text-muted); }
+
+/* ── States ──────────────────────────────────────────────────────────────── */
+
+.dt-state {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  padding: 2.5rem 1.1rem !important;
+  text-align: center;
+}
+
+.dt-state--error {
+  color: var(--danger);
+}
+
+/* Standalone empty panel, for pages with no table rendered at all. It carries
+   the card surface so it occupies the same visual slot the table would have. */
+.dt-empty {
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  text-align: center;
+}
+
+/* Inline usages — a one-line note standing in for a table inside a section
+   that already has its own surface — stay plain. */
+p.dt-empty,
+.dt-card > .dt-empty {
+  background: none;
+  border: none;
+  padding: 2rem 1.1rem;
+}
+
+.dt-empty h2 {
+  color: var(--text-main);
+  font-size: 1.05rem;
+  margin: 0.35rem 0 0;
+}
+
+.dt-empty p {
+  font-size: 0.875rem;
+  margin: 0;
+  max-width: 46ch;
+}
+
+/* ── Footer & pager ──────────────────────────────────────────────────────── */
+
+.dt-foot {
+  align-items: center;
+  border-top: 1px solid var(--border-base);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: space-between;
+  padding: 0.9rem 1.1rem;
+}
+
+.dt-foot-info {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.dt-pager {
+  align-items: center;
+  display: flex;
+  gap: 0.3rem;
+}
+
+.dt-page {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  min-width: 32px;
+  padding: 0.4rem 0.6rem;
+  transition: background 0.15s, color 0.15s;
+}
+
+.dt-page:hover:not(:disabled):not(.is-current) {
+  background: var(--border-light);
+  color: var(--text-main);
+}
+
+.dt-page.is-current {
+  background: var(--primary-color);
+  color: #1a1a1a;
+}
+
+.dt-page:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.dt-page-gap {
+  color: var(--text-muted);
+  padding: 0 0.2rem;
+}
+
+/* ── Page header above the card ──────────────────────────────────────────── */
+
+.dt-page-head {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.dt-page-title {
+  color: var(--text-main);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* The page name lives in the topbar, so the header carries only the
+   description and whatever action belongs beside it. The top margin here was
+   the gap under a title that is no longer there. */
+.dt-page-sub {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  margin: 0;
+  max-width: 62ch;
+}
+
+/* The standard vertical rhythm for a list page. */
+.dt-page-layout {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-sans);
+  gap: 1.75rem;
+  width: 100%;
+}

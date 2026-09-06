@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { MapPin } from 'lucide-react'
 import { isGoogleMapsKeyValid } from '../../utils/googleMapsKey'
+import { providerMarkerIcon } from '../map/providerPin'
 import './LiveTrackingMap.css'
 
 const PROVIDER_COLOR = '#10b981'
@@ -125,6 +126,8 @@ function LiveTrackingMap({ apiKey, provider, destination }) {
     upsert('provider', provider, {
       title: 'Service provider',
       zIndex: 2,
+      // Drawn as a dot first so the position shows without waiting on the
+      // artwork; the pin swaps in below once its canvas is ready.
       icon: {
         path: g.SymbolPath.CIRCLE,
         scale: 8,
@@ -134,6 +137,17 @@ function LiveTrackingMap({ apiKey, provider, destination }) {
         strokeWeight: 3,
       },
     })
+
+    if (store.provider) {
+      const marker = store.provider
+      providerMarkerIcon(g, PROVIDER_COLOR).then((icon) => {
+        // A later render may have replaced or removed this marker while the
+        // canvas was rasterising.
+        if (icon && store.provider === marker && marker.getMap()) {
+          marker.setIcon(icon)
+        }
+      })
+    }
 
     // A straight line is a hint of distance, not a driving route — the
     // Directions API is not wired up here.

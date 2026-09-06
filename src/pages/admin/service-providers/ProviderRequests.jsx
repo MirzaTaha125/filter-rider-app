@@ -8,7 +8,10 @@ import {
 } from '../../../api'
 import { mapProviderToRequest } from '../../../utils/spDocuments'
 import { initials, formatDate } from './providers.js'
+import SortableTh from '../../../components/DataTable/SortableTh'
+import { useTableSort } from '../../../components/DataTable/useTableSort'
 import './ProviderRequests.css'
+import TableScroll from '../../../components/DataTable/TableScroll'
 
 const REQUEST_STATUSES = [
   { value: 'PENDING', label: 'Pending' },
@@ -33,6 +36,7 @@ function ProviderRequests() {
   const navigate = useNavigate()
 
   const [requests, setRequests] = useState([])
+  const sort = useTableSort()
   const [status, setStatus] = useState('PENDING')
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
@@ -101,10 +105,19 @@ function ProviderRequests() {
     }
   }
 
+  // Rows come through mapProviderToRequest, so these read its camelCase shape.
+  const sortedRequests = sort.apply(requests, {
+    name: (r) => r.fullName,
+    contact: (r) => r.email,
+    zone: (r) => r.zone,
+    submitted: (r) => new Date(r.submittedDate ?? 0).getTime(),
+    status: (r) => r.status,
+  })
+
   return (
     <div className="pr-panel">
-      <div className="pr-toolbar">
-        <div className="pr-search">
+      <div className="dt-toolbar">
+        <div className="dt-search">
           <Search size={16} />
           <input
             type="search"
@@ -113,14 +126,21 @@ function ProviderRequests() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <select className="pr-filter" value={status} onChange={(e) => setStatus(e.target.value)}>
-          {REQUEST_STATUSES.map(s => (
-            <option key={s.value} value={s.value}>{s.label}</option>
-          ))}
-        </select>
-        <span className="pr-count">
-          {loading ? '—' : `${requests.length} request${requests.length === 1 ? '' : 's'}`}
-        </span>
+        <div className="dt-toolbar-actions">
+          <select
+            className="dt-field"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            aria-label="Request status"
+          >
+            {REQUEST_STATUSES.map(s => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
+          <span className="pr-count">
+            {loading ? '—' : `${requests.length} request${requests.length === 1 ? '' : 's'}`}
+          </span>
+        </div>
       </div>
 
       {error && (
@@ -140,32 +160,32 @@ function ProviderRequests() {
       )}
 
       {loading ? (
-        <div className="pr-state">
+        <div className="dt-empty">
           <Loader2 size={30} className="spin" />
           <span>Loading requests…</span>
         </div>
       ) : requests.length === 0 ? (
-        <div className="pr-state">
+        <div className="dt-empty">
           <Inbox size={30} />
           <h3>No {REQUEST_STATUSES.find(s => s.value === status)?.label.toLowerCase()} requests</h3>
           <p>Nothing to review here right now.</p>
         </div>
       ) : (
-        <div className="pr-table-card">
-          <div className="pr-table-wrap">
-            <table className="pr-table">
+        <div className="dt-card">
+          <TableScroll>
+            <table className="dt-table">
               <thead>
                 <tr>
-                  <th>Applicant</th>
-                  <th>Contact</th>
-                  <th>Zone</th>
-                  <th>Submitted</th>
-                  <th>Status</th>
+                  <SortableTh sortKey="name" sort={sort}>Applicant</SortableTh>
+                  <SortableTh sortKey="contact" sort={sort}>Contact</SortableTh>
+                  <SortableTh sortKey="zone" sort={sort}>Zone</SortableTh>
+                  <SortableTh sortKey="submitted" sort={sort}>Submitted</SortableTh>
+                  <SortableTh sortKey="status" sort={sort}>Status</SortableTh>
                   <th aria-label="Actions" />
                 </tr>
               </thead>
               <tbody>
-                {requests.map(request => {
+                {sortedRequests.map(request => {
                   const pending = String(request.status).toUpperCase() === 'PENDING'
                   return (
                     <tr key={request.id}>
@@ -179,21 +199,21 @@ function ProviderRequests() {
                         <span>{request.phone}</span>
                         <em>{request.email}</em>
                       </td>
-                      <td className="pr-muted">
+                      <td className="dt-muted">
                         <span className="pr-zone"><MapPin size={13} /> {request.zone}</span>
                       </td>
-                      <td className="pr-muted">
+                      <td className="dt-muted">
                         {request.submittedDate === '—' ? '—' : formatDate(request.submittedDate)}
                       </td>
                       <td>
-                        <span className={`pr-badge pr-badge--${statusTone(request.status)}`}>
+                        <span className={`dt-status dt-status--${statusTone(request.status)}`}>
                           {request.status}
                         </span>
                       </td>
                       <td>
-                        <div className="pr-actions">
+                        <div className="dt-row-actions">
                           <button
-                            className="pr-btn pr-btn--ghost"
+                            className="dt-btn dt-btn dt-btn--ghost"
                             onClick={() => navigate(`/admin/service-providers/requests/${request.id}`)}
                           >
                             <Eye size={14} /> Review
@@ -201,13 +221,13 @@ function ProviderRequests() {
                           {pending && (
                             <>
                               <button
-                                className="pr-btn pr-btn--accept"
+                                className="dt-btn dt-btn dt-btn--primary"
                                 onClick={() => setDecision({ request, type: 'accept' })}
                               >
                                 <Check size={14} /> Accept
                               </button>
                               <button
-                                className="pr-btn pr-btn--reject"
+                                className="dt-btn dt-btn"
                                 onClick={() => setDecision({ request, type: 'reject' })}
                               >
                                 <X size={14} /> Reject
@@ -221,7 +241,7 @@ function ProviderRequests() {
                 })}
               </tbody>
             </table>
-          </div>
+          </TableScroll>
         </div>
       )}
 
@@ -258,11 +278,11 @@ function ProviderRequests() {
             )}
 
             <div className="pr-decision-actions">
-              <button className="pr-btn pr-btn--ghost" onClick={closeDecision} disabled={busy}>
+              <button className="dt-btn dt-btn dt-btn--ghost" onClick={closeDecision} disabled={busy}>
                 Cancel
               </button>
               <button
-                className={`pr-btn ${decision.type === 'accept' ? 'pr-btn--accept' : 'pr-btn--reject'}`}
+                className={`dt-btn ${decision.type === 'accept' ? 'dt-btn dt-btn--primary' : 'dt-btn'}`}
                 onClick={confirmDecision}
                 disabled={busy || (decision.type === 'reject' && !reason.trim())}
               >

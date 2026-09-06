@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Loader2, AlertTriangle, ShieldAlert, Search, ChevronRight,
+  AlertTriangle, Search, ChevronRight,
 } from 'lucide-react'
 import { getDisputes } from '../../../api/disputes.js'
 import {
@@ -13,7 +13,11 @@ import {
   partyName,
   formatDate,
 } from './disputes.js'
+import StatTile from '../../../components/StatTile/StatTile'
+import SortableTh from '../../../components/DataTable/SortableTh'
+import { useTableSort } from '../../../components/DataTable/useTableSort'
 import './DisputeManagement.css'
+import TableScroll from '../../../components/DataTable/TableScroll'
 
 function toArray(value) {
   return Array.isArray(value) ? value : []
@@ -23,6 +27,7 @@ function DisputeManagement() {
   const navigate = useNavigate()
 
   const [disputes, setDisputes] = useState([])
+  const sort = useTableSort()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
@@ -60,51 +65,36 @@ function DisputeManagement() {
     d => d.status === 'PENDING' || d.status === 'UNDER_REVIEW',
   ).length
 
+  const sortedDisputes = sort.apply(visible, {
+    code: (d) => d.dispute_code,
+    order: (d) => d.order?.order_no,
+    customer: (d) => partyName(d.customer),
+    provider: (d) => partyName(d.provider),
+    type: (d) => d.type,
+    opened: (d) => new Date(d.created_at ?? 0).getTime(),
+    status: (d) => d.status,
+  })
+
   return (
-    <div className="dispute-management">
-      <header className="dm-header">
+    <div className="dt-page-layout">
+      <header className="dt-page-head">
         <div>
-          <h1 className="dm-title">Disputes</h1>
-          <p className="dm-subtitle">Complaints raised by customers and service providers.</p>
+          <p className="dt-page-sub">Complaints raised by customers and service providers.</p>
         </div>
       </header>
 
-      <div className="dm-stats">
-        <div className="dm-stat">
-          <span className="dm-stat-label">Open disputes</span>
-          <span className="dm-stat-value">{loading ? '—' : openCount}</span>
-        </div>
-        <div className="dm-stat">
-          <span className="dm-stat-label">Total</span>
-          <span className="dm-stat-value">{loading ? '—' : disputes.length}</span>
-        </div>
-      </div>
-
-      <div className="dm-toolbar">
-        <div className="dm-search">
-          <Search size={16} />
-          <input
-            type="search"
-            placeholder="Search by code, order, or party…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <select className="dm-filter" value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="ALL">All statuses</option>
-          {DISPUTE_STATUSES.map(s => (
-            <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-          ))}
-        </select>
-        <select className="dm-filter" value={type} onChange={(e) => setType(e.target.value)}>
-          <option value="ALL">All types</option>
-          {DISPUTE_TYPES.map(t => (
-            <option key={t} value={t}>{enumLabel(t)}</option>
-          ))}
-        </select>
-        <span className="dm-count">
-          {loading ? '—' : `${visible.length} of ${disputes.length}`}
-        </span>
+      <div className="stat-tile-row">
+        <StatTile
+          label="Open disputes"
+          value={loading ? null : openCount}
+          hint="Pending & under review"
+          tone={openCount > 0 ? 'warning' : undefined}
+        />
+        <StatTile
+          label="Total disputes"
+          value={loading ? null : disputes.length}
+          hint="All time"
+        />
       </div>
 
       {error && (
@@ -115,44 +105,64 @@ function DisputeManagement() {
         </div>
       )}
 
-      {loading ? (
-        <div className="dm-state">
-          <Loader2 size={32} className="spin" />
-          <span>Loading disputes…</span>
+      <div className="dt-card">
+        <div className="dt-toolbar">
+          <div className="dt-search">
+            <Search size={16} />
+            <input
+              type="search"
+              placeholder="Search by code, order, or party…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          <div className="dt-toolbar-actions">
+            <div className="dt-field">
+              <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">
+                <option value="ALL">All statuses</option>
+                {DISPUTE_STATUSES.map(s => (
+                  <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                ))}
+              </select>
+            </div>
+            <div className="dt-field">
+              <select value={type} onChange={(e) => setType(e.target.value)} aria-label="Type">
+                <option value="ALL">All types</option>
+                {DISPUTE_TYPES.map(t => (
+                  <option key={t} value={t}>{enumLabel(t)}</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
-      ) : disputes.length === 0 ? (
-        <div className="dm-state">
-          <ShieldAlert size={32} />
-          <h2>No disputes</h2>
-          <p>Nothing has been raised yet.</p>
-        </div>
-      ) : visible.length === 0 ? (
-        <div className="dm-state">
-          <Search size={32} />
-          <h2>No matches</h2>
-          <p>No disputes match the current search or filters.</p>
-        </div>
-      ) : (
-        <div className="dm-table-card">
-          <div className="dm-table-wrap">
-            <table className="dm-table">
-              <thead>
-                <tr>
-                  <th>Dispute</th>
-                  <th>Order</th>
-                  <th>Customer</th>
-                  <th>Provider</th>
-                  <th>Type</th>
-                  <th>Opened</th>
-                  <th>Status</th>
-                  <th aria-label="Open" />
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map(dispute => (
+
+        <TableScroll>
+          <table className="dt-table" style={{ minWidth: 940 }}>
+            <thead>
+              <tr>
+                <SortableTh sortKey="code" sort={sort}>Dispute</SortableTh>
+                <SortableTh sortKey="order" sort={sort}>Order</SortableTh>
+                <SortableTh sortKey="customer" sort={sort}>Customer</SortableTh>
+                <SortableTh sortKey="provider" sort={sort}>Provider</SortableTh>
+                <SortableTh sortKey="type" sort={sort}>Type</SortableTh>
+                <SortableTh sortKey="opened" sort={sort}>Opened</SortableTh>
+                <SortableTh sortKey="status" sort={sort}>Status</SortableTh>
+                <th className="dt-col-actions" aria-label="Open" />
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan="8" className="dt-state">Loading disputes…</td></tr>
+              ) : disputes.length === 0 ? (
+                <tr><td colSpan="8" className="dt-state">Nothing has been raised yet.</td></tr>
+              ) : visible.length === 0 ? (
+                <tr><td colSpan="8" className="dt-state">No disputes match the current search or filters.</td></tr>
+              ) : (
+                sortedDisputes.map(dispute => (
                   <tr
                     key={dispute.id}
-                    className="dm-row"
+                    className="is-clickable"
                     onClick={() => navigate(`/admin/disputes/${dispute.id}`)}
                     tabIndex={0}
                     onKeyDown={(e) => {
@@ -162,25 +172,31 @@ function DisputeManagement() {
                       }
                     }}
                   >
-                    <td className="dm-code">{dispute.dispute_code}</td>
-                    <td className="dm-muted">{dispute.order?.order_no || '—'}</td>
+                    <td><strong>{dispute.dispute_code}</strong></td>
+                    <td className="dt-muted">{dispute.order?.order_no || '—'}</td>
                     <td>{partyName(dispute.customer)}</td>
                     <td>{partyName(dispute.provider)}</td>
-                    <td className="dm-muted">{enumLabel(dispute.type)}</td>
-                    <td className="dm-muted">{formatDate(dispute.created_at)}</td>
+                    <td className="dt-muted">{enumLabel(dispute.type)}</td>
+                    <td className="dt-muted">{formatDate(dispute.created_at)}</td>
                     <td>
-                      <span className={`dm-badge dm-badge--${statusTone(dispute.status)}`}>
+                      <span className={`dt-status dt-status--${statusTone(dispute.status)}`}>
                         {STATUS_LABELS[dispute.status] ?? dispute.status}
                       </span>
                     </td>
-                    <td className="dm-chevron"><ChevronRight size={16} /></td>
+                    <td className="dt-col-actions"><ChevronRight size={16} className="dt-muted" /></td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+                ))
+              )}
+            </tbody>
+          </table>
+        </TableScroll>
+
+        <footer className="dt-foot">
+          <span className="dt-foot-info">
+            {loading ? 'Loading…' : `Showing ${visible.length} of ${disputes.length}`}
+          </span>
+        </footer>
+      </div>
     </div>
   )
 }

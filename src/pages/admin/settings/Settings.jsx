@@ -5,6 +5,7 @@ import { getRoles, getUsers, getSettings, createSetting, updateSetting, saveGoog
 import { useAppSettings } from '../../../contexts/AppSettingsContext'
 import { PREDEFINED_PERMISSIONS, PERMISSION_GROUPS } from './permissionCatalog'
 import './Settings.css'
+import TableScroll from '../../../components/DataTable/TableScroll'
 
 const TABS = ['general', 'api', 'security', 'admin-users', 'roles', 'permissions']
 
@@ -15,6 +16,17 @@ function initials(name, email) {
   if (parts.length === 0) return '?'
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+/** Maps a User.status onto one of the shared dt-status tones. */
+function userStatusTone(status) {
+  switch (status) {
+    case 'active': return 'success'
+    case 'inactive': return 'warning'
+    case 'suspended':
+    case 'deleted': return 'danger'
+    default: return 'neutral'
+  }
 }
 
 
@@ -297,7 +309,6 @@ function Settings() {
   return (
     <div className="settings-page">
       <div className="settings-header">
-        <h1 className="settings-title">Settings</h1>
         <p className="settings-subtitle">Configure platform settings and preferences</p>
       </div>
 
@@ -478,7 +489,7 @@ function Settings() {
               {adminUsersLoading ? (
                 <div className="settings-loading"><Loader2 size={20} className="spin" /> Loading admin users…</div>
               ) : adminUsers.length === 0 ? (
-                <div className="au-empty">
+                <div className="dt-state">
                   <Users size={28} />
                   <p>No admin users yet</p>
                   <span>Create one to give a teammate access to this panel.</span>
@@ -488,14 +499,14 @@ function Settings() {
                   <div className="au-count">
                     {adminUsers.length} {adminUsers.length === 1 ? 'account' : 'accounts'}
                   </div>
-                  <div className="au-table-wrapper">
-                    <table className="au-table">
+                  <TableScroll>
+                    <table className="dt-table">
                       <thead>
                         <tr>
                           <th>User</th>
                           <th>Roles</th>
                           <th>Status</th>
-                          <th className="au-col-action">Action</th>
+                          <th className="dt-col-actions">Action</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -516,7 +527,7 @@ function Settings() {
                               <td>
                                 <div className="au-roles">
                                   {(u.roles ?? []).length === 0
-                                    ? <span className="au-muted">No roles</span>
+                                    ? <span className="dt-muted">No roles</span>
                                     : u.roles.map((r) => (
                                       <span
                                         key={r.id ?? r.name}
@@ -528,13 +539,13 @@ function Settings() {
                                 </div>
                               </td>
                               <td>
-                                <span className={`au-status au-status--${status || 'unknown'}`}>
+                                <span className={`dt-status dt-status--${userStatusTone(status)}`}>
                                   {u.status ?? '—'}
                                 </span>
                               </td>
-                              <td className="au-col-action">
+                              <td className="dt-col-actions">
                                 <button
-                                  className="au-action-btn"
+                                  className="dt-btn"
                                   onClick={() => navigate(`/admin/settings/roles/users/${u.id}?from=admin-users`)}
                                 >
                                   Manage roles
@@ -545,7 +556,7 @@ function Settings() {
                         })}
                       </tbody>
                     </table>
-                  </div>
+                  </TableScroll>
                 </>
               )}
             </div>
@@ -595,12 +606,12 @@ function Settings() {
                   <p className="permissions-subtitle">Create permissions, select a role, tick the permissions, then save</p>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button className="btn-action-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  <button className="dt-btn"
                     onClick={handleSeedPermissions} disabled={seedLoading}>
                     {seedLoading ? <Loader2 size={18} className="spin" /> : <CheckCircle size={18} />}
                     Seed All Permissions
                   </button>
-                  <button className="btn-action-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  <button className="dt-btn"
                     onClick={() => navigate('/admin/settings/permissions/new')}>
                     <Plus size={18} /> Create Permission
                   </button>
@@ -649,8 +660,8 @@ function Settings() {
                 ) : (
                   <div className="permissions-content">
                     <div className="permissions-section">
-                      <div className="permissions-table-wrapper">
-                        <table className="permissions-table">
+                      <TableScroll>
+                        <table className="dt-table">
                           <thead>
                             <tr>
                               <th style={{ width: '48px' }}>Access</th>
@@ -710,7 +721,7 @@ function Settings() {
                             })}
                           </tbody>
                         </table>
-                      </div>
+                      </TableScroll>
                     </div>
                   </div>
                 )
