@@ -1,5 +1,257 @@
-/* Shared form primitives (.sf-*) live in ../adminForm.css.
-   Badges (.spm-badge / .spm-avail) come from ServiceProviderManagement.css. */
+/* ═══════════════════════════════════════════════════════════════════════════
+   Service provider record.
+
+   Same shape as the customer and order records: identity and paperwork pinned
+   in a rail, headline numbers along the top, and the working areas — orders,
+   services, wallet, settings — behind tabs. Tables, tiles and badges come from
+   the shared set; only the rail and the panel chrome live here.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.sp-detail-page {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-sans);
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.spd-layout {
+  align-items: start;
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+}
+
+@media (max-width: 1000px) {
+  .spd-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.spd-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+/* ── Rail ─────────────────────────────────────────────────────────────────── */
+
+.spd-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.spd-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+}
+
+.spd-card-title {
+  color: var(--text-main);
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin: 0 0 0.85rem;
+}
+
+.spd-identity {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+
+.spd-presence {
+  background: var(--text-muted);
+  border: 3px solid var(--bg-card);
+  border-radius: 50%;
+  bottom: 0;
+  height: 18px;
+  position: absolute;
+  right: 0;
+  width: 18px;
+}
+
+.spd-presence.is-online {
+  background: var(--success);
+}
+
+.spd-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: center;
+  margin-top: 0.6rem;
+}
+
+.spd-stars-row {
+  align-items: center;
+  color: var(--border-base);
+  display: flex;
+  gap: 0.1rem;
+  margin-top: 0.7rem;
+}
+
+.spd-stars-row .is-filled {
+  color: var(--primary-color);
+  fill: var(--primary-color);
+}
+
+.spd-stars-row em {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-style: normal;
+  margin-left: 0.4rem;
+}
+
+.spd-facts {
+  border-top: 1px solid var(--border-base);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 1.15rem;
+  padding-top: 1.15rem;
+  text-align: left;
+  width: 100%;
+}
+
+.spd-fact {
+  min-width: 0;
+}
+
+.spd-fact-label {
+  color: var(--text-muted);
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.spd-fact-value {
+  align-items: center;
+  color: var(--text-main);
+  display: flex;
+  font-size: 0.85rem;
+  gap: 0.45rem;
+  margin-top: 0.2rem;
+  overflow-wrap: anywhere;
+}
+
+.spd-fact-value svg {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ── Tabs & panel ─────────────────────────────────────────────────────────── */
+
+.spd-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-lg);
+  min-width: 0;
+  padding: 1.25rem;
+}
+
+/* The order table brings its own edge-to-edge chrome — including the scroll
+   bar mirrored above it, which is a sibling of the table's own frame. */
+.spd-panel > .dt-table-wrap,
+.spd-panel > .dt-scroll-top {
+  margin-left: -1.25rem;
+  margin-right: -1.25rem;
+  width: calc(100% + 2.5rem);
+}
+
+.spd-panel > .dt-table-wrap {
+  margin-bottom: -1.25rem;
+}
+
+.spd-panel > .dt-toolbar {
+  padding: 0 0 1rem;
+}
+
+.spd-panel-head {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1.15rem;
+}
+
+.spd-panel-sub {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  margin: 0.2rem 0 0;
+  max-width: 56ch;
+}
+
+.spd-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.spd-chip {
+  background: var(--border-light);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.spd-chip:hover {
+  background: var(--action-btn-bg-hover);
+}
+
+.spd-chip.is-active {
+  background: var(--primary-soft);
+  color: var(--primary-hover);
+}
+
+/* ── Wallet breakdown ─────────────────────────────────────────────────────── */
+
+.spd-breakdown {
+  background: var(--bg-admin);
+  border-radius: var(--radius-md);
+  padding: 0.4rem 1rem;
+}
+
+.spd-line {
+  align-items: center;
+  border-bottom: 1px solid var(--border-base);
+  display: flex;
+  font-size: 0.85rem;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 0.7rem 0;
+}
+
+.spd-line:last-child {
+  border-bottom: none;
+}
+
+.spd-line span {
+  color: var(--text-muted);
+}
+
+.spd-line strong {
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+
+/* ── Kept: the avatar, tab strip, services list, documents list, bank cards
+   and notes, which the new layout still uses. ───────────────────────────── */
 
 .sp-detail-page {
   width: 100%;
@@ -8,23 +260,15 @@
   gap: 1.25rem;
 }
 
+
+
 .spd-stack {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
 }
 
-/* ---------- Profile banner ---------- */
-.spd-profile {
-  display: flex;
-  align-items: flex-start;
-  gap: 1.25rem;
-  padding: 1.35rem 1.5rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border-base);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-}
+
 
 .spd-avatar {
   width: 60px;
@@ -41,15 +285,16 @@
   font-weight: 700;
 }
 
-.spd-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-.spd-profile-body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
+
+.spd-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
 }
+
+
 
 .spd-name {
   display: flex;
@@ -61,6 +306,8 @@
   font-weight: 700;
   color: var(--text-main);
 }
+
+
 
 .spd-verified {
   display: inline-flex;
@@ -76,19 +323,7 @@
   letter-spacing: 0.04em;
 }
 
-.spd-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem 1.1rem;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
 
-.spd-meta span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
 
 .spd-bio {
   margin: 0.2rem 0 0;
@@ -97,13 +332,7 @@
   color: var(--text-muted);
 }
 
-.spd-profile-badges {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
+
 
 /* ---------- Tabs ---------- */
 .spd-tabs {
@@ -112,6 +341,8 @@
   flex-wrap: wrap;
   border-bottom: 1px solid var(--border-base);
 }
+
+
 
 .spd-tab {
   display: inline-flex;
@@ -130,12 +361,18 @@
   transition: color 0.15s ease, border-color 0.15s ease;
 }
 
+
+
 .spd-tab:hover { color: var(--text-main); }
+
+
 
 .spd-tab.is-active {
   color: var(--text-main);
   border-bottom-color: var(--primary-color);
 }
+
+
 
 .spd-tab-count {
   padding: 0.05rem 0.4rem;
@@ -146,126 +383,7 @@
   font-weight: 700;
 }
 
-/* ---------- Metrics ---------- */
-.spd-metrics {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem;
-}
 
-.spd-metric {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  padding: 1.2rem 1.35rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border-base);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-}
-
-.spd-metric-icon {
-  width: 34px;
-  height: 34px;
-  margin-bottom: 0.25rem;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--primary-soft);
-  color: var(--text-main);
-}
-
-.spd-metric-label {
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.spd-metric-value {
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: var(--text-main);
-  font-variant-numeric: tabular-nums;
-}
-
-.spd-metric-sub {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
-.spd-stars {
-  display: inline-flex;
-  gap: 0.1rem;
-  color: var(--border-base);
-}
-
-.spd-stars .is-filled {
-  color: var(--warning);
-  fill: var(--warning);
-}
-
-.spd-head-count {
-  margin-left: 0.4rem;
-  padding: 0.05rem 0.45rem;
-  border-radius: 999px;
-  background: var(--border-light);
-  color: var(--text-muted);
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-
-/* ---------- Tables ---------- */
-.spd-table-wrap { overflow-x: auto; }
-
-.spd-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.spd-table th {
-  padding: 0.7rem 0.85rem;
-  text-align: left;
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  border-bottom: 1px solid var(--border-base);
-  white-space: nowrap;
-}
-
-.spd-table td {
-  padding: 0.75rem 0.85rem;
-  font-size: 0.85rem;
-  color: var(--text-main);
-  border-bottom: 1px solid var(--border-light);
-  white-space: nowrap;
-}
-
-.spd-table tbody tr:last-child td { border-bottom: none; }
-
-.spd-num { text-align: right; font-variant-numeric: tabular-nums; }
-.spd-strong { font-weight: 600; }
-.spd-muted { color: var(--text-muted); }
-
-.spd-empty-cell {
-  text-align: center;
-  color: var(--text-muted);
-  padding: 1.5rem !important;
-}
-
-.spd-order-status {
-  display: inline-block;
-  padding: 0.15rem 0.55rem;
-  border-radius: 999px;
-  background: var(--border-light);
-  color: var(--text-muted);
-  font-size: 0.7rem;
-  font-weight: 600;
-}
 
 .spd-empty {
   margin: 0;
@@ -277,14 +395,7 @@
   border-radius: var(--radius-md);
 }
 
-/* ---------- Services ---------- */
-.spd-card-head-row {
-  flex-direction: row;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
+
 
 .spd-add-row {
   display: flex;
@@ -292,6 +403,8 @@
   gap: 0.5rem;
   flex-wrap: wrap;
 }
+
+
 
 .spd-add-row select {
   padding: 0.6rem 0.8rem;
@@ -303,11 +416,15 @@
   font-family: inherit;
 }
 
+
+
 .spd-add-row select:focus {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px var(--primary-soft);
 }
+
+
 
 .spd-services {
   list-style: none;
@@ -318,6 +435,8 @@
   gap: 0.6rem;
 }
 
+
+
 .spd-service {
   display: flex;
   align-items: center;
@@ -327,6 +446,8 @@
   border-radius: var(--radius-md);
   background: var(--bg-card);
 }
+
+
 
 .spd-service-icon {
   width: 36px;
@@ -340,6 +461,8 @@
   color: var(--accent);
 }
 
+
+
 .spd-service-name {
   display: flex;
   flex-direction: column;
@@ -348,17 +471,23 @@
   min-width: 0;
 }
 
+
+
 .spd-service-name strong {
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-main);
 }
 
+
+
 .spd-service-name em {
   font-style: normal;
   font-size: 0.75rem;
   color: var(--text-muted);
 }
+
+
 
 .spd-service-meta {
   display: flex;
@@ -368,6 +497,8 @@
   font-weight: 600;
   color: var(--text-muted);
 }
+
+
 
 /* ---------- Documents ---------- */
 .spd-docs {
@@ -379,6 +510,8 @@
   gap: 0.5rem;
 }
 
+
+
 .spd-doc {
   display: flex;
   align-items: center;
@@ -387,6 +520,8 @@
   border: 1px solid var(--border-base);
   border-radius: var(--radius-md);
 }
+
+
 
 .spd-doc-icon {
   width: 32px;
@@ -400,12 +535,16 @@
   color: var(--text-muted);
 }
 
+
+
 .spd-doc-label {
   flex: 1;
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--text-main);
 }
+
+
 
 .spd-doc-link {
   padding: 0.35rem 0.85rem;
@@ -419,40 +558,18 @@
   transition: background 0.15s ease;
 }
 
+
+
 .spd-doc-link:hover { background: var(--action-btn-bg-hover); }
+
+
 
 .spd-doc-missing {
   font-size: 0.8rem;
   color: var(--text-muted);
 }
 
-/* ---------- Wallet rows ---------- */
-.spd-rows {
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-}
 
-.spd-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.65rem 0;
-  border-bottom: 1px solid var(--border-light);
-}
-
-.spd-row:last-child { border-bottom: none; }
-
-.spd-row dt { font-size: 0.825rem; color: var(--text-muted); }
-
-.spd-row dd {
-  margin: 0;
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--text-main);
-  font-variant-numeric: tabular-nums;
-}
 
 .spd-banks {
   list-style: none;
@@ -462,6 +579,8 @@
   flex-direction: column;
   gap: 0.6rem;
 }
+
+
 
 .spd-bank {
   display: flex;
@@ -475,6 +594,8 @@
   color: var(--text-main);
 }
 
+
+
 .spd-bank em {
   font-style: normal;
   font-size: 0.78rem;
@@ -482,30 +603,7 @@
   overflow-wrap: anywhere;
 }
 
-/* ---------- Misc ---------- */
-.spd-icon-btn {
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: 1px solid var(--border-base);
-  border-radius: var(--radius-sm);
-  background: var(--action-btn-bg);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-}
 
-.spd-icon-btn:disabled { opacity: 0.55; cursor: not-allowed; }
-
-.spd-icon-btn--danger:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.12);
-  border-color: rgba(239, 68, 68, 0.4);
-  color: var(--danger);
-}
 
 .spd-note {
   display: flex;
@@ -519,7 +617,11 @@
   font-size: 0.85rem;
 }
 
+
+
 .spd-note svg { flex-shrink: 0; }
+
+
 
 /* ---------- Responsive ---------- */
 @media (max-width: 820px) {

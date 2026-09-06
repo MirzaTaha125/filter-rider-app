@@ -298,3 +298,23 @@
   color: var(--primary-color);
   font-weight: 600;
 }
+
+/* Unread counter on a submenu entry (chat). */
+.sidebar-badge {
+  background: var(--danger);
+  border-radius: 999px;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-left: auto;
+  min-width: 18px;
+  padding: 4px 6px;
+  text-align: center;
+}
+
+.sidebar-submenu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}

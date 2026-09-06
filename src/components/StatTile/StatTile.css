@@ -1,0 +1,106 @@
+/* A small card per figure. Compact on purpose — a row of these should read as
+   one strip of numbers, not six competing panels. */
+.stat-tile {
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-sans);
+  gap: 0.3rem;
+  min-width: 0;
+  padding: 1rem 1.1rem;
+  text-align: left;
+}
+
+/* Clickable tiles are real buttons, so reset the UA button chrome. */
+.stat-tile.is-clickable {
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.stat-tile.is-clickable:hover {
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.stat-tile.is-clickable:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+.stat-tile-label {
+  align-items: center;
+  color: var(--text-muted);
+  display: flex;
+  font-size: 0.8rem;
+  font-weight: 500;
+  gap: 0.35rem;
+  justify-content: space-between;
+}
+
+/* The affordance arrow stays quiet until the tile is hovered or focused. */
+.stat-tile-go {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.stat-tile.is-clickable:hover .stat-tile-go,
+.stat-tile.is-clickable:focus-visible .stat-tile-go {
+  color: var(--primary-hover);
+  opacity: 1;
+}
+
+/* Proportional figures on purpose: tabular-nums gives every digit the width of
+   a zero, which makes a value like 121 look loose at display size. Tabular
+   belongs in columns of numbers, not headline figures. */
+.stat-tile-value {
+  align-items: baseline;
+  color: var(--text-main);
+  display: flex;
+  font-size: 1.6rem;
+  font-weight: 700;
+  gap: 0.2rem;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.stat-tile-value.is-warning { color: var(--warning); }
+.stat-tile-value.is-danger { color: var(--danger); }
+.stat-tile-value.is-success { color: var(--success); }
+
+.stat-tile-delta {
+  align-items: center;
+  display: flex;
+  font-size: 0.76rem;
+  font-weight: 600;
+  gap: 0.3rem;
+}
+
+.stat-tile-delta.is-up { color: var(--success); }
+.stat-tile-delta.is-down { color: var(--danger); }
+
+.stat-tile-delta em {
+  color: var(--text-muted);
+  font-style: normal;
+  font-weight: 400;
+}
+
+.stat-tile-hint {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A row of tiles, used by both the dashboard and the list pages. */
+.stat-tile-row {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}

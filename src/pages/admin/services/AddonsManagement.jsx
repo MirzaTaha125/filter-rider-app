@@ -10,6 +10,7 @@ import {
   deleteServiceAddon,
 } from '../../../api'
 import './AddonsManagement.css'
+import TableScroll from '../../../components/DataTable/TableScroll'
 
 function toArray(value) {
   return Array.isArray(value) ? value : []
@@ -94,13 +95,12 @@ function AddonsManagement() {
 
   return (
     <div className="addons-management">
-      <header className="am-header">
+      <header className="dt-page-head">
         <div>
-          <h1 className="am-title">Service Add-ons</h1>
-          <p className="am-subtitle">Optional extras customers can add to a service when booking.</p>
+          <p className="dt-page-sub">Optional extras customers can add to a service when booking.</p>
         </div>
         <button
-          className="am-btn am-btn--primary"
+          className="dt-btn dt-btn--primary"
           onClick={() => navigate('/admin/services/addons/add')}
           disabled={services.length === 0}
         >
@@ -109,8 +109,8 @@ function AddonsManagement() {
         </button>
       </header>
 
-      <div className="am-toolbar">
-        <div className="am-search">
+      <div className="dt-toolbar">
+        <div className="dt-search">
           <Search size={16} />
           <input
             type="search"
@@ -132,21 +132,21 @@ function AddonsManagement() {
       )}
 
       {loading ? (
-        <div className="am-state">
+        <div className="dt-empty">
           <Loader2 size={32} className="spin" />
           <span>Loading add-ons…</span>
         </div>
       ) : services.length === 0 ? (
-        <div className="am-state">
+        <div className="dt-empty">
           <PackagePlus size={32} />
           <h2>No services yet</h2>
           <p>Add-ons attach to a service, so create a service first.</p>
-          <button className="am-btn am-btn--primary" onClick={() => navigate('/admin/services/add')}>
+          <button className="dt-btn dt-btn--primary" onClick={() => navigate('/admin/services/add')}>
             <Plus size={16} /> Add Service
           </button>
         </div>
       ) : visibleServices.length === 0 ? (
-        <div className="am-state">
+        <div className="dt-empty">
           <Search size={32} />
           <h2>No matches</h2>
           <p>No add-ons match “{search.trim()}”.</p>
@@ -165,7 +165,7 @@ function AddonsManagement() {
                     </p>
                   </div>
                   <button
-                    className="am-btn am-btn--ghost"
+                    className="dt-btn dt-btn--ghost"
                     onClick={() => navigate(`/admin/services/addons/add?serviceId=${service.id}`)}
                   >
                     <Plus size={15} /> Add
@@ -173,10 +173,10 @@ function AddonsManagement() {
                 </header>
 
                 {addons.length === 0 ? (
-                  <p className="am-empty">No add-ons for this service yet.</p>
+                  <p className="dt-empty">No add-ons for this service yet.</p>
                 ) : (
-                  <div className="am-table-wrap">
-                    <table className="am-table">
+                  <TableScroll>
+                    <table className="dt-table">
                       <thead>
                         <tr>
                           <th>Name</th>
@@ -197,14 +197,14 @@ function AddonsManagement() {
                             </td>
                             <td>{addon.additional_duration ?? 0} min</td>
                             <td>
-                              <span className={`am-badge ${addon.is_active ? 'is-active' : 'is-inactive'}`}>
+                              <span className={`dt-status ${addon.is_active ? 'is-active' : 'is-inactive'}`}>
                                 {addon.is_active ? 'Active' : 'Inactive'}
                               </span>
                             </td>
                             <td>
-                              <div className="am-row-actions">
+                              <div className="dt-row-actions">
                                 <button
-                                  className="am-icon-btn"
+                                  className="dt-icon-btn"
                                   onClick={() => navigate(`/admin/services/addons/${addon.id}/edit`, {
                                     state: { serviceId: service.id },
                                   })}
@@ -214,7 +214,7 @@ function AddonsManagement() {
                                   <Pencil size={15} />
                                 </button>
                                 <button
-                                  className="am-icon-btn am-icon-btn--danger"
+                                  className="dt-icon-btn dt-icon-btn--danger"
                                   onClick={() => askDelete(addon, service)}
                                   title={`Delete ${addon.name_en}`}
                                   aria-label={`Delete ${addon.name_en}`}
@@ -227,7 +227,7 @@ function AddonsManagement() {
                         ))}
                       </tbody>
                     </table>
-                  </div>
+                  </TableScroll>
                 )}
               </section>
             )

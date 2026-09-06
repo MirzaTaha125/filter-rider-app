@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { logout, getAdminProfile } from "../../api";
 import { useTheme } from "../../context/ThemeContext";
+import { getPageTitleFor } from "./pageTitle";
 import "./TopBar.css";
 
 function TopBar({ onMenuClick }) {
@@ -36,16 +37,7 @@ function TopBar({ onMenuClick }) {
     });
   }, []);
 
-  const getPageTitle = () => {
-    const path = location.pathname;
-    if (path === "/admin" || path === "/admin/") return "Dashboard";
-    const pathParts = path.split("/").filter(Boolean);
-    if (pathParts.length > 1) {
-      const segment = pathParts[1].replace(/-/g, " ");
-      return segment.charAt(0).toUpperCase() + segment.slice(1);
-    }
-    return "Dashboard";
-  };
+  const getPageTitle = () => getPageTitleFor(location.pathname);
 
   useEffect(() => {
     const handleClickOutside = (event) => {

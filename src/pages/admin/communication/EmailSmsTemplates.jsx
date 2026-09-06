@@ -113,7 +113,6 @@ function EmailSmsTemplates() {
     <div className="email-sms-templates">
       <div className="email-sms-templates-header-content">
         <div>
-          <h1 className="email-sms-templates-title">Email & SMS Templates</h1>
           <p className="email-sms-templates-subtitle">Manage email and SMS notification templates</p>
         </div>
         <button className="btn-add" onClick={() => openModal()}>

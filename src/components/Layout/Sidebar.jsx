@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { usePermissions } from "../../contexts/PermissionsContext";
+import { useSocket } from "../../contexts/SocketContext";
+import { getChatUnreadCount } from "../../api";
 import frLogo from "../../assets/fr_logo.png";
 import {
   LayoutDashboard,
@@ -17,6 +19,7 @@ import {
   FolderOpen,
   Tag,
   MessageSquare,
+  MessagesSquare,
   AlertCircle,
   MapPin,
   ChevronDown,
@@ -35,9 +38,11 @@ function Sidebar({ isOpen, onClose }) {
   const isServicesActive = location.pathname.startsWith("/admin/services");
   const isPricingActive = location.pathname.startsWith("/admin/pricing");
   const isAssetsActive = location.pathname.startsWith("/admin/assets");
-  const isCommunicationActive = location.pathname.startsWith(
-    "/admin/communication",
-  );
+  // Chat has its own top-level entry now, so it must not also open and
+  // highlight the Communication dropdown.
+  const isCommunicationActive =
+    location.pathname.startsWith("/admin/communication") &&
+    !location.pathname.startsWith("/admin/communication/chat");
   const isWalletActive = location.pathname.startsWith("/admin/wallet");
   const isServiceProvidersActive = location.pathname.startsWith(
     "/admin/service-providers",
@@ -49,6 +54,8 @@ function Sidebar({ isOpen, onClose }) {
     isCommunicationActive,
   );
   const [walletOpen, setWalletOpen] = useState(isWalletActive);
+  const [chatUnread, setChatUnread] = useState(0);
+  const { chatSocket } = useSocket();
 
   useEffect(() => {
     if (isServicesActive) {
@@ -86,6 +93,9 @@ function Sidebar({ isOpen, onClose }) {
     { path: "/admin/orders", label: "Orders", icon: ShoppingCart, permission: "orders.view" },
     { path: "/admin/customers", label: "Customers", icon: Users, permission: "customers.view" },
     { path: "/admin/promotions", label: "Promotions", icon: Tag, permission: "promotions.view" },
+    // Chat is its own destination rather than a Communication sub-item: it is
+    // something support lives in all day, and it carries the unread badge.
+    { path: "/admin/communication/chat", label: "Chat", icon: MessagesSquare, permission: "chat.view", badge: "chat" },
     { path: "/admin/disputes", label: "Disputes", icon: AlertCircle, permission: "disputes.view" },
     { path: "/admin/zones", label: "Zones", icon: MapPin, permission: "zones.view" },
     { path: "/admin/analytics", label: "Analytics", icon: TrendingUp, permission: "analytics.view" },
@@ -121,6 +131,32 @@ function Sidebar({ isOpen, onClose }) {
     { path: "/admin/wallet/payment-approval", label: "Payment Approval", permission: "wallet.approvals.view" },
     { path: "/admin/wallet/transaction-ledger", label: "Immutable Transaction Ledger", permission: "wallet.ledger.view" },
   ];
+
+  // Unread chat count for the menu badge — refreshed on every new message and
+  // whenever the route changes (opening a thread clears its count).
+  const canSeeChat = hasPermission("chat.view");
+  useEffect(() => {
+    if (!canSeeChat) return
+    let alive = true
+    const refresh = () => {
+      getChatUnreadCount()
+        .then((res) => { if (alive) setChatUnread(Number(res?.unread) || 0) })
+        .catch(() => {})
+    }
+    refresh()
+    // The admin firehose, not the room event — room events only reach sockets
+    // that joined that order, so the badge would never move unless the matching
+    // thread happened to be open.
+    chatSocket?.on("chat.admin.new_message", refresh)
+    // Opening a conversation only changes a query param, so the route-change
+    // refresh above never fires — ChatThread announces the read instead.
+    window.addEventListener("admin:chat-read", refresh)
+    return () => {
+      alive = false
+      chatSocket?.off("chat.admin.new_message", refresh)
+      window.removeEventListener("admin:chat-read", refresh)
+    }
+  }, [canSeeChat, chatSocket, location.pathname]);
 
   // A dropdown is only worth showing when at least one of its children is.
   const visible = (items) => items.filter((item) => hasPermission(item.permission));
@@ -420,6 +456,11 @@ function Sidebar({ isOpen, onClose }) {
                     <IconComponent size={20} />
                   </span>
                   <span className="menu-label">{item.label}</span>
+                  {item.badge === "chat" && chatUnread > 0 && (
+                    <span className="sidebar-badge">
+                      {chatUnread > 99 ? "99+" : chatUnread}
+                    </span>
+                  )}
                 </Link>
               </li>
             );

@@ -197,7 +197,6 @@ function Analytics() {
     <div className="analytics-page">
       <header className="an-header">
         <div>
-          <h1 className="an-title">Analytics</h1>
           <p className="an-subtitle">
             Live platform snapshot
             {refreshedAt && <> · updated {refreshedAt.toLocaleTimeString()}</>}

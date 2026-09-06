@@ -1,11 +1,15 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  Loader2, AlertTriangle, Plus, Trash2, Star, ShoppingCart, Wallet,
-  Phone, Mail, MapPin, CheckCircle, FileText, Briefcase, Shield, FileCheck,
+  Loader2, AlertTriangle, Plus, Trash2, Star, Calendar, ChevronRight,
+  Phone, MapPin, CheckCircle, FileText, Briefcase, Shield, FileCheck,
 } from 'lucide-react'
 import PageHeader from '../../../components/PageHeader/PageHeader'
 import ConfirmDialog from '../../../components/ConfirmDialog/ConfirmDialog'
+import StatTile from '../../../components/StatTile/StatTile'
+import SortableTh from '../../../components/DataTable/SortableTh'
+import { useTableSort } from '../../../components/DataTable/useTableSort'
+import { normalizeStatus, orderStatusTone } from '../orders/orderStatus'
 import {
   getProviderDetails, updateProviderStatus,
   assignProviderServices, removeProviderService, getServices,
@@ -18,14 +22,29 @@ import {
 } from './providers.js'
 import '../adminForm.css'
 import './ServiceProviderDetail.css'
+import TableScroll from '../../../components/DataTable/TableScroll'
 
+// Documents moved into the rail — they are a checklist you glance at, not a
+// place you go. Performance became the order table it always was.
 const TABS = [
-  { id: 'performance', label: 'Performance' },
+  { id: 'orders', label: 'Orders' },
   { id: 'services', label: 'Services' },
-  { id: 'documents', label: 'Documents' },
   { id: 'wallet', label: 'Wallet' },
   { id: 'settings', label: 'Settings' },
 ]
+
+/** One labelled fact in the identity rail. */
+function Fact({ icon: Icon, label, children }) {
+  return (
+    <div className="spd-fact">
+      <span className="spd-fact-label">{label}</span>
+      <span className="spd-fact-value">
+        {Icon && <Icon size={14} />}
+        <span>{children}</span>
+      </span>
+    </div>
+  )
+}
 
 const DOCUMENTS = [
   { key: 'governmentId', label: 'Government ID', Icon: FileText },
@@ -52,7 +71,10 @@ function ServiceProviderDetail() {
   const [ordersLoading, setOrdersLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [actionError, setActionError] = useState('')
-  const [tab, setTab] = useState('performance')
+  const [tab, setTab] = useState('orders')
+  const [orderFilter, setOrderFilter] = useState('all')
+  const [avatarBroken, setAvatarBroken] = useState(false)
+  const sort = useTableSort('date', 'desc')
 
   const [addingService, setAddingService] = useState(false)
   const [serviceToAdd, setServiceToAdd] = useState('')
@@ -76,12 +98,17 @@ function ServiceProviderDetail() {
         phone: raw.user?.phone ?? '—',
         avatar: raw.user?.avatar ?? null,
         status: raw.status ?? raw.provider_status ?? 'ACTIVE',
-        availability: normalizeAvailability(raw.liveStatus ?? raw.live_status),
+        availability: normalizeAvailability(
+          raw.availability ?? raw.liveStatus ?? raw.live_status,
+        ),
         verified: raw.verification_status === 'VERIFIED',
         zone: zoneLabel(raw.zone),
         bio: raw.profile?.bio ?? '',
         joinDate: raw.created_at ?? null,
-        rating: raw.stats?.rating ?? 0,
+        // ProviderStats stores avg_rating; `stats.rating` never existed, so
+        // every provider used to read 0.0 stars.
+        rating: Number(raw.rating ?? raw.stats?.avg_rating ?? 0),
+        ratingCount: raw.rating_count ?? raw.stats?.rating_count ?? 0,
         wallet: raw.wallet ?? null,
         services: raw.services ?? [],
         bankAccounts: raw.bank_accounts ?? [],
@@ -202,48 +229,24 @@ function ServiceProviderDetail() {
   const availableServices = allServices.filter(s => !assignedIds.has(s.id))
   const isDeactivated = ['INACTIVE', 'SUSPENDED'].includes(String(provider.status).toUpperCase())
 
-  const orderRows = (rows, showAmount) => (
-    <div className="spd-table-wrap">
-      <table className="spd-table">
-        <thead>
-          <tr>
-            <th>Order</th>
-            <th>Service</th>
-            <th>Customer</th>
-            {showAmount && <th className="spd-num">Amount</th>}
-            <th>Date</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.length === 0 ? (
-            <tr><td colSpan={showAmount ? 6 : 5} className="spd-empty-cell">Nothing here</td></tr>
-          ) : rows.map(order => (
-            <tr key={order.id}>
-              <td className="spd-strong">{order.order_no ?? `#${order.id?.slice(0, 8)}`}</td>
-              <td>{order.service?.name_en ?? '—'}</td>
-              <td className="spd-muted">
-                {order.customer?.user?.full_name ?? order.customer?.profile?.company_name ?? '—'}
-              </td>
-              {showAmount && (
-                <td className="spd-num">
-                  <span className="riyal-symbol">&#x20C1;</span>{formatMoney(order.total_price)}
-                </td>
-              )}
-              <td className="spd-muted">{formatDate(order.created_at)}</td>
-              <td>
-                <span className="spd-order-status">{titleCase(String(order.status).replace(/_/g, ' '))}</span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
+  const shownOrders = orderFilter === 'active'
+    ? activeOrders
+    : orderFilter === 'completed'
+      ? completedOrders
+      : orders
+
+  const sortedOrders = sort.apply(shownOrders, {
+    order_no: (o) => o.order_no ?? o.id,
+    service: (o) => o.service?.name_en ?? '',
+    customer: (o) => o.customer?.user?.full_name ?? o.customer?.profile?.company_name ?? '',
+    amount: (o) => Number(o.total_price ?? 0),
+    date: (o) => new Date(o.created_at ?? 0).getTime(),
+    status: (o) => normalizeStatus(o.status),
+  })
 
   return (
     <div className="sp-detail-page">
-      <PageHeader title={provider.name} subtitle="Service provider" />
+      <PageHeader title={provider.name} subtitle={provider.phone} />
 
       {actionError && (
         <div className="sf-alert">
@@ -252,320 +255,394 @@ function ServiceProviderDetail() {
         </div>
       )}
 
-      <section className="spd-profile">
-        <span className="spd-avatar">
-          {provider.avatar ? <img src={provider.avatar} alt="" /> : initials(provider.name)}
-        </span>
-        <div className="spd-profile-body">
-          <h2 className="spd-name">
-            {provider.name}
-            {provider.verified && <span className="spd-verified"><CheckCircle size={13} /> Verified</span>}
-          </h2>
-          <div className="spd-meta">
-            <span><Phone size={13} /> {provider.phone}</span>
-            <span><Mail size={13} /> {provider.email}</span>
-            <span><MapPin size={13} /> {provider.zone}</span>
-            {provider.joinDate && <span>Joined {formatDate(provider.joinDate)}</span>}
-          </div>
-          {provider.bio && <p className="spd-bio">{provider.bio}</p>}
-        </div>
-        <div className="spd-profile-badges">
-          <span className={`spm-badge spm-badge--${statusTone(provider.status)}`}>
-            {titleCase(provider.status)}
-          </span>
-          <span className={`spm-avail spm-avail--${availabilityTone(provider.availability)}`}>
-            <span className="spm-avail-dot" />
-            {titleCase(provider.availability)}
-          </span>
-        </div>
-      </section>
-
-      <div className="spd-tabs" role="tablist">
-        {TABS.map(t => (
-          <button
-            key={t.id}
-            role="tab"
-            aria-selected={tab === t.id}
-            className={`spd-tab ${tab === t.id ? 'is-active' : ''}`}
-            onClick={() => setTab(t.id)}
-          >
-            {t.label}
-            {t.id === 'services' && provider.services?.length > 0 && (
-              <span className="spd-tab-count">{provider.services.length}</span>
-            )}
-          </button>
-        ))}
+      <div className="stat-tile-row">
+        <StatTile
+          label="Total orders"
+          value={ordersLoading ? null : orders.length}
+          hint={`${completedOrders.length} completed · ${activeOrders.length} active`}
+        />
+        <StatTile
+          label="Average rating"
+          value={ordersLoading ? provider.rating : provider.rating}
+          hint={provider.ratingCount > 0
+            ? `from ${provider.ratingCount} rating${provider.ratingCount === 1 ? '' : 's'}`
+            : 'no ratings yet'}
+        />
+        <StatTile
+          label="Earned"
+          value={ordersLoading ? null : earned}
+          money
+          hint={`from ${completedOrders.length} completed`}
+        />
+        <StatTile
+          label="Wallet balance"
+          value={Number(provider.wallet?.available_balance ?? 0)}
+          money
+          hint="Available now"
+        />
       </div>
 
-      {tab === 'performance' && (
-        <div className="spd-stack">
-          <div className="spd-metrics">
-            <div className="spd-metric">
-              <span className="spd-metric-icon"><ShoppingCart size={18} /></span>
-              <span className="spd-metric-label">Total orders</span>
-              <span className="spd-metric-value">{ordersLoading ? '—' : orders.length}</span>
-              <span className="spd-metric-sub">
-                {completedOrders.length} completed · {activeOrders.length} active
+      <div className="spd-layout">
+        {/* ── Identity rail ───────────────────────────────────────────────── */}
+        <aside className="spd-rail">
+          <section className="spd-card spd-identity">
+            <span className="spd-avatar">
+              {provider.avatar && !avatarBroken
+                ? <img src={provider.avatar} alt="" onError={() => setAvatarBroken(true)} />
+                : initials(provider.name)}
+              <span className={`spd-presence ${provider.availability === 'ONLINE' ? 'is-online' : ''}`} />
+            </span>
+
+            <h2 className="spd-name">
+              {provider.name}
+              {provider.verified && (
+                <span className="spd-verified" title="Verified"><CheckCircle size={14} /></span>
+              )}
+            </h2>
+
+            <div className="spd-tags">
+              <span className={`dt-status dt-status--${statusTone(provider.status)}`}>
+                {titleCase(provider.status)}
+              </span>
+              <span className={`dt-dot-label dt-tone--${availabilityTone(provider.availability)}`}>
+                <span className="dt-dot" />
+                {titleCase(provider.availability)}
               </span>
             </div>
-            <div className="spd-metric">
-              <span className="spd-metric-icon"><Star size={18} /></span>
-              <span className="spd-metric-label">Average rating</span>
-              <span className="spd-metric-value">{Number(provider.rating).toFixed(1)}</span>
-              <span className="spd-stars">
-                {[1, 2, 3, 4, 5].map(n => (
-                  <Star
-                    key={n}
-                    size={13}
-                    className={n <= Math.round(provider.rating) ? 'is-filled' : ''}
-                  />
-                ))}
-              </span>
+
+            <div className="spd-stars-row">
+              {[1, 2, 3, 4, 5].map(n => (
+                <Star key={n} size={14} className={n <= Math.round(provider.rating) ? 'is-filled' : ''} />
+              ))}
+              <em>{Number(provider.rating).toFixed(1)}</em>
             </div>
-            <div className="spd-metric">
-              <span className="spd-metric-icon"><Wallet size={18} /></span>
-              <span className="spd-metric-label">Earned</span>
-              <span className="spd-metric-value">
-                <span className="riyal-symbol">&#x20C1;</span>{formatMoney(earned)}
-              </span>
-              <span className="spd-metric-sub">from {completedOrders.length} completed orders</span>
+
+            {provider.bio && <p className="spd-bio">{provider.bio}</p>}
+
+            <div className="spd-facts">
+              <Fact icon={Phone} label="Phone">{provider.phone}</Fact>
+              <Fact icon={MapPin} label="Zone">{provider.zone}</Fact>
+              <Fact icon={Calendar} label="Joined">
+                {provider.joinDate ? formatDate(provider.joinDate) : '—'}
+              </Fact>
             </div>
-          </div>
+          </section>
 
-          {ordersLoading ? (
-            <div className="sf-state"><Loader2 size={28} className="spin" /><span>Loading orders…</span></div>
-          ) : (
-            <>
-              <section className="sf-card">
-                <header className="sf-card-head">
-                  <h2>Active orders <span className="spd-head-count">{activeOrders.length}</span></h2>
-                </header>
-                {orderRows(activeOrders, false)}
-              </section>
-
-              <section className="sf-card">
-                <header className="sf-card-head">
-                  <h2>Completed orders <span className="spd-head-count">{completedOrders.length}</span></h2>
-                </header>
-                {orderRows(completedOrders, true)}
-              </section>
-            </>
-          )}
-        </div>
-      )}
-
-      {tab === 'services' && (
-        <section className="sf-card">
-          <header className="sf-card-head spd-card-head-row">
-            <div>
-              <h2>Assigned services</h2>
-              <p>Which services this provider is allowed to take.</p>
-            </div>
-            {!addingService ? (
-              <button
-                className="sf-btn sf-btn--primary"
-                onClick={() => setAddingService(true)}
-                disabled={servicesBusy || availableServices.length === 0}
-                title={availableServices.length === 0 ? 'Every service is already assigned' : undefined}
-              >
-                <Plus size={15} /> Add service
-              </button>
-            ) : (
-              <div className="spd-add-row">
-                <select
-                  value={serviceToAdd}
-                  onChange={(e) => setServiceToAdd(e.target.value)}
-                  disabled={servicesBusy}
-                >
-                  <option value="">Select a service…</option>
-                  {availableServices.map(s => (
-                    <option key={s.id} value={s.id}>{s.name_en}</option>
-                  ))}
-                </select>
-                <button
-                  className="sf-btn sf-btn--primary"
-                  onClick={handleAddService}
-                  disabled={!serviceToAdd || servicesBusy}
-                >
-                  {servicesBusy ? <Loader2 size={15} className="spin" /> : 'Add'}
-                </button>
-                <button
-                  className="sf-btn sf-btn--secondary"
-                  onClick={() => { setAddingService(false); setServiceToAdd('') }}
-                  disabled={servicesBusy}
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
-          </header>
-
-          {(provider.services ?? []).length === 0 ? (
-            <p className="spd-empty">No services assigned yet.</p>
-          ) : (
-            <ul className="spd-services">
-              {provider.services.map(item => {
-                const svc = item.service ?? item
-                const id = svc.id ?? item.service_id
+          <section className="spd-card">
+            <h3 className="spd-card-title">Documents</h3>
+            <ul className="spd-docs">
+              {DOCUMENTS.map((doc) => {
+                const Icon = doc.Icon
+                const { key, label } = doc
+                const url = provider[key]
                 return (
-                  <li key={id} className="spd-service">
-                    <span
-                      className="spd-service-icon"
-                      style={{ '--accent': svc.icon_color || 'var(--text-muted)' }}
-                    >
-                      <Briefcase size={16} />
-                    </span>
-                    <span className="spd-service-name">
-                      <strong>{svc.name_en ?? '—'}</strong>
-                      {svc.name_ar && <em dir="rtl">{svc.name_ar}</em>}
-                    </span>
-                    <span className="spd-service-meta">
-                      {svc.base_price != null && (
-                        <span><span className="riyal-symbol">&#x20C1;</span>{formatMoney(svc.base_price)}</span>
-                      )}
-                      {svc.duration_min != null && <span>{svc.duration_min} min</span>}
-                    </span>
-                    <span className={`spm-badge spm-badge--${item.is_active ? 'success' : 'muted'}`}>
-                      {item.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                    <button
-                      className="spd-icon-btn spd-icon-btn--danger"
-                      onClick={() => setConfirm({
-                        serviceId: id,
-                        message: `Remove "${svc.name_en}" from ${provider.name}? They will stop receiving orders for it.`,
-                      })}
-                      disabled={servicesBusy}
-                      title="Remove service"
-                      aria-label={`Remove ${svc.name_en}`}
-                    >
-                      <Trash2 size={15} />
-                    </button>
+                  <li key={key} className="spd-doc">
+                    <span className="spd-doc-icon"><Icon size={15} /></span>
+                    <span className="spd-doc-label">{label}</span>
+                    {url ? (
+                      <a href={url} target="_blank" rel="noopener noreferrer" className="spd-doc-link">
+                        View
+                      </a>
+                    ) : (
+                      <span className="spd-doc-missing">Missing</span>
+                    )}
                   </li>
                 )
               })}
             </ul>
-          )}
-        </section>
-      )}
-
-      {tab === 'documents' && (
-        <section className="sf-card">
-          <header className="sf-card-head">
-            <h2>Documents</h2>
-            <p>Verification paperwork submitted by the provider.</p>
-          </header>
-          <ul className="spd-docs">
-            {DOCUMENTS.map((doc) => {
-              const Icon = doc.Icon
-              const { key, label } = doc
-              const url = provider[key]
-              return (
-                <li key={key} className="spd-doc">
-                  <span className="spd-doc-icon"><Icon size={16} /></span>
-                  <span className="spd-doc-label">{label}</span>
-                  {url ? (
-                    <a href={url} target="_blank" rel="noopener noreferrer" className="spd-doc-link">
-                      View
-                    </a>
-                  ) : (
-                    <span className="spd-doc-missing">Not provided</span>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        </section>
-      )}
-
-      {tab === 'wallet' && (
-        <div className="spd-stack">
-          <section className="sf-card">
-            <header className="sf-card-head">
-              <h2>Wallet</h2>
-              <p>Balances held for this provider.</p>
-            </header>
-            <dl className="spd-rows">
-              {[
-                ['Available balance', provider.wallet?.available_balance],
-                ['Locked balance', provider.wallet?.locked_balance],
-                ['Total credited', provider.wallet?.total_credited],
-                ['Total debited', provider.wallet?.total_debited],
-              ].map(([label, value]) => (
-                <div key={label} className="spd-row">
-                  <dt>{label}</dt>
-                  <dd><span className="riyal-symbol">&#x20C1;</span>{formatMoney(value)}</dd>
-                </div>
-              ))}
-              <div className="spd-row">
-                <dt>Currency</dt>
-                <dd>{provider.wallet?.currency ?? 'SAR'}</dd>
-              </div>
-              <div className="spd-row">
-                <dt>Wallet status</dt>
-                <dd>
-                  <span className={`spm-badge spm-badge--${provider.wallet?.status === 'ACTIVE' ? 'success' : 'muted'}`}>
-                    {provider.wallet?.status ?? '—'}
-                  </span>
-                </dd>
-              </div>
-            </dl>
           </section>
+        </aside>
 
-          {(provider.bankAccounts ?? []).length > 0 && (
-            <section className="sf-card">
-              <header className="sf-card-head">
-                <h2>Bank accounts</h2>
-              </header>
-              <ul className="spd-banks">
-                {provider.bankAccounts.map(acc => (
-                  <li key={acc.id ?? acc.iban} className="spd-bank">
-                    <strong>{acc.bank_name ?? 'Bank'}</strong>
-                    <span>{acc.account_holder_name}</span>
-                    {acc.iban && <em>{acc.iban}</em>}
-                    {acc.is_default && <span className="spm-badge spm-badge--success">Default</span>}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
+        {/* ── Tabs ────────────────────────────────────────────────────────── */}
+        <div className="spd-main">
+          <div className="spd-tabs" role="tablist">
+            {TABS.map(t => (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={tab === t.id}
+                className={`spd-tab ${tab === t.id ? 'is-active' : ''}`}
+                onClick={() => setTab(t.id)}
+              >
+                {t.label}
+                {t.id === 'services' && provider.services?.length > 0 && (
+                  <span className="spd-tab-count">{provider.services.length}</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          <div className="spd-panel">
+            {/* ORDERS */}
+            {tab === 'orders' && (
+              ordersLoading ? (
+                <div className="dt-state">Loading orders…</div>
+              ) : (
+                <>
+                  {/* One table with a filter beats two stacked tables — the
+                      columns are identical and sorting works across the lot. */}
+                  <div className="dt-toolbar">
+                    <div className="spd-filters">
+                      {[
+                        ['all', `All (${orders.length})`],
+                        ['active', `Active (${activeOrders.length})`],
+                        ['completed', `Completed (${completedOrders.length})`],
+                      ].map(([value, label]) => (
+                        <button
+                          key={value}
+                          className={`spd-chip ${orderFilter === value ? 'is-active' : ''}`}
+                          onClick={() => setOrderFilter(value)}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <TableScroll>
+                    <table className="dt-table" style={{ minWidth: 780 }}>
+                      <thead>
+                        <tr>
+                          <SortableTh sortKey="order_no" sort={sort}>Order</SortableTh>
+                          <SortableTh sortKey="service" sort={sort}>Service</SortableTh>
+                          <SortableTh sortKey="customer" sort={sort}>Customer</SortableTh>
+                          <SortableTh sortKey="date" sort={sort}>Date</SortableTh>
+                          <SortableTh sortKey="status" sort={sort}>Status</SortableTh>
+                          <SortableTh sortKey="amount" sort={sort}>Amount</SortableTh>
+                          <th className="dt-col-actions" aria-label="Open" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedOrders.length === 0 ? (
+                          <tr><td colSpan="7" className="dt-state">No orders in this view.</td></tr>
+                        ) : sortedOrders.map(order => {
+                          const status = normalizeStatus(order.status)
+                          return (
+                            <tr
+                              key={order.id}
+                              className="is-clickable"
+                              onClick={() => navigate(`/admin/orders/${order.id}`)}
+                            >
+                              <td><strong>{order.order_no ?? `#${order.id?.slice(0, 8)}`}</strong></td>
+                              <td>{order.service?.name_en ?? '—'}</td>
+                              <td className="dt-muted">
+                                {order.customer?.user?.full_name
+                                  ?? order.customer?.profile?.company_name
+                                  ?? '—'}
+                              </td>
+                              <td className="dt-muted">{formatDate(order.created_at)}</td>
+                              <td>
+                                <span className={`dt-status dt-status--${orderStatusTone(status)}`}>
+                                  {status.replace(/_/g, ' ')}
+                                </span>
+                              </td>
+                              <td>
+                                <strong>
+                                  <span className="riyal-symbol">&#x20C1;</span>{formatMoney(order.total_price)}
+                                </strong>
+                              </td>
+                              <td className="dt-col-actions">
+                                <ChevronRight size={16} className="dt-muted" />
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </TableScroll>
+                </>
+              )
+            )}
+
+            {/* SERVICES */}
+            {tab === 'services' && (
+              <>
+                <div className="spd-panel-head">
+                  <div>
+                    <h3 className="spd-card-title">Assigned services</h3>
+                    <p className="spd-panel-sub">Which services this provider is allowed to take.</p>
+                  </div>
+                  {!addingService ? (
+                    <button
+                      className="dt-btn dt-btn--primary"
+                      onClick={() => setAddingService(true)}
+                      disabled={servicesBusy || availableServices.length === 0}
+                      title={availableServices.length === 0 ? 'Every service is already assigned' : undefined}
+                    >
+                      <Plus size={15} /> Add service
+                    </button>
+                  ) : (
+                    <div className="spd-add-row">
+                      <select
+                        className="dt-field"
+                        value={serviceToAdd}
+                        onChange={(e) => setServiceToAdd(e.target.value)}
+                        disabled={servicesBusy}
+                        aria-label="Service to add"
+                      >
+                        <option value="">Select a service…</option>
+                        {availableServices.map(s => (
+                          <option key={s.id} value={s.id}>{s.name_en}</option>
+                        ))}
+                      </select>
+                      <button
+                        className="dt-btn dt-btn--primary"
+                        onClick={handleAddService}
+                        disabled={!serviceToAdd || servicesBusy}
+                      >
+                        {servicesBusy ? <Loader2 size={15} className="spin" /> : 'Add'}
+                      </button>
+                      <button
+                        className="dt-btn"
+                        onClick={() => { setAddingService(false); setServiceToAdd('') }}
+                        disabled={servicesBusy}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {(provider.services ?? []).length === 0 ? (
+                  <p className="spd-empty">No services assigned yet.</p>
+                ) : (
+                  <ul className="spd-services">
+                    {provider.services.map(item => {
+                      const svc = item.service ?? item
+                      const id = svc.id ?? item.service_id
+                      return (
+                        <li key={id} className="spd-service">
+                          <span
+                            className="spd-service-icon"
+                            style={{ '--accent': svc.icon_color || 'var(--text-muted)' }}
+                          >
+                            <Briefcase size={16} />
+                          </span>
+                          <span className="spd-service-name">
+                            <strong>{svc.name_en ?? '—'}</strong>
+                            {/* name_ar is often filled in with the English name,
+                                so only show it when it differs. */}
+                            {svc.name_ar && svc.name_ar.trim() !== (svc.name_en ?? '').trim() && (
+                              <em dir="rtl">{svc.name_ar}</em>
+                            )}
+                          </span>
+                          <span className="spd-service-meta">
+                            {svc.base_price != null && (
+                              <span><span className="riyal-symbol">&#x20C1;</span>{formatMoney(svc.base_price)}</span>
+                            )}
+                            {svc.duration_min != null && <span>{svc.duration_min} min</span>}
+                          </span>
+                          <span className={`dt-status dt-status--${item.is_active ? 'success' : 'muted'}`}>
+                            {item.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                          <button
+                            className="dt-icon-btn dt-icon-btn--danger"
+                            onClick={() => setConfirm({
+                              serviceId: id,
+                              message: `Remove "${svc.name_en}" from ${provider.name}? They will stop receiving orders for it.`,
+                            })}
+                            disabled={servicesBusy}
+                            title="Remove service"
+                            aria-label={`Remove ${svc.name_en}`}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+              </>
+            )}
+
+            {/* WALLET */}
+            {tab === 'wallet' && (
+              <div className="spd-stack">
+                <div className="spd-breakdown">
+                  {[
+                    ['Available balance', provider.wallet?.available_balance],
+                    ['Locked balance', provider.wallet?.locked_balance],
+                    ['Total credited', provider.wallet?.total_credited],
+                    ['Total debited', provider.wallet?.total_debited],
+                  ].map(([label, value]) => (
+                    <div key={label} className="spd-line">
+                      <span>{label}</span>
+                      <strong><span className="riyal-symbol">&#x20C1;</span>{formatMoney(value)}</strong>
+                    </div>
+                  ))}
+                  <div className="spd-line">
+                    <span>Currency</span>
+                    <strong>{provider.wallet?.currency ?? 'SAR'}</strong>
+                  </div>
+                  <div className="spd-line">
+                    <span>Wallet status</span>
+                    <strong>
+                      <span className={`dt-status dt-status--${provider.wallet?.status === 'ACTIVE' ? 'success' : 'muted'}`}>
+                        {provider.wallet?.status ?? '—'}
+                      </span>
+                    </strong>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="spd-card-title">Bank accounts</h3>
+                  {(provider.bankAccounts ?? []).length === 0 ? (
+                    <p className="spd-empty">No bank account on file.</p>
+                  ) : (
+                    <ul className="spd-banks">
+                      {provider.bankAccounts.map(acc => (
+                        <li key={acc.id ?? acc.iban} className="spd-bank">
+                          <strong>{acc.bank_name ?? 'Bank'}</strong>
+                          <span>{acc.account_holder_name}</span>
+                          {acc.iban && <em>{acc.iban}</em>}
+                          {acc.is_default && <span className="dt-status dt-status--success">Default</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* SETTINGS */}
+            {tab === 'settings' && (
+              <>
+                <h3 className="spd-card-title">Account status</h3>
+                <p className="spd-panel-sub">
+                  Controls whether this provider can sign in and receive new orders.
+                </p>
+
+                <label className="sf-toggle">
+                  <input
+                    type="checkbox"
+                    checked={!isDeactivated}
+                    onChange={(e) => handleStatusChange(e.target.checked ? 'ACTIVE' : 'INACTIVE')}
+                    disabled={statusBusy}
+                  />
+                  <span className="sf-toggle-track"><span className="sf-toggle-thumb" /></span>
+                  <span className="sf-toggle-copy">
+                    <strong>{statusBusy ? 'Saving…' : isDeactivated ? 'Deactivated' : 'Active'}</strong>
+                    <em>
+                      {isDeactivated
+                        ? 'This provider cannot access the platform or receive orders.'
+                        : 'This provider can sign in and receive new orders.'}
+                    </em>
+                  </span>
+                </label>
+
+                {String(provider.status).toUpperCase() === 'SUSPENDED' && (
+                  <div className="spd-note">
+                    <AlertTriangle size={15} />
+                    <span>
+                      This account is <strong>suspended</strong>. Turning the toggle on will set it back to Active.
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
-      )}
-
-      {tab === 'settings' && (
-        <section className="sf-card">
-          <header className="sf-card-head">
-            <h2>Account status</h2>
-            <p>Controls whether this provider can sign in and receive new orders.</p>
-          </header>
-
-          <label className="sf-toggle">
-            <input
-              type="checkbox"
-              checked={!isDeactivated}
-              onChange={(e) => handleStatusChange(e.target.checked ? 'ACTIVE' : 'INACTIVE')}
-              disabled={statusBusy}
-            />
-            <span className="sf-toggle-track"><span className="sf-toggle-thumb" /></span>
-            <span className="sf-toggle-copy">
-              <strong>{statusBusy ? 'Saving…' : isDeactivated ? 'Deactivated' : 'Active'}</strong>
-              <em>
-                {isDeactivated
-                  ? 'This provider cannot access the platform or receive orders.'
-                  : 'This provider can sign in and receive new orders.'}
-              </em>
-            </span>
-          </label>
-
-          {String(provider.status).toUpperCase() === 'SUSPENDED' && (
-            <div className="spd-note">
-              <AlertTriangle size={15} />
-              <span>
-                This account is <strong>suspended</strong>. Turning the toggle on will set it back to Active.
-              </span>
-            </div>
-          )}
-        </section>
-      )}
+      </div>
 
       <ConfirmDialog
         open={Boolean(confirm)}

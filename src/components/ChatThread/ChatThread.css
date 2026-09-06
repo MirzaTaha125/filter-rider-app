@@ -1,0 +1,376 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   One conversation, laid out the way a messaging client does.
+
+   Three parties share this thread — customer, provider and support — so it
+   follows the group-chat convention rather than the two-person one: whoever is
+   reading (support) sits on the right, everyone else on the left with a
+   coloured name, and consecutive messages from one person collapse into a
+   single block.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.ct-messages {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+/* ── Day divider ──────────────────────────────────────────────────────────── */
+
+.ct-day {
+  display: flex;
+  justify-content: center;
+  margin: 0.9rem 0 0.6rem;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.ct-day span {
+  background: var(--bg-card);
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 4px 12px;
+  text-transform: uppercase;
+}
+
+/* ── Bubbles ──────────────────────────────────────────────────────────────── */
+
+.ct-msg {
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-top: 0.45rem;
+  max-width: min(68%, 560px);
+  padding: 0.45rem 0.65rem 0.35rem;
+  position: relative;
+}
+
+/* Within a run the gap tightens and the tail is dropped, so the block reads as
+   one turn instead of a stack of separate cards. */
+.ct-msg.is-grouped {
+  margin-top: 0.12rem;
+}
+
+.ct-msg--customer,
+.ct-msg--provider {
+  align-self: flex-start;
+  background: var(--chat-bubble-in);
+  border-top-left-radius: 4px;
+}
+
+/* Support is the reader, so its own replies sit on the right. */
+.ct-msg--admin {
+  align-self: flex-end;
+  background: var(--chat-bubble-out);
+  border-top-left-radius: 12px;
+  border-top-right-radius: 4px;
+}
+
+.ct-msg.is-grouped.ct-msg--customer,
+.ct-msg.is-grouped.ct-msg--provider,
+.ct-msg.is-grouped.ct-msg--admin {
+  border-radius: 12px;
+}
+
+/* A photo fills its bubble edge to edge — the frame is the message. */
+.ct-msg.is-media {
+  padding: 4px 4px 0.3rem;
+}
+
+.ct-msg-head {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.1rem;
+}
+
+.ct-msg.is-media .ct-msg-head {
+  padding: 0.2rem 0.35rem 0;
+}
+
+.ct-msg-head strong {
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+/* The sender's name is colour-coded, the way a group thread distinguishes
+   speakers at a glance. The role chip still carries the same information in
+   words, so colour is never the only signal. */
+.ct-msg--customer .ct-msg-head strong { color: var(--info); }
+.ct-msg--provider .ct-msg-head strong { color: var(--success); }
+.ct-msg--admin .ct-msg-head strong { color: var(--primary-hover); }
+
+.ct-role {
+  border-radius: 999px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+}
+
+.ct-role--customer {
+  background: rgba(37, 99, 235, 0.14);
+  color: var(--info);
+}
+
+.ct-role--provider {
+  background: rgba(22, 163, 74, 0.14);
+  color: var(--success);
+}
+
+.ct-msg-body p {
+  color: var(--text-main);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  margin: 0;
+  overflow-wrap: anywhere;
+  padding-right: 3.2rem;
+  white-space: pre-wrap;
+}
+
+/* The clock sits bottom-right. On a text bubble it is pulled up onto the last
+   line, using the padding reserved on the paragraph; on a photo, clip or file
+   there is no such room, so it keeps its own line. Written in that direction
+   deliberately — without :has() support the clock simply drops to its own line
+   rather than landing on top of a media control. */
+.ct-msg-time {
+  align-self: flex-end;
+  color: var(--text-muted);
+  font-size: 0.64rem;
+  line-height: 1;
+  margin-top: 0.25rem;
+  padding-right: 0.15rem;
+  pointer-events: none;
+}
+
+.ct-msg:has(.ct-msg-body p) .ct-msg-time {
+  margin-top: -0.55rem;
+}
+
+.ct-attachment {
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  display: inline-flex;
+  font-size: 0.8rem;
+  font-weight: 600;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  text-decoration: none;
+}
+
+.ct-attachment:hover {
+  border-color: var(--primary-color);
+}
+
+/* ── Inline media ───────────────────────────────────────────────────────── */
+
+/* A photo is the message, so it renders at a readable size in the bubble and
+   opens full-size on click rather than navigating away. */
+.ct-photo {
+  background: none;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: zoom-in;
+  display: block;
+  line-height: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.ct-photo img {
+  display: block;
+  max-height: 260px;
+  max-width: 100%;
+  object-fit: cover;
+  transition: transform 0.2s;
+}
+
+.ct-photo:hover img {
+  transform: scale(1.02);
+}
+
+.ct-audio {
+  display: block;
+  height: 38px;
+  max-width: 100%;
+  width: 260px;
+}
+
+.ct-video {
+  border-radius: var(--radius-md);
+  display: block;
+  max-height: 280px;
+  max-width: 100%;
+}
+
+/* ── Photo viewer ───────────────────────────────────────────────────────── */
+
+.ct-lightbox {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.82);
+  cursor: zoom-out;
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  position: fixed;
+  z-index: 1000;
+}
+
+.ct-lightbox img {
+  border-radius: var(--radius-md);
+  cursor: default;
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.ct-lightbox-close {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.14);
+  border: none;
+  border-radius: 999px;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  height: 38px;
+  justify-content: center;
+  position: absolute;
+  right: 1.25rem;
+  top: 1.25rem;
+  width: 38px;
+}
+
+.ct-lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.26);
+}
+
+/* Order lifecycle notices are not part of the conversation, so they sit
+   centred as a quiet pill rather than as anyone's bubble. */
+.ct-system {
+  align-items: center;
+  align-self: center;
+  background: var(--chat-divider);
+  border-radius: 999px;
+  color: var(--text-muted);
+  display: flex;
+  font-size: 0.71rem;
+  gap: 0.35rem;
+  margin: 0.4rem 0;
+  max-width: 80%;
+  padding: 4px 12px;
+  text-align: center;
+}
+
+.ct-state {
+  align-items: center;
+  color: var(--text-muted);
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.6rem;
+  justify-content: center;
+  min-height: 220px;
+  padding: 2.5rem 1.25rem;
+  text-align: center;
+}
+
+.ct-role--admin {
+  background: rgba(139, 92, 246, 0.18);
+  color: #7c3aed;
+}
+
+body.dark-mode .ct-role--admin {
+  color: #c4b5fd;
+}
+
+/* ── Composer ───────────────────────────────────────────────────────────── */
+
+/* The composer is a bar on the card surface, sitting clear of the message
+   canvas so it never reads as another bubble. */
+.ct-composer {
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-base);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 0.4rem;
+  padding: 0.7rem 1rem;
+}
+
+.ct-composer-row {
+  align-items: flex-end;
+  display: flex;
+  gap: 0.6rem;
+}
+
+.ct-input {
+  background: var(--bg-input);
+  border: 1px solid transparent;
+  border-radius: 20px;
+  color: var(--text-main);
+  flex: 1;
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  max-height: 140px;
+  min-height: 40px;
+  padding: 0.55rem 1rem;
+  resize: none;
+}
+
+.ct-input:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+.ct-input:disabled {
+  opacity: 0.6;
+}
+
+.ct-send {
+  align-items: center;
+  background: var(--primary-color);
+  border: none;
+  border-radius: 50%;
+  color: #1a1a1a;
+  cursor: pointer;
+  display: flex;
+  flex-shrink: 0;
+  height: 40px;
+  justify-content: center;
+  transition: background 0.15s;
+  width: 40px;
+}
+
+.ct-send:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.ct-send:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.ct-send-error {
+  align-items: center;
+  color: var(--danger);
+  display: flex;
+  font-size: 0.78rem;
+  gap: 0.35rem;
+  margin: 0;
+}

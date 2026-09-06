@@ -38,6 +38,7 @@ import CreatePromotion from "./promotions/CreatePromotion";
 import EmailSmsTemplates from "./communication/EmailSmsTemplates";
 import PushNotifications from "./communication/PushNotifications";
 import ContentManagement from "./communication/ContentManagement";
+import ChatMonitor from "./communication/ChatMonitor";
 import DisputeManagement from "./disputes/DisputeManagement";
 import DisputeDetail from "./disputes/DisputeDetail";
 import Analytics from "./analytics/Analytics";
@@ -56,6 +57,14 @@ function AdminDashboard() {
     <AppSettingsProvider>
       <SocketProvider>
       <PermissionsProvider>
+      <Routes>
+      {/* Chat runs outside the admin shell: it is a messaging client, and the
+          nav rail plus topbar would eat the width the conversation needs. It
+          still sits inside the providers, so sockets and permissions work the
+          same as everywhere else, and it carries its own way back. */}
+      <Route path="/communication/chat" element={<ChatMonitor />} />
+
+      <Route path="*" element={
       <Layout>
         <Routes>
         <Route path="/" element={<Dashboard />} />
@@ -141,6 +150,8 @@ function AdminDashboard() {
         <Route path="/account" element={<AccountSettings />} />
         </Routes>
       </Layout>
+      } />
+      </Routes>
       </PermissionsProvider>
       </SocketProvider>
     </AppSettingsProvider>

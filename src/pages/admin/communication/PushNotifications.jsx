@@ -19,7 +19,6 @@ function PushNotifications() {
     <div className="push-notifications">
       <div className="push-notifications-header-content">
         <div>
-          <h1 className="push-notifications-title">Push Notifications</h1>
           <p className="push-notifications-subtitle">Configure push notification settings</p>
         </div>
       </div>

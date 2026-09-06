@@ -7,6 +7,9 @@ import ConfirmDialog from '../../../components/ConfirmDialog/ConfirmDialog'
 import { getRegionalPricing, deleteRegionalPricing } from '../../../api/pricing.js'
 import { getZones } from '../../../api/zones.js'
 import './RegionalPricing.css'
+import SortableTh from '../../../components/DataTable/SortableTh'
+import { useTableSort } from '../../../components/DataTable/useTableSort'
+import TableScroll from '../../../components/DataTable/TableScroll'
 
 function toZoneList(data) {
   if (Array.isArray(data)) return data
@@ -21,6 +24,7 @@ function RegionalPricing() {
   const navigate = useNavigate()
 
   const [regions, setRegions] = useState([])
+  const sort = useTableSort()
   const [zones, setZones] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -84,15 +88,22 @@ function RegionalPricing() {
 
   const unpricedZones = zones.length - regions.length
 
+  const sortedRegions = sort.apply(visibleRegions, {
+    zone: (r) => zoneName(r),
+    city: (r) => zoneCity(r),
+    price: (r) => Number(r.base_price ?? 0),
+    commission: (r) => Number(r.commission_percent ?? 0),
+    status: (r) => (r.is_active !== false ? 'Active' : 'Inactive'),
+  })
+
   return (
     <div className="regional-pricing">
-      <header className="rp-header">
+      <header className="dt-page-head">
         <div>
-          <h1 className="rp-title">Regional Pricing</h1>
-          <p className="rp-subtitle">Per-zone base price and commission overrides.</p>
+          <p className="dt-page-sub">Per-zone base price and commission overrides.</p>
         </div>
         <button
-          className="rp-btn rp-btn--primary"
+          className="dt-btn dt-btn--primary"
           onClick={() => navigate('/admin/pricing/regional/add')}
           disabled={loading || zones.length === 0 || unpricedZones <= 0}
         >
@@ -101,8 +112,8 @@ function RegionalPricing() {
         </button>
       </header>
 
-      <div className="rp-toolbar">
-        <div className="rp-search">
+      <div className="dt-toolbar">
+        <div className="dt-search">
           <Search size={16} />
           <input
             type="search"
@@ -126,50 +137,50 @@ function RegionalPricing() {
       )}
 
       {loading ? (
-        <div className="rp-state">
+        <div className="dt-empty">
           <Loader2 size={32} className="spin" />
           <span>Loading regional pricing…</span>
         </div>
       ) : zones.length === 0 ? (
-        <div className="rp-state">
+        <div className="dt-empty">
           <MapPin size={32} />
           <h2>No zones yet</h2>
           <p>Regional pricing attaches to a zone, so create a zone first.</p>
-          <button className="rp-btn rp-btn--primary" onClick={() => navigate('/admin/zones')}>
+          <button className="dt-btn dt-btn--primary" onClick={() => navigate('/admin/zones')}>
             Go to Zones
           </button>
         </div>
       ) : regions.length === 0 ? (
-        <div className="rp-state">
+        <div className="dt-empty">
           <MapPin size={32} />
           <h2>No regional pricing yet</h2>
           <p>Every zone currently uses the standard platform pricing.</p>
-          <button className="rp-btn rp-btn--primary" onClick={() => navigate('/admin/pricing/regional/add')}>
+          <button className="dt-btn dt-btn--primary" onClick={() => navigate('/admin/pricing/regional/add')}>
             <Plus size={16} /> Add Region
           </button>
         </div>
       ) : visibleRegions.length === 0 ? (
-        <div className="rp-state">
+        <div className="dt-empty">
           <Search size={32} />
           <h2>No matches</h2>
           <p>No regions match “{search.trim()}”.</p>
         </div>
       ) : (
-        <div className="rp-table-card">
-          <div className="rp-table-wrap">
-            <table className="rp-table">
+        <div className="dt-card">
+          <TableScroll>
+            <table className="dt-table">
               <thead>
                 <tr>
-                  <th>Zone</th>
-                  <th>City</th>
-                  <th>Base price</th>
-                  <th>Commission</th>
-                  <th>Status</th>
+                  <SortableTh sortKey="zone" sort={sort}>Zone</SortableTh>
+                  <SortableTh sortKey="city" sort={sort}>City</SortableTh>
+                  <SortableTh sortKey="price" sort={sort}>Base price</SortableTh>
+                  <SortableTh sortKey="commission" sort={sort}>Commission</SortableTh>
+                  <SortableTh sortKey="status" sort={sort}>Status</SortableTh>
                   <th aria-label="Actions" />
                 </tr>
               </thead>
               <tbody>
-                {visibleRegions.map(region => (
+                {sortedRegions.map(region => (
                   <tr key={region.id}>
                     <td>
                       <span className="rp-cell-name">
@@ -177,20 +188,20 @@ function RegionalPricing() {
                         {zoneName(region)}
                       </span>
                     </td>
-                    <td className="rp-cell-muted">{zoneCity(region) || '—'}</td>
+                    <td className="dt-muted">{zoneCity(region) || '—'}</td>
                     <td>
                       <span className="riyal-symbol">&#x20C1;</span>{formatPrice(region.base_price)}
                     </td>
                     <td>{Number(region.commission_percent ?? 0)}%</td>
                     <td>
-                      <span className={`rp-badge ${region.is_active !== false ? 'is-active' : 'is-inactive'}`}>
+                      <span className={`dt-status ${region.is_active !== false ? 'is-active' : 'is-inactive'}`}>
                         {region.is_active !== false ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td>
-                      <div className="rp-row-actions">
+                      <div className="dt-row-actions">
                         <button
-                          className="rp-icon-btn"
+                          className="dt-icon-btn"
                           onClick={() => navigate(`/admin/pricing/regional/${region.id}/edit`)}
                           title={`Edit ${zoneName(region)}`}
                           aria-label={`Edit ${zoneName(region)}`}
@@ -198,7 +209,7 @@ function RegionalPricing() {
                           <Pencil size={15} />
                         </button>
                         <button
-                          className="rp-icon-btn rp-icon-btn--danger"
+                          className="dt-icon-btn dt-icon-btn--danger"
                           onClick={() => askDelete(region)}
                           title={`Delete ${zoneName(region)}`}
                           aria-label={`Delete ${zoneName(region)}`}
@@ -211,7 +222,7 @@ function RegionalPricing() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableScroll>
 
           {unpricedZones > 0 && (
             <p className="rp-footnote">

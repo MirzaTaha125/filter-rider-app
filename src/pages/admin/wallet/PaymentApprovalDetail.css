@@ -125,36 +125,6 @@
   white-space: pre-wrap;
 }
 
-/* ---------- Transactions ---------- */
-.pa-tx-wrap { overflow-x: auto; }
-
-.pa-tx {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.pa-tx th {
-  padding: 0.6rem 0.75rem;
-  text-align: left;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  border-bottom: 1px solid var(--border-base);
-  white-space: nowrap;
-}
-
-.pa-tx td {
-  padding: 0.7rem 0.75rem;
-  font-size: 0.85rem;
-  color: var(--text-main);
-  border-bottom: 1px solid var(--border-light);
-  white-space: nowrap;
-}
-
-.pa-tx tbody tr:last-child td { border-bottom: none; }
-
 /* ---------- Decision panel ---------- */
 .pa-status-block {
   display: flex;

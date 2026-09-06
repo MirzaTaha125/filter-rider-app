@@ -115,7 +115,6 @@ function ServiceManagement() {
     <div className="service-management">
       <header className="sm-header">
         <div>
-          <h1 className="sm-title">Services</h1>
           <p className="sm-subtitle">Manage the service catalog, pricing, and configuration.</p>
         </div>
         <button className="sm-btn sm-btn--primary" onClick={() => navigate('/admin/services/add')}>

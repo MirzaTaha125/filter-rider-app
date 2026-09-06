@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
-import { Loader2, X, AlertTriangle, CheckCircle, UserCog, Filter, Hash, Package, Layers, Calendar, Clock, MapPin, User } from 'lucide-react'
+import { useParams, useNavigate } from 'react-router-dom'
+import {
+  Loader2, X, AlertTriangle, CheckCircle, UserCog, Filter, Package, Layers,
+  Calendar, Clock, MapPin, Phone, Radio, ChevronRight,
+} from 'lucide-react'
 import PageHeader from '../../../components/PageHeader/PageHeader'
+import StatTile from '../../../components/StatTile/StatTile'
 import LiveTrackingMap from '../../../components/LiveTrackingMap/LiveTrackingMap'
+import ChatThread from '../../../components/ChatThread/ChatThread'
 import { useSocket } from '../../../contexts/SocketContext'
 import { useGoogleMapsApiKey } from '../../../contexts/AppSettingsContext'
 import {
   getAdminOrderDetails,
   getProviderDetails,
   getCustomerDetails,
-  getServices,
   cancelOrder,
   reassignOrder,
   rebroadcastOrder,
@@ -18,9 +22,25 @@ import {
 import {
   getPaymentState, formatMoney, PAYMENT_TIMING_LABELS, PAYMENT_RECORD_TONES,
 } from './paymentStatus'
+import { normalizeStatus, orderStatusTone } from './orderStatus'
 import './OrderDetail.css'
+import TableScroll from '../../../components/DataTable/TableScroll'
 
-const TABS = ['details', 'customer', 'provider', 'financials', 'media', 'timeline', 'tracking']
+/**
+ * What the order *is* — service, schedule, customer, provider — used to be
+ * three separate tabs, which meant hunting for facts you always want while
+ * reading anything else. Those now live in the rail beside the tabs, and only
+ * the genuine deep dives stay tabbed.
+ */
+const TABS = ['financials', 'media', 'timeline', 'tracking', 'chat']
+
+const TAB_LABELS = {
+  financials: 'Financials',
+  media: 'Photos',
+  timeline: 'Timeline',
+  tracking: 'Live Tracking',
+  chat: 'Chat',
+}
 
 /** Matches the date style already used elsewhere on this page. */
 function formatDateTime(value) {
@@ -29,14 +49,36 @@ function formatDateTime(value) {
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString()
 }
 
+function initials(name) {
+  const parts = (name ?? '').trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+/** One labelled fact in the record rail. */
+function Fact({ icon: Icon, label, children }) {
+  return (
+    <div className="od-fact">
+      <span className="od-fact-label">{label}</span>
+      <span className="od-fact-value">
+        {Icon && <Icon size={14} />}
+        <span>{children}</span>
+      </span>
+    </div>
+  )
+}
+
 function OrderDetail() {
   const { orderId } = useParams()
+  const navigate = useNavigate()
   const { ordersSocket } = useSocket()
   const mapsApiKey = useGoogleMapsApiKey()
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [activeTab, setActiveTab] = useState('details')
+  const [activeTab, setActiveTab] = useState('financials')
+  const [lightbox, setLightbox] = useState(null)
   // Live provider position, seeded from the provider record and then kept
   // current by the provider.location.updated websocket event.
   const [providerPos, setProviderPos] = useState(null)
@@ -55,12 +97,9 @@ function OrderDetail() {
     setLoading(true)
     setError('')
     try {
-      const [detailsRes, providerRes] = await Promise.allSettled([
-        getAdminOrderDetails(orderId),
-        null // will fetch provider separately if needed
-      ])
-
-      let details = detailsRes.status === 'fulfilled' ? detailsRes.value : null
+      // The customer, service and provider are each fetched below once we know
+      // which ids this order carries, so this is a single request.
+      const details = await getAdminOrderDetails(orderId)
       if (!details) {
         setError('Failed to load order details')
         return
@@ -82,24 +121,8 @@ function OrderDetail() {
         }
       }
 
-      // Fetch service details if needed
-      if (details.service_id || details.service?.id) {
-        try {
-          const services = await getServices()
-          const serviceList = Array.isArray(services) ? services : []
-          const foundService = serviceList.find(s => s.id === (details.service_id || details.service?.id))
-          if (foundService) {
-            details.service = {
-              ...(details.service || {}),
-              name: foundService.name || foundService.name_en,
-              name_en: foundService.name_en || foundService.name,
-              id: foundService.id,
-            }
-          }
-        } catch (err) {
-          console.error('Failed to load service:', err)
-        }
-      }
+      // The order now arrives with its service and serviceType attached, so
+      // the whole service list no longer has to be fetched to name one of them.
 
       // Fetch provider details if assigned
       if (details.provider_id || details.provider?.id) {
@@ -147,17 +170,6 @@ function OrderDetail() {
     ordersSocket.on('provider.location.updated', onMove)
     return () => ordersSocket.off('provider.location.updated', onMove)
   }, [ordersSocket, orderId])
-
-  const getStatusClass = (status) => {
-    const statusMap = {
-      'BROADCASTED': 'status-broadcasted',
-      'CREATED': 'status-created',
-      'IN PROGRESS': 'status-progress',
-      'CANCELLED': 'status-cancelled',
-      'COMPLETED': 'status-completed'
-    }
-    return statusMap[status] || 'status-default'
-  }
 
   const handleConfirmCancelOrder = async () => {
     if (!order?.id) return
@@ -214,18 +226,18 @@ function OrderDetail() {
 
   if (loading) {
     return (
-      <div className="order-detail-loading">
-        <Loader2 size={40} className="spin" />
-        <span>Loading order details...</span>
+      <div className="od-state">
+        <Loader2 size={34} className="spin" />
+        <span>Loading order…</span>
       </div>
     )
   }
 
   if (error || !order) {
     return (
-      <div className="order-detail-error">
-        <AlertTriangle size={40} />
-        <h2>Error Loading Order</h2>
+      <div className="od-state">
+        <AlertTriangle size={34} />
+        <h2>Could not load this order</h2>
         <p>{error || 'Order not found'}</p>
       </div>
     )
@@ -239,227 +251,242 @@ function OrderDetail() {
     ? { lat: orderLat, lng: orderLng }
     : null
 
+  const status = normalizeStatus(order.status)
+  const pay = getPaymentState(order)
+  const cur = order.currency || 'SAR'
+  const money = (v) => formatMoney(v, cur).amount
+
+  // What the platform keeps on this order. Commission is only written to the
+  // order once it settles, so before that the backend sends what the current
+  // fee configuration would take — shown as an estimate rather than as a zero.
+  const total = Number(order.total_price ?? 0)
+  const isSettled = order.commission_basis === 'settled'
+  const commission = Number(
+    order.commission_amount ?? order.platform_commission_amount ?? 0,
+  )
+  const providerNet = Number(
+    order.commission_provider_net ?? order.provider_net_amount ?? 0,
+  )
+  const commissionPct = total > 0 && commission > 0
+    ? Math.round((commission / total) * 1000) / 10
+    : null
+
+  // The package is the ServiceType the customer picked. It used to read
+  // "Standard" for every order because the endpoint never sent it — say so
+  // plainly when it really is missing rather than inventing a default.
+  const serviceTypeName = order.serviceType?.name_en
+    ?? order.service_type?.name_en
+    ?? order.category?.name_en
+    ?? null
+  // Plenty of rows have name_ar filled in with the English text, so only show
+  // the second name when it is actually a different one.
+  const serviceTypeAltRaw = order.serviceType?.name_ar ?? order.service_type?.name_ar ?? null
+  const serviceTypeArabic =
+    serviceTypeAltRaw && serviceTypeAltRaw.trim() !== (serviceTypeName ?? '').trim()
+      ? serviceTypeAltRaw
+      : null
+  const customerName = order.customer?.profile?.full_name
+    || order.customer?.full_name
+    || '—'
+
+  // Tracking and chat both need an assigned provider to exist.
+  const visibleTabs = TABS.filter(
+    (tab) => (tab !== 'tracking' && tab !== 'chat') || hasProvider,
+  )
+
   return (
     <div className="order-detail-page">
       <PageHeader
         title={`Order ${order.order_no || order.id?.slice(0, 8)}`}
-        subtitle={`Created on ${new Date(order.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}`}
+        subtitle={`Created ${formatDateTime(order.created_at)}`}
       />
 
-      <div className="order-detail-container">
-        {/* Status & Actions Bar */}
-        <div className="order-detail-bar">
-          <div className="status-section">
-            <span className={`status-badge ${getStatusClass(order.status)}`}>
-              {order.status || 'PENDING'}
-            </span>
-          </div>
-          <div className="actions-section">
-            <button
-              className="btn-action cancel"
-              onClick={() => setConfirmCancel({ open: true })}
-              title="Cancel order"
-            >
-              <X size={18} />
-              Cancel Order
-            </button>
-            <button
-              className="btn-action reassign"
-              onClick={openReassignModal}
-              title="Reassign provider"
-            >
-              <UserCog size={18} />
-              Reassign SP
-            </button>
-            {!isTerminal && (
+      {/* ── What this order is worth, where the eye lands first ──────────── */}
+      <div className="stat-tile-row">
+        <StatTile label="Order total" value={Number(order.total_price ?? 0)} money />
+        <StatTile
+          label={isSettled ? 'Our commission' : 'Expected commission'}
+          value={commission}
+          money
+          hint={[
+            commissionPct != null ? `${commissionPct}% of the order` : null,
+            isSettled ? null : 'not settled yet',
+          ].filter(Boolean).join(' · ') || 'No commission configured'}
+        />
+        <StatTile
+          label={isSettled ? 'Provider payout' : 'Expected payout'}
+          value={providerNet}
+          money
+          hint="After commission"
+        />
+        <StatTile label="Add-ons" value={Number(order.addons_total ?? 0)} money hint="Extras & equipment" />
+      </div>
+
+      <div className="od-layout">
+        {/* ── Record rail ──────────────────────────────────────────────── */}
+        <aside className="od-rail">
+          <section className="od-card">
+            <div className="od-tags">
+              <span className={`dt-status dt-status--${orderStatusTone(status)}`}>
+                {status.replace(/_/g, ' ')}
+              </span>
+              <span className={`dt-dot-label dt-tone--${pay.tone}`}>
+                <span className="dt-dot" />
+                {pay.label}
+              </span>
+            </div>
+
+            {/* Cancelling and reassigning a finished order is not a thing, so
+                those only appear while the order is still live. */}
+            <div className="od-actions">
+              {!isTerminal && (
+                <>
+                  <button className="od-action is-danger" onClick={() => setConfirmCancel({ open: true })}>
+                    <X size={15} /> Cancel order
+                  </button>
+                  <button className="od-action" onClick={openReassignModal}>
+                    <UserCog size={15} /> Reassign provider
+                  </button>
+                  <button className="od-action" onClick={handleRebroadcast}>
+                    <Radio size={15} /> Force rebroadcast
+                  </button>
+                </>
+              )}
+              {isTerminal && (
+                <p className="od-terminal">
+                  This order is {status.toLowerCase()} — no further action can be taken.
+                </p>
+              )}
+            </div>
+          </section>
+
+          <section className="od-card">
+            <h3 className="od-card-title">Job</h3>
+            <div className="od-facts">
+              <Fact icon={Package} label="Service">
+                {order.service?.name_en || order.service?.name || '—'}
+              </Fact>
+              <Fact icon={Layers} label="Package">
+                {serviceTypeName ?? <span className="dt-muted">Not recorded</span>}
+                {serviceTypeArabic && <em className="od-fact-alt" dir="rtl">{serviceTypeArabic}</em>}
+              </Fact>
+              <Fact icon={Calendar} label="Scheduled">
+                {order.scheduled_at ? formatDateTime(order.scheduled_at) : 'ASAP'}
+              </Fact>
+              <Fact icon={Clock} label="Booking">
+                {order.schedule_type || 'On-Demand'}
+              </Fact>
+              <Fact icon={MapPin} label="Location">
+                {order.address_text || 'No location recorded'}
+              </Fact>
+            </div>
+
+            {order.addons?.length > 0 && (
+              <div className="od-addons">
+                <span className="od-fact-label">Add-ons</span>
+                {order.addons.map((addon, i) => (
+                  <div key={i} className="od-addon">
+                    <span>{addon.name_en || addon.name || `Add-on ${i + 1}`}</span>
+                    {addon.price != null && (
+                      <em><span className="riyal-symbol">&#x20C1;</span>{money(addon.price)}</em>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="od-card">
+            <h3 className="od-card-title">Customer</h3>
+            <div className="od-party">
+              <span className="od-avatar">{initials(customerName)}</span>
+              <div>
+                <strong>{customerName}</strong>
+                {order.customer?.status && (
+                  <span className={`dt-status dt-status--${order.customer.status === 'Active' ? 'success' : 'neutral'}`}>
+                    {order.customer.status}
+                  </span>
+                )}
+              </div>
+            </div>
+            {(order.customer_id || order.customer?.id) && (
               <button
-                className="btn-action broadcast"
-                onClick={handleRebroadcast}
+                className="od-link"
+                onClick={() => navigate(`/admin/customers/${order.customer_id || order.customer?.id}`)}
               >
-                Force Rebroadcast
+                Open customer <ChevronRight size={14} />
               </button>
             )}
-          </div>
-        </div>
+            {order.customer?.profile?.national_address && (
+              <Fact icon={MapPin} label="National address">
+                {order.customer.profile.national_address}
+              </Fact>
+            )}
+            {order.ratings?.length > 0 && (
+              <div className="od-rating">
+                <span className="od-stars">
+                  {'★'.repeat(order.ratings[0]?.rating || 0)}
+                  <em>{'★'.repeat(Math.max(0, 5 - (order.ratings[0]?.rating || 0)))}</em>
+                </span>
+                {order.ratings[0]?.comment && <p>{order.ratings[0].comment}</p>}
+              </div>
+            )}
+          </section>
 
-        {/* Tabs */}
-        <div className="tabs-section">
-          <nav className="tabs-nav">
-            {TABS.filter(tab => tab !== 'tracking' || hasProvider).map(tab => (
+          <section className="od-card">
+            <h3 className="od-card-title">Provider</h3>
+            {order.provider ? (
+              <>
+                <div className="od-party">
+                  <span className="od-avatar">{initials(order.provider._name)}</span>
+                  <div>
+                    <strong>{order.provider._name || '—'}</strong>
+                    {order.provider.status && (
+                      <span className="dt-status dt-status--neutral">{order.provider.status}</span>
+                    )}
+                  </div>
+                </div>
+                {order.provider._phone && (
+                  <Fact icon={Phone} label="Phone">{order.provider._phone}</Fact>
+                )}
+                <button
+                  className="od-link"
+                  onClick={() => navigate(`/admin/service-providers/${order.provider.id}`)}
+                >
+                  Open provider <ChevronRight size={14} />
+                </button>
+              </>
+            ) : (
+              <p className="od-empty">No provider assigned yet.</p>
+            )}
+          </section>
+        </aside>
+
+        {/* ── Deep dives ───────────────────────────────────────────────── */}
+        <div className="od-main">
+          <div className="od-tabs" role="tablist">
+            {visibleTabs.map((tab) => (
               <button
                 key={tab}
-                className={`tab-button ${activeTab === tab ? 'active' : ''}`}
+                role="tab"
+                aria-selected={activeTab === tab}
+                className={`od-tab ${activeTab === tab ? 'is-active' : ''}`}
                 onClick={() => setActiveTab(tab)}
               >
-                {tab === 'tracking'
-                  ? 'Live Tracking'
-                  : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {TAB_LABELS[tab] ?? tab}
               </button>
             ))}
-          </nav>
-        </div>
+          </div>
 
-        {/* Tab Content */}
-        <div className="tab-content">
-          {/* DETAILS TAB */}
-          {activeTab === 'details' && (
-            <div className="info-grid">
-              <div className="info-item">
-                <label>SERVICE</label>
-                <div className="info-value">
-                  <Package size={18} />
-                  <span>{order.service?.name_en || order.service?.name || 'N/A'}</span>
-                </div>
-              </div>
-              <div className="info-item">
-                <label>SERVICE PACKAGE</label>
-                <div className="info-value">
-                  <Layers size={18} />
-                  <span>{order.serviceType?.name_en || order.category?.name_en || 'Standard'}</span>
-                </div>
-              </div>
-              <div className="info-item">
-                <label>SCHEDULED APPOINTMENT</label>
-                <div className="info-value">
-                  <Calendar size={18} />
-                  <span>{order.scheduled_at ? new Date(order.scheduled_at).toLocaleString() : 'ASAP'}</span>
-                </div>
-              </div>
-              <div className="info-item">
-                <label>BOOKING MODEL</label>
-                <div className="info-value">
-                  <Clock size={18} />
-                  <span>{order.schedule_type || 'On-Demand'}</span>
-                </div>
-              </div>
-              <div className="info-item full-width">
-                <label>SERVICE LOCATION</label>
-                <div className="info-value">
-                  <MapPin size={18} />
-                  <span>{order.address_text || 'No location available'}</span>
-                </div>
-              </div>
-              {order.addons?.length > 0 && (
-                <div className="info-item full-width">
-                  <label>ADD-ONS</label>
-                  <div className="addons-list">
-                    {order.addons.map((addon, i) => (
-                      <div key={i} className="addon-row">
-                        <span>{addon.name_en || addon.name || `Addon ${i + 1}`}</span>
-                        <span className="addon-price">{addon.price ? `${order.currency || 'SAR'} ${addon.price}` : ''}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          <div className="od-panel">
+            {/* FINANCIALS */}
+            {activeTab === 'financials' && (() => {
+              const payments = Array.isArray(order.payments) ? order.payments : []
+              const tip = Number(order.tip_amount || 0)
 
-          {/* CUSTOMER TAB */}
-          {activeTab === 'customer' && (
-            <div className="info-grid">
-              <div className="info-item">
-                <label>NAME / COMPANY</label>
-                <div className="info-value">
-                  <User size={18} />
-                  <span>{order.customer?.profile?.full_name || order.customer?.full_name || '—'}</span>
-                </div>
-              </div>
-              <div className="info-item">
-                <label>ACCOUNT STATUS</label>
-                <span className={`status-badge ${getStatusClass(order.customer?.status)}`}>
-                  {order.customer?.status || '—'}
-                </span>
-              </div>
-              <div className="info-item">
-                <label>CUSTOMER ID</label>
-                <div className="info-value">
-                  <Hash size={18} />
-                  <span style={{ fontFamily: 'monospace' }}>{order.customer_id || order.customer?.id || '—'}</span>
-                </div>
-              </div>
-              {order.customer?.profile?.national_address && (
-                <div className="info-item full-width">
-                  <label>NATIONAL ADDRESS</label>
-                  <div className="info-value">
-                    <MapPin size={18} />
-                    <span>{order.customer.profile.national_address}</span>
-                  </div>
-                </div>
-              )}
-              {order.ratings?.length > 0 && (
-                <div className="info-item full-width">
-                  <label>RATING LEFT</label>
-                  <span>{'★'.repeat(order.ratings[0]?.rating || 0)} {order.ratings[0]?.comment || ''}</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* PROVIDER TAB */}
-          {activeTab === 'provider' && (
-            <div className="info-grid">
-              {order.provider ? (
-                <>
-                  <div className="info-item">
-                    <label>NAME</label>
-                    <div className="info-value">
-                      <User size={18} />
-                      <span>{order.provider._name || '—'}</span>
-                    </div>
-                  </div>
-                  <div className="info-item">
-                    <label>PROVIDER ID</label>
-                    <div className="info-value">
-                      <Hash size={18} />
-                      <span style={{ fontFamily: 'monospace' }}>{order.provider.id}</span>
-                    </div>
-                  </div>
-                  {order.provider._phone && (
-                    <div className="info-item">
-                      <label>PHONE</label>
-                      <span>{order.provider._phone}</span>
-                    </div>
-                  )}
-                  {order.provider._email && (
-                    <div className="info-item">
-                      <label>EMAIL</label>
-                      <span style={{ textTransform: 'lowercase' }}>{order.provider._email}</span>
-                    </div>
-                  )}
-                  <div className="info-item">
-                    <label>STATUS</label>
-                    <span className={`status-badge ${getStatusClass(order.provider.status)}`}>
-                      {order.provider.status}
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <div className="empty-state">
-                  <span>No provider assigned yet</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* FINANCIALS TAB */}
-          {activeTab === 'financials' && (() => {
-            const pay = getPaymentState(order)
-            const cur = order.currency || 'SAR'
-            const money = (v) => formatMoney(v, cur).amount
-            const payments = Array.isArray(order.payments) ? order.payments : []
-            const tip = Number(order.tip_amount || 0)
-            const commission = Number(order.platform_commission_amount || 0)
-            const providerNet = Number(order.provider_net_amount || 0)
-
-            return (
-              <div className="financials-tab">
-                <div className={`pay-summary pay-summary--${pay.tone}`}>
-                  <div className="pay-summary-main">
-                    <span className="pay-summary-label">Payment status</span>
-                    <span className={`pay-badge pay-badge--${pay.tone}`}>{pay.label}</span>
-                  </div>
-                  <dl className="pay-summary-meta">
+              return (
+                <div className="od-financials">
+                  <dl className="od-pay-meta">
                     <div>
                       <dt>Timing</dt>
                       <dd>{PAYMENT_TIMING_LABELS[order.payment_timing] ?? '—'}</dd>
@@ -473,57 +500,59 @@ function OrderDetail() {
                       <dd>{order.is_payment_required === false ? 'No' : 'Yes'}</dd>
                     </div>
                   </dl>
-                </div>
 
-                <div className="financial-breakdown">
-                  <div className="financial-row">
-                    <label>Standard Service Base Fee</label>
-                    <span className="amount">{cur} {money(order.base_price)}</span>
+                  <div className="od-breakdown">
+                    <div className="od-line">
+                      <span>Standard service base fee</span>
+                      <strong><span className="riyal-symbol">&#x20C1;</span>{money(order.base_price)}</strong>
+                    </div>
+                    <div className="od-line">
+                      <span>Add-ons &amp; equipment</span>
+                      <strong><span className="riyal-symbol">&#x20C1;</span>{money(order.addons_total)}</strong>
+                    </div>
+                    {tip > 0 && (
+                      <div className="od-line">
+                        <span>Tip</span>
+                        <strong><span className="riyal-symbol">&#x20C1;</span>{money(tip)}</strong>
+                      </div>
+                    )}
+                    <div className="od-line is-total">
+                      <span>Total payable</span>
+                      <strong><span className="riyal-symbol">&#x20C1;</span>{money(order.total_price)}</strong>
+                    </div>
                   </div>
-                  <div className="financial-row">
-                    <label>Additional Add-ons &amp; Equipment</label>
-                    <span className="amount">{cur} {money(order.addons_total)}</span>
-                  </div>
-                  {tip > 0 && (
-                    <div className="financial-row">
-                      <label>Tip</label>
-                      <span className="amount">{cur} {money(tip)}</span>
+
+                  {(commission > 0 || providerNet > 0) && (
+                    <div className="od-breakdown">
+                      <div className="od-line">
+                        <span>
+                          Platform commission
+                          {!isSettled && <em className="od-line-note"> · estimated</em>}
+                        </span>
+                        <strong><span className="riyal-symbol">&#x20C1;</span>{money(commission)}</strong>
+                      </div>
+                      <div className="od-line">
+                        <span>
+                          Provider net payout
+                          {!isSettled && <em className="od-line-note"> · estimated</em>}
+                        </span>
+                        <strong><span className="riyal-symbol">&#x20C1;</span>{money(providerNet)}</strong>
+                      </div>
+                      <div className="od-line">
+                        <span>Wallet settled</span>
+                        <strong className="od-line-muted">
+                          {order.wallet_processed_at ? formatDateTime(order.wallet_processed_at) : 'Pending'}
+                        </strong>
+                      </div>
                     </div>
                   )}
-                  <div className="financial-row total">
-                    <label>TOTAL PAYABLE AMOUNT</label>
-                    <span className="amount">{cur} {money(order.total_price)}</span>
-                  </div>
-                </div>
 
-                {(commission > 0 || providerNet > 0) && (
-                  <div className="financial-breakdown">
-                    <div className="financial-row">
-                      <label>Platform Commission</label>
-                      <span className="amount">{cur} {money(commission)}</span>
-                    </div>
-                    <div className="financial-row">
-                      <label>Provider Net Payout</label>
-                      <span className="amount">{cur} {money(providerNet)}</span>
-                    </div>
-                    <div className="financial-row">
-                      <label>Wallet Settled</label>
-                      <span className="amount">
-                        {order.wallet_processed_at ? formatDateTime(order.wallet_processed_at) : 'Pending'}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                <div className="pay-records">
-                  <h3 className="pay-records-title">Payment attempts</h3>
+                  <h4 className="od-card-title">Payment attempts</h4>
                   {payments.length === 0 ? (
-                    <p className="pay-records-empty">
-                      No payment records for this order yet.
-                    </p>
+                    <p className="od-empty">No payment records for this order yet.</p>
                   ) : (
-                    <div className="pay-records-wrap">
-                      <table className="pay-records-table">
+                    <TableScroll>
+                      <table className="dt-table" style={{ minWidth: 620 }}>
                         <thead>
                           <tr>
                             <th>Reference</th>
@@ -540,116 +569,139 @@ function OrderDetail() {
                               <tr key={p.id}>
                                 <td><code>{p.payment_no ?? '—'}</code></td>
                                 <td>{p.payment_method?.name ?? p.provider_code ?? '—'}</td>
-                                <td>{cur} {money(p.amount)}</td>
-                                <td><span className={`pay-badge pay-badge--${tone}`}>{p.status}</span></td>
-                                <td>{formatDateTime(p.paid_at ?? p.created_at)}</td>
+                                <td>
+                                  <strong><span className="riyal-symbol">&#x20C1;</span>{money(p.amount)}</strong>
+                                </td>
+                                <td>
+                                  <span className={`dt-dot-label dt-tone--${tone}`}>
+                                    <span className="dt-dot" />{p.status}
+                                  </span>
+                                </td>
+                                <td className="dt-muted">{formatDateTime(p.paid_at ?? p.created_at)}</td>
                               </tr>
                             )
                           })}
                         </tbody>
                       </table>
-                    </div>
+                    </TableScroll>
                   )}
                 </div>
+              )
+            })()}
+
+            {/* MEDIA */}
+            {activeTab === 'media' && (
+              <div className="od-media">
+                {['BEFORE', 'AFTER'].map((type) => {
+                  const photos = (order.media || []).filter((m) => m.type === type)
+                  if (photos.length === 0) return null
+                  return (
+                    <div key={type} className="od-media-group">
+                      <h4 className="od-card-title">{type.charAt(0) + type.slice(1).toLowerCase()} photos</h4>
+                      <div className="od-media-grid">
+                        {photos.map((photo) => (
+                          <button
+                            key={photo.id}
+                            type="button"
+                            className="od-photo"
+                            onClick={() => setLightbox(photo.file_url)}
+                          >
+                            <img src={photo.file_url} alt={type} loading="lazy" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+                {(!order.media || order.media.length === 0) && (
+                  <p className="od-empty">No media uploaded for this order.</p>
+                )}
               </div>
-            )
-          })()}
+            )}
 
-          {/* MEDIA TAB */}
-          {activeTab === 'media' && (
-            <div className="media-section">
-              {['BEFORE', 'AFTER'].map(type => {
-                const photos = (order.media || []).filter(m => m.type === type)
-                if (photos.length === 0) return null
-                return (
-                  <div key={type} className="media-group">
-                    <h3 className="media-title">{type} PHOTOS</h3>
-                    <div className="media-grid">
-                      {photos.map(photo => (
-                        <a key={photo.id} href={photo.file_url} target="_blank" rel="noopener noreferrer" className="media-item">
-                          <img src={photo.file_url} alt={type} />
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })}
-              {(!order.media || order.media.length === 0) && (
-                <div className="empty-state">
-                  <span>No media uploaded for this order</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* TIMELINE TAB */}
-          {activeTab === 'timeline' && (
-            <div className="timeline-section">
-              {order.timeline && order.timeline.length > 0 ? (
-                order.timeline.map((event, idx) => (
-                  <div key={idx} className="timeline-item">
-                    <div className={`timeline-dot ${idx === 0 ? 'active' : ''}`} />
-                    <div className="timeline-content">
-                      <div className="timeline-time">{new Date(event.created_at).toLocaleString()}</div>
-                      <div className="timeline-status">{event.status?.replace(/_/g, ' ')}</div>
-                      {event.note && <div className="timeline-note">{event.note}</div>}
-                    </div>
-                  </div>
-                ))
+            {/* TIMELINE */}
+            {activeTab === 'timeline' && (
+              order.timeline?.length > 0 ? (
+                <ol className="od-timeline">
+                  {order.timeline.map((event, idx) => (
+                    <li key={idx} className={`od-event ${idx === 0 ? 'is-latest' : ''}`}>
+                      <span className="od-event-dot" />
+                      <div>
+                        <strong>{event.status?.replace(/_/g, ' ')}</strong>
+                        <em>{formatDateTime(event.created_at)}</em>
+                        {event.note && <p>{event.note}</p>}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
               ) : (
-                <div className="empty-state">
-                  <span>No history recorded</span>
-                </div>
-              )}
-            </div>
-          )}
+                <p className="od-empty">No history recorded.</p>
+              )
+            )}
 
-          {/* LIVE TRACKING TAB */}
-          {activeTab === 'tracking' && hasProvider && (
-            <div className="tracking-tab">
-              <div className="tracking-legend">
-                <span className="tracking-key">
-                  <i className="tracking-dot tracking-dot--provider" />
-                  {order.provider?._name ?? 'Service provider'}
-                  {posUpdatedAt && (
-                    <em className="tracking-stamp">updated {formatDateTime(posUpdatedAt)}</em>
-                  )}
-                </span>
-                <span className="tracking-key">
-                  <i className="tracking-pin" />
-                  Job location
-                  {order.address_text && (
-                    <em className="tracking-stamp">{order.address_text}</em>
-                  )}
-                </span>
+            {/* LIVE TRACKING */}
+            {activeTab === 'tracking' && hasProvider && (
+              <div className="od-tracking">
+                <div className="tracking-legend">
+                  <span className="tracking-key">
+                    <i className="tracking-dot tracking-dot--provider" />
+                    {order.provider?._name ?? 'Service provider'}
+                    {posUpdatedAt && (
+                      <em className="tracking-stamp">updated {formatDateTime(posUpdatedAt)}</em>
+                    )}
+                  </span>
+                  <span className="tracking-key">
+                    <i className="tracking-pin" />
+                    Job location
+                    {order.address_text && (
+                      <em className="tracking-stamp">{order.address_text}</em>
+                    )}
+                  </span>
+                </div>
+
+                {!providerPos && !destinationPos ? (
+                  <p className="od-empty">
+                    No coordinates recorded for this order or provider yet.
+                  </p>
+                ) : (
+                  <>
+                    <div className="tracking-map">
+                      <LiveTrackingMap
+                        apiKey={mapsApiKey}
+                        provider={providerPos}
+                        destination={destinationPos}
+                      />
+                    </div>
+                    {!providerPos && (
+                      <p className="tracking-note">
+                        The provider has not reported a position yet — only the job
+                        location is shown. Positions arrive once the provider app
+                        starts sending them.
+                      </p>
+                    )}
+                  </>
+                )}
               </div>
+            )}
 
-              {!providerPos && !destinationPos ? (
-                <div className="empty-state">
-                  <span>No coordinates recorded for this order or provider yet.</span>
-                </div>
-              ) : (
-                <>
-                  <div className="tracking-map">
-                    <LiveTrackingMap
-                      apiKey={mapsApiKey}
-                      provider={providerPos}
-                      destination={destinationPos}
-                    />
-                  </div>
-                  {!providerPos && (
-                    <p className="tracking-note">
-                      The provider has not reported a position yet — only the job
-                      location is shown. Positions arrive once the provider app
-                      starts sending them.
-                    </p>
-                  )}
-                </>
-              )}
-            </div>
-          )}
+            {/* CHAT */}
+            {activeTab === 'chat' && hasProvider && (
+              <div className="order-chat-tab">
+                <ChatThread orderId={orderId} />
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {lightbox && (
+        <div className="od-lightbox" onClick={() => setLightbox(null)} role="presentation">
+          <button type="button" className="od-lightbox-close" aria-label="Close photo">
+            <X size={20} />
+          </button>
+          <img src={lightbox} alt="" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
 
       {/* Modals */}
       {confirmCancel.open && (

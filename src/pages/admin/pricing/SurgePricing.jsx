@@ -43,7 +43,6 @@ function SurgePricing() {
     <div className="surge-pricing">
       <header className="sp-header">
         <div>
-          <h1 className="sp-title">Surge Pricing</h1>
           <p className="sp-subtitle">
             Multipliers applied to the quoted price based on how many providers are free.
           </p>

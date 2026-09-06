@@ -4,6 +4,8 @@ import {
 } from 'lucide-react'
 import { getWalletLedger } from '../../../api'
 import { formatMoney, formatDate, unwrapList } from './walletFormat.js'
+import SortableTh from '../../../components/DataTable/SortableTh'
+import { useTableSort } from '../../../components/DataTable/useTableSort'
 import {
   LEDGER_TYPES,
   typeLabel,
@@ -13,12 +15,14 @@ import {
   transactionStatusTone,
 } from './ledger.js'
 import './TransactionLedger.css'
+import TableScroll from '../../../components/DataTable/TableScroll'
 
 const PAGE_SIZE = 20
 
 function TransactionLedger() {
   const [type, setType] = useState('')
   const [items, setItems] = useState([])
+  const sort = useTableSort()
   const [total, setTotal] = useState(0)
   const [totalVolume, setTotalVolume] = useState(null)
   const [page, setPage] = useState(1)
@@ -53,12 +57,24 @@ function TransactionLedger() {
 
   const hasMore = items.length < total
 
+  // Money columns sort on the number, dates on the timestamp.
+  const sortedItems = sort.apply(items, {
+    ref: (t) => t.transaction_no,
+    date: (t) => new Date(t.created_at ?? 0).getTime(),
+    account: (t) => counterparty(t).name,
+    type: (t) => typeLabel(t.type),
+    amount: (t) => Number(t.amount ?? 0),
+    fee: (t) => Number(t.fee_amount ?? 0),
+    net: (t) => Number(t.net_amount ?? 0),
+    balance: (t) => Number(t.available_after ?? 0),
+    status: (t) => t.status,
+  })
+
   return (
     <div className="transaction-ledger">
-      <header className="tl-header">
+      <header className="dt-page-head">
         <div>
-          <h1 className="tl-title">Transaction Ledger</h1>
-          <p className="tl-subtitle">Immutable audit trail of every wallet movement.</p>
+          <p className="dt-page-sub">Immutable audit trail of every wallet movement.</p>
         </div>
       </header>
 
@@ -79,8 +95,8 @@ function TransactionLedger() {
         </div>
       </div>
 
-      <div className="tl-toolbar">
-        <div className="tl-filter">
+      <div className="dt-toolbar">
+        <div className="dt-field">
           <Search size={16} />
           <select value={type} onChange={(e) => setType(e.target.value)}>
             <option value="">All types</option>
@@ -104,36 +120,36 @@ function TransactionLedger() {
       )}
 
       {loading ? (
-        <div className="tl-state">
+        <div className="dt-empty">
           <Loader2 size={32} className="spin" />
           <span>Loading ledger…</span>
         </div>
       ) : items.length === 0 ? (
-        <div className="tl-state">
+        <div className="dt-empty">
           <ScrollText size={32} />
           <h2>No transactions</h2>
           <p>{type ? `No ${typeLabel(type).toLowerCase()} transactions recorded.` : 'The ledger is empty.'}</p>
         </div>
       ) : (
         <>
-          <div className="tl-table-card">
-            <div className="tl-table-wrap">
-              <table className="tl-table">
+          <div className="dt-card">
+            <TableScroll>
+              <table className="dt-table">
                 <thead>
                   <tr>
-                    <th>Transaction</th>
-                    <th>Date</th>
-                    <th>Account</th>
-                    <th>Type</th>
-                    <th className="tl-num">Amount</th>
-                    <th className="tl-num">Fee</th>
-                    <th className="tl-num">Net</th>
-                    <th className="tl-num">Balance after</th>
-                    <th>Status</th>
+                    <SortableTh sortKey="ref" sort={sort}>Transaction</SortableTh>
+                    <SortableTh sortKey="date" sort={sort}>Date</SortableTh>
+                    <SortableTh sortKey="account" sort={sort}>Account</SortableTh>
+                    <SortableTh sortKey="type" sort={sort}>Type</SortableTh>
+                    <SortableTh sortKey="amount" sort={sort} className="tl-num">Amount</SortableTh>
+                    <SortableTh sortKey="fee" sort={sort} className="tl-num">Fee</SortableTh>
+                    <SortableTh sortKey="net" sort={sort} className="tl-num">Net</SortableTh>
+                    <SortableTh sortKey="balance" sort={sort} className="tl-num">Balance after</SortableTh>
+                    <SortableTh sortKey="status" sort={sort}>Status</SortableTh>
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map(txn => {
+                  {sortedItems.map(txn => {
                     const party = counterparty(txn)
                     const reference = referenceLabel(txn)
                     const credit = isCredit(txn)
@@ -148,7 +164,7 @@ function TransactionLedger() {
                             )}
                           </span>
                         </td>
-                        <td className="tl-muted">{formatDate(txn.created_at, true)}</td>
+                        <td className="dt-muted">{formatDate(txn.created_at, true)}</td>
                         <td>
                           <span className="tl-party">
                             <strong>{party.name}</strong>
@@ -167,7 +183,7 @@ function TransactionLedger() {
                             <span className="riyal-symbol">&#x20C1;</span>{formatMoney(Math.abs(txn.amount))}
                           </span>
                         </td>
-                        <td className="tl-num tl-muted">
+                        <td className="tl-num dt-muted">
                           {fee !== 0
                             ? <><span className="riyal-symbol">&#x20C1;</span>{formatMoney(Math.abs(fee))}</>
                             : '—'}
@@ -175,11 +191,11 @@ function TransactionLedger() {
                         <td className="tl-num tl-net">
                           <span className="riyal-symbol">&#x20C1;</span>{formatMoney(Math.abs(txn.net_amount))}
                         </td>
-                        <td className="tl-num tl-muted">
+                        <td className="tl-num dt-muted">
                           <span className="riyal-symbol">&#x20C1;</span>{formatMoney(txn.available_after)}
                         </td>
                         <td>
-                          <span className={`tl-badge tl-badge--${transactionStatusTone(txn.status)}`}>
+                          <span className={`dt-status dt-status--${transactionStatusTone(txn.status)}`}>
                             {txn.status}
                           </span>
                         </td>
@@ -188,13 +204,13 @@ function TransactionLedger() {
                   })}
                 </tbody>
               </table>
-            </div>
+            </TableScroll>
           </div>
 
           {hasMore && (
             <div className="tl-more">
               <button
-                className="tl-btn"
+                className="dt-btn"
                 onClick={() => load(page + 1, false)}
                 disabled={loadingMore}
               >

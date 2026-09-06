@@ -1,80 +1,482 @@
-/* Dashboard Layout */
+/* ═══════════════════════════════════════════════════════════════════════════
+   Dashboard — all colour comes from the app's own tokens (index.css).
+   Layout: greeting · bare KPI strip · map + side column · chart + action list.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 .dashboard {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-sans);
+  gap: 1.75rem;
   width: 100%;
+}
+
+/* Recharts renders axis ticks and labels as SVG <text>. They inherit in most
+   browsers, but stating it here keeps the charts on Poppins regardless. */
+.dashboard svg text {
+  font-family: var(--font-sans);
+}
+
+/* ── Greeting ────────────────────────────────────────────────────────────── */
+
+.dash-head {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.dash-greeting {
+  color: var(--text-muted);
+  font-size: 1.75rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.dash-greeting strong {
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.dash-head-sub {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  margin: 0.3rem 0 0;
+}
+
+.dash-head-tools {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.dash-period {
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.55rem 0.8rem;
+}
+
+.dash-period select {
+  appearance: none;
+  background: none;
+  border: none;
+  color: var(--text-main);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  outline: none;
+  padding-right: 0.25rem;
+}
+
+.dash-today {
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.6rem 0.9rem;
+  white-space: nowrap;
+}
+
+/* ── KPI strip ───────────────────────────────────────────────────────────── */
+
+/* Bare figures on the page ground, not cards — the eye reads a row of numbers
+   faster without six competing borders. */
+.dash-kpis {
+  display: grid;
+  gap: 1.5rem 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.dash-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.dash-kpi-label {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+/* Proportional figures: tabular-nums would make a value like 121 look loose
+   at this size. Tabular is for columns, not headline numbers. */
+.dash-kpi-value {
+  align-items: baseline;
+  color: var(--text-main);
+  display: flex;
+  font-size: 1.75rem;
+  font-weight: 700;
+  gap: 0.2rem;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.dash-kpi-delta {
+  align-items: center;
+  display: flex;
+  font-size: 0.78rem;
+  font-weight: 600;
+  gap: 0.3rem;
+}
+
+.dash-kpi-delta.is-up {
+  color: var(--success);
+}
+
+.dash-kpi-delta.is-down {
+  color: var(--danger);
+}
+
+.dash-kpi-delta em {
+  color: var(--text-muted);
+  font-style: normal;
+  font-weight: 400;
+}
+
+.dash-kpi-hint {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+/* ── Cards ───────────────────────────────────────────────────────────────── */
+
+.dash-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.dash-card-head {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 1.25rem 1.4rem 0.9rem;
+}
+
+.dash-card-head h2 {
+  color: var(--text-main);
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.dash-card-head p {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  margin: 0.25rem 0 0;
+}
+
+.dash-count {
+  background: var(--primary-soft);
+  border-radius: 999px;
+  color: var(--primary-hover);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 10px;
+}
+
+/* ── Main grid: map + side column ────────────────────────────────────────── */
+
+/* stretch, not start: the side column matches the map's height exactly, and
+   the cards inside it share that height between them. */
+.dash-main {
+  align-items: stretch;
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+}
+
+@media (max-width: 1100px) {
+  .dash-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dash-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.dash-legend span {
+  align-items: center;
+  color: var(--text-muted);
+  display: flex;
+  font-size: 0.8rem;
+  font-weight: 500;
+  gap: 0.4rem;
+}
+
+.dash-dot {
+  border: 1.5px solid var(--bg-card);
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  height: 11px;
+  width: 11px;
+}
+
+.dash-dot--online { background: #10b981; }
+.dash-dot--busy { background: var(--primary-color); }
+
+.dash-pin {
+  background: #2563eb;
+  clip-path: polygon(50% 100%, 0 42%, 0 0, 100% 0, 100% 42%);
+  display: inline-block;
+  flex-shrink: 0;
+  height: 14px;
+  width: 10px;
+}
+
+/* The map fills its card edge to edge — no padding, and the card's own
+   radius clips it, so the tiles run right up to the border. */
+.dash-map {
+  padding: 0;
+}
+
+.dash-map-body {
+  display: flex;
+  flex: 1;
+  min-height: 520px;
+}
+
+.dash-map-body > * {
+  border-radius: 0;
+  flex: 1;
+  min-height: 520px;
+}
+
+/* ── Side column ─────────────────────────────────────────────────────────── */
+
+.dash-side {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  min-height: 520px;
 }
 
-/* Top Row - 4 KPI Cards */
-.dashboard-top-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.5rem;
+/* The rings card absorbs whatever height is left over, so the column lines up
+   with the bottom of the map however tall the other two cards end up. */
+.dash-side > .dash-rings {
+  flex: 1;
+  justify-content: space-evenly;
 }
 
-.kpi-card {
-  background: var(--bg-card);
+/* The one branded slab — brand yellow with the same dark ink the sidebar's
+   active item and primary buttons already use. */
+.dash-accent {
+  background: linear-gradient(140deg, var(--primary-color), var(--primary-hover));
   border-radius: var(--radius-lg);
-  padding: 1.35rem 1.4rem;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border-base);
-  position: relative;
-  overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.kpi-card:hover {
-  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
-}
-
-.kpi-icon-wrapper {
-  position: absolute;
-  top: 1.25rem;
-  right: 1.25rem;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   color: #1a1a1a;
+  padding: 1.4rem;
 }
 
-.kpi-icon-wrapper.orders,
-.kpi-icon-wrapper.revenue,
-.kpi-icon-wrapper.sales,
-.kpi-icon-wrapper.sps,
-.kpi-icon-wrapper.services,
-.kpi-icon-wrapper.customers,
-.kpi-icon-wrapper.zones {
+.dash-accent h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.dash-accent-label {
+  font-size: 0.8rem;
+  margin: 1rem 0 0;
+  opacity: 0.75;
+}
+
+/* The single number the view leads with. */
+.dash-hero {
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  margin-top: 0.15rem;
+}
+
+.dash-accent-foot {
+  font-size: 0.8rem;
+  margin: 0.35rem 0 0;
+  opacity: 0.75;
+}
+
+.dash-spark {
+  margin: 0.6rem -0.4rem -0.4rem;
+}
+
+/* ── Rings ───────────────────────────────────────────────────────────────── */
+
+.dash-rings {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.4rem;
+}
+
+.dash-ring {
+  align-items: center;
+  display: flex;
+  gap: 0.9rem;
+}
+
+.dash-ring-arc {
+  align-items: center;
+  border-radius: 50%;
+  display: flex;
+  flex-shrink: 0;
+  height: 62px;
+  justify-content: center;
+  width: 62px;
+}
+
+.dash-ring-hole {
+  background: var(--bg-card);
+  border-radius: 50%;
+  height: 46px;
+  width: 46px;
+}
+
+.dash-ring-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dash-ring-label {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.dash-ring-value {
+  color: var(--text-main);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.dash-ring-sub {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-style: normal;
+}
+
+/* ── Bottom row ──────────────────────────────────────────────────────────── */
+
+.dash-bottom {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+}
+
+@media (max-width: 1100px) {
+  .dash-bottom {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dash-chart {
+  padding: 0.5rem 1rem 1.2rem;
+}
+
+.dash-empty {
+  align-items: center;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  justify-content: center;
+  min-height: 200px;
+  padding: 2rem 1rem;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.dash-list {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0.4rem;
+}
+
+.dash-list-row {
+  align-items: center;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border-base);
+  cursor: pointer;
+  display: flex;
+  font-family: inherit;
+  gap: 0.75rem;
+  justify-content: space-between;
+  padding: 0.8rem 1.4rem;
+  text-align: left;
+  transition: background 0.15s;
+  width: 100%;
+}
+
+.dash-list-row:hover {
+  background: var(--border-light);
+}
+
+.dash-list-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dash-list-main strong {
+  color: var(--text-main);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.dash-list-main em {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-style: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-chip {
+  border-radius: 999px;
+  color: var(--text-muted);
+  background: var(--border-light);
+  flex-shrink: 0;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 3px 9px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.dash-chip--broadcasted,
+.dash-chip--created {
   background: var(--primary-soft);
-  color: #b8860b;
+  color: var(--primary-hover);
 }
 
-/* Dispute cards carry their own tone so an at-a-glance scan separates
-   "needs attention" from "already closed". */
-.kpi-icon-wrapper.disputes {
-  background: rgba(245, 158, 11, 0.15);
-  color: #b45309;
-}
+/* ── Locked state ────────────────────────────────────────────────────────── */
 
-.kpi-icon-wrapper.resolved {
-  background: rgba(22, 163, 74, 0.13);
-  color: #15803d;
-}
-
-.kpi-icon-wrapper.rejected {
-  background: rgba(239, 68, 68, 0.12);
-  color: #b91c1c;
-}
-
-body.dark-mode .kpi-icon-wrapper.disputes { color: #fbbf24; }
-body.dark-mode .kpi-icon-wrapper.resolved { color: #4ade80; }
-body.dark-mode .kpi-icon-wrapper.rejected { color: #f87171; }
-
-/* Shown when a role holds no dashboard permissions at all. */
 .dash-locked {
   align-items: center;
   background: var(--bg-card);
@@ -84,7 +486,6 @@ body.dark-mode .kpi-icon-wrapper.rejected { color: #f87171; }
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  margin-bottom: 1.5rem;
   padding: 3rem 1.5rem;
   text-align: center;
 }
@@ -101,162 +502,22 @@ body.dark-mode .kpi-icon-wrapper.rejected { color: #f87171; }
   max-width: 46ch;
 }
 
-.kpi-content {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  max-width: calc(100% - 64px);
-}
-
-.kpi-label {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--text-muted);
-  text-transform: none;
-  letter-spacing: 0;
-}
-
-.kpi-value {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--text-main);
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-}
-
-.kpi-trend {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  margin-top: 0.5rem;
-}
-
-.kpi-trend.positive {
-  color: var(--color-success);
-}
-
-.kpi-trend.yellow {
-  color: var(--primary-color);
-}
-
-/* Map Section */
-.dashboard-map-section {
-  width: 100%;
-}
-
-.map-card {
-  background: transparent;
-  border-radius: 0;
-  padding: 0;
-  box-shadow: none;
-  min-height: 500px;
-}
-
-.map-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-}
-
-.map-title-section {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex: 1;
-  min-width: 200px;
-}
-
-.map-title-icon {
-  color: var(--primary-color);
-  flex-shrink: 0;
-}
-
-.map-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--text-main);
-  margin: 0;
-}
-
-.map-legend {
-  display: flex;
-  gap: 1.5rem;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-
-.legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  border: 1.5px solid var(--bg-card);
-  box-shadow: 0 1px 2px var(--shadow-sm);
-}
-
-.legend-dot.online {
-  background: var(--color-success);
-}
-
-.legend-dot.busy {
-  background: var(--primary-color);
-}
-
-.legend-dot.offline {
-  background: var(--text-muted);
-}
-
-.map-container {
-  position: relative;
-  width: 100%;
-  min-height: 450px;
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border-base);
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-}
-
-.map-container > div:first-child {
-  flex: 1;
-  min-height: 400px;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-}
+/* ── Map internals (used by GoogleMapsAdvanced) ──────────────────────────── */
 
 .map-visualization {
   width: 100% !important;
   height: 100% !important;
-  min-height: 400px;
+  min-height: 520px;
   position: relative;
-  border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--border-light);
 }
 
+/* No dashed border — the placeholder now fills the card, whose own border
+   already frames it. */
 .map-placeholder {
-  flex: 1;
-  min-height: 400px;
-  border-radius: var(--radius-md);
+  min-height: 520px;
   background: var(--border-light);
-  border: 2px dashed var(--border-base);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -266,488 +527,23 @@ body.dark-mode .kpi-icon-wrapper.rejected { color: #f87171; }
   color: var(--text-muted);
 }
 
-.map-placeholder svg {
-  color: var(--text-muted);
-}
-
 .map-placeholder-title {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: 1.05rem;
   font-weight: 600;
   color: var(--text-main);
 }
 
 .map-placeholder-text {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   text-align: center;
-  max-width: 360px;
-  line-height: 1.5;
+  max-width: 380px;
+  line-height: 1.55;
 }
 
 .map-placeholder-text strong {
   color: var(--text-main);
-}
-
-.map-placeholder-link {
-  display: inline-block;
-  margin-top: 0.5rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--primary-color);
-  background: var(--border-light);
-  border-radius: 8px;
-  text-decoration: none;
-  transition: background 0.2s, color 0.2s;
-}
-
-.map-placeholder-link:hover {
-  background: var(--bg-hover-primary);
-  color: var(--primary-hover);
-}
-
-.custom-marker {
-  position: relative;
-}
-
-.custom-marker:hover {
-  transform: scale(1.1);
-  transition: transform 0.2s;
-}
-
-.order-marker {
-  filter: drop-shadow(0 2px 4px var(--shadow-md));
-}
-
-.order-marker svg {
-  width: 32px;
-  height: 40px;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-.map-placeholder-message {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  text-align: center;
-  color: var(--text-muted);
-}
-
-.map-placeholder-message h4 {
-  margin: 1rem 0 0.5rem 0;
-  color: var(--text-main);
-  font-size: 1.25rem;
-}
-
-.map-placeholder-message p {
-  margin: 0.5rem 0;
-  font-size: 0.875rem;
-}
-
-.map-placeholder-instructions {
-  margin-top: 1rem;
-  padding: 1rem;
-  background: var(--border-light);
-  border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-}
-
-.map-placeholder-instructions code {
-  background: var(--bg-input);
-  padding: 0.2rem 0.4rem;
-  border-radius: 4px;
-  font-family: monospace;
-  font-size: 0.75rem;
-}
-
-.live-activity-box {
-  position: absolute;
-  bottom: 1.5rem;
-  right: 1.5rem;
-  background: var(--bg-card);
-  border-radius: var(--radius-md);
-  padding: 1.25rem;
-  box-shadow: var(--shadow-md);
-  min-width: 200px;
-  border: 1px solid var(--border-base);
-}
-
-.live-activity-header {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 0.75rem;
-}
-
-.live-activity-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
-}
-
-.live-activity-item:last-child {
-  margin-bottom: 0;
-}
-
-.live-activity-label {
-  font-size: 0.875rem;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-
-.live-activity-value {
-  font-size: 1.1rem;
-  font-weight: 700;
-}
-
-/* Each figure gets its own colour — blue and orange both resolved to the
-   brand yellow before, so the rows were impossible to tell apart. */
-.live-activity-value.blue {
-  color: var(--info);
-}
-
-.live-activity-value.orange {
-  color: var(--primary-color);
-}
-
-.live-activity-value.purple {
-  color: #8b5cf6;
-}
-
-.live-activity-value.green {
-  color: var(--success);
-}
-
-.live-activity-progress-note {
-  display: block;
-  margin-top: 0.4rem;
-  font-size: 0.7rem;
-  color: var(--text-muted);
-}
-
-.live-activity-progress {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--border-base);
-}
-
-.live-activity-progress-bar {
-  width: 100%;
-  height: 6px;
-  background: var(--border-light);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.live-activity-progress-fill {
-  height: 100%;
-  background: var(--primary-color);
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-
-/* Bottom Row - 2 Cards */
-.dashboard-bottom-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-}
-
-.trends-card,
-.sp-status-card {
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  box-shadow: var(--shadow-sm);
-}
-
-.trends-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.trends-heading {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  min-width: 0;
-}
-
-.trends-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text-main);
-  margin: 0;
-}
-
-.trends-summary {
-  margin: 0;
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--text-main);
-  font-variant-numeric: tabular-nums;
-}
-
-.trends-summary-sub {
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--text-muted);
-}
-
-.trends-dropdown {
-  position: relative;
-  display: inline-block;
-}
-
-.period-select {
-  appearance: none;
-  background: var(--border-light);
-  border: 1px solid var(--border-base);
-  border-radius: var(--radius-md);
-  padding: 0.5rem 2rem 0.5rem 0.75rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-main);
-  cursor: pointer;
-  outline: none;
-}
-
-.period-select:hover {
-  background: var(--border-light);
-}
-
-.dropdown-icon {
-  position: absolute;
-  right: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-  color: var(--text-muted);
-}
-
-.chart-container {
-  width: 100%;
-  height: 250px;
-  padding: 0.5rem 0;
-}
-
-.chart-empty {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.6rem;
-  color: var(--text-muted);
-  text-align: center;
-}
-
-.chart-empty p {
-  margin: 0;
-  font-size: 0.85rem;
-}
-
-/* Recharts custom styles */
-.recharts-cartesian-grid-horizontal line,
-.recharts-cartesian-grid-vertical line {
-  stroke: var(--border-base);
-}
-
-.recharts-bar-rectangle {
-  transition: all 0.3s ease;
-  cursor: pointer;
-}
-
-.recharts-bar-rectangle:hover {
-  opacity: 0.8;
-  transform: scaleY(1.05);
-  transform-origin: bottom;
-}
-
-/* SP Status Card */
-.sp-status-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.sp-status-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text-main);
-  margin: 0;
-}
-
-.live-badge {
-  background: var(--color-success);
-  color: var(--bg-card);
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 0.35rem 0.75rem;
-  border-radius: var(--radius-sm);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.sp-status-content {
-  display: flex;
-  gap: 2rem;
-  align-items: center;
-}
-
-.donut-chart-wrapper {
-  flex-shrink: 0;
-}
-
-.donut-chart {
-  position: relative;
-  width: 180px;
-  height: 180px;
-}
-
-.donut-svg {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-}
-
-.donut-center {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-}
-
-.donut-total {
-  font-size: 2rem;
-  font-weight: 800;
-  color: var(--text-main);
-  line-height: 1;
-}
-
-.donut-label {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-top: 0.25rem;
-}
-
-.sp-status-breakdown {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.breakdown-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.breakdown-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.breakdown-content {
-  flex: 1;
-}
-
-.breakdown-label {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-main);
-  margin-bottom: 0.25rem;
-}
-
-.breakdown-value {
-  font-size: 0.875rem;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-
-/* Responsive Design */
-@media (max-width: 1200px) {
-  .dashboard-top-row {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .dashboard-bottom-row {
-    grid-template-columns: 1fr;
-  }
-
-  .sp-status-content {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .donut-chart-wrapper {
-    align-self: center;
-  }
-}
-
-@media (max-width: 768px) {
-  .dashboard-top-row {
-    grid-template-columns: 1fr;
-  }
-
-  .map-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .map-legend {
-    width: 100%;
-    justify-content: flex-start;
-  }
-
-  .kpi-value {
-    font-size: 2rem;
-  }
-
-  .live-activity-box {
-    position: relative;
-    bottom: auto;
-    right: auto;
-    margin-top: 1rem;
-  }
-}
-
-/* ── Operations map: legend pin + marker tooltips ──────────────────────── */
-
-.legend-pin {
-  width: 10px;
-  height: 14px;
-  background: #2563eb;
-  border-radius: 50% 50% 50% 50% / 42% 42% 58% 58%;
-  clip-path: polygon(50% 100%, 0 42%, 0 0, 100% 0, 100% 42%);
-  flex-shrink: 0;
 }
 
 /* InfoWindow content is injected as raw HTML, so these are global. */
@@ -784,13 +580,130 @@ body.dark-mode .kpi-icon-wrapper.rejected { color: #f87171; }
   word-break: break-word;
 }
 
-.map-plot-count {
+/* ── Map caption card ────────────────────────────────────────────────────── */
+
+.dash-mapinfo {
+  gap: 0.7rem;
+  padding: 1.25rem 1.4rem;
+}
+
+.dash-mapinfo h2 {
+  color: var(--text-main);
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.dash-mapinfo p {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.dash-mapinfo .dash-legend {
+  gap: 0.65rem 1rem;
+}
+
+.dash-mapinfo-count {
+  border-top: 1px solid var(--border-base);
+  padding-top: 0.7rem;
+}
+
+/* ── Filter bar ──────────────────────────────────────────────────────────── */
+
+.dash-filter-btn {
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  gap: 0.45rem;
+  padding: 0.55rem 0.9rem;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.dash-filter-btn:hover {
   background: var(--border-light);
+}
+
+.dash-filter-btn.is-active {
+  border-color: var(--primary-color);
+}
+
+.dash-filter-btn--ghost {
+  background: none;
+  border-color: transparent;
+  color: var(--text-muted);
+}
+
+.dash-filter-btn svg.is-flipped {
+  transform: rotate(180deg);
+}
+
+.dash-filter-count {
+  background: var(--primary-soft);
   border-radius: 999px;
+  color: var(--primary-hover);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 7px;
+}
+
+.dash-filters {
+  align-items: end;
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  padding: 1rem 1.1rem;
+}
+
+.dash-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 150px;
+}
+
+.dash-filter-field label {
   color: var(--text-muted);
   font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  padding: 3px 10px;
-  white-space: nowrap;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.dash-filter-field input,
+.dash-filter-field select {
+  background: var(--bg-input);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.7rem;
+}
+
+.dash-filter-field input:focus,
+.dash-filter-field select:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+.dash-filter-note {
+  color: var(--text-muted);
+  flex: 1 1 260px;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  margin: 0;
+  min-width: 220px;
 }

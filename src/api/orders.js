@@ -10,6 +10,7 @@ export async function getAdminOrders(params = {}) {
     if (params.serviceId && params.serviceId !== 'All Services') query.append('serviceId', params.serviceId);
     if (params.from) query.append('from', params.from);
     if (params.to) query.append('to', params.to);
+    if (params.search) query.append('search', params.search);
     if (params.customerId)  query.append('customerId', params.customerId);
     if (params.providerId)  query.append('provider_id', params.providerId);
     if (params.page) query.append('page', params.page);

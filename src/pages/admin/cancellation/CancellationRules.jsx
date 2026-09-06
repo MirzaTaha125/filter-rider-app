@@ -101,7 +101,6 @@ function CancellationRules() {
       <div className="rules-header">
         <div className="rules-header-content">
           <div>
-            <h1 className="rules-title">Cancellation Rules</h1>
             <p className="rules-subtitle">Configure cancellation policies and penalties</p>
           </div>
           <button className="btn-add-rule" onClick={() => openModal()}>

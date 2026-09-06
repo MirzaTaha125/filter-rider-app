@@ -62,7 +62,6 @@ function AssetCategories() {
     <div className="asset-categories">
       <header className="ac-header">
         <div>
-          <h1 className="ac-title">Asset Categories</h1>
           <p className="ac-subtitle">Groups the assets a service can be booked against.</p>
         </div>
         <button
