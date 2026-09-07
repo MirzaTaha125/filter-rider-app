@@ -180,8 +180,8 @@
   gap: 0.55rem;
   padding: 0.75rem 0.9rem;
   border-radius: var(--radius-md);
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.4);
+  background: rgba(252, 194, 69,) 0.12);
+  border: 1px solid rgba(252, 194, 69,) 0.4);
   color: var(--warning);
   font-size: 0.8rem;
   line-height: 1.45;

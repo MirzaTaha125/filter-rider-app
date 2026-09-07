@@ -57,8 +57,8 @@
   gap: 0.6rem;
   padding: 0.85rem 1rem;
   border-radius: var(--radius-md);
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.4);
+  background: rgba(252, 194, 69, 0.12);
+  border: 1px solid rgba(252, 194, 69, 0.4);
   color: var(--warning);
   font-size: 0.875rem;
   font-weight: 500;

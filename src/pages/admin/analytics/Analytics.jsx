@@ -13,7 +13,7 @@ import { getAdminOrders } from '../../../api/orders.js'
 import { getWalletOverview } from '../../../api/wallet.js'
 import './Analytics.css'
 
-const BRAND = '#F0B020'
+const BRAND = '#FCC245'
 const BRAND_DARK = '#D39A18'
 
 // How many orders to pull for the client-side charts. There is no time-series
@@ -276,7 +276,7 @@ function Analytics() {
 
   const breakdown = [
     { label: 'Active', value: spSummary?.activeProviders, color: '#10b981' },
-    { label: 'Pending', value: spSummary?.pendingRequests, color: '#f59e0b' },
+    { label: 'Pending', value: spSummary?.pendingRequests, color: '#FCC245' },
     { label: 'Approved', value: spSummary?.approvedProviders, color: '#3b82f6' },
     { label: 'Rejected', value: spSummary?.rejectedProviders, color: '#ef4444' },
     { label: 'Suspended', value: spSummary?.suspendedProviders, color: '#8b5cf6' },
@@ -426,7 +426,7 @@ function Analytics() {
             </span>
           </div>
           <div className="an-breakdown-item">
-            <span className="an-dot" style={{ background: '#f59e0b' }} />
+            <span className="an-dot" style={{ background: '#FCC245' }} />
             <span className="an-breakdown-label">Pending payouts</span>
             <span className="an-breakdown-value">
               {loading ? '…' : <><Riyal />{money(wallet?.pending_payouts)}</>}

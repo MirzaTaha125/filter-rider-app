@@ -136,7 +136,7 @@
 .dt-badge {
   background: var(--primary-soft);
   border-radius: 999px;
-  color: var(--primary-hover);
+  color: var(--primary-color);
   font-size: 0.7rem;
   font-weight: 700;
   padding: 1px 7px;
@@ -444,15 +444,15 @@ select.dt-field:focus {
 }
 
 .dt-status--neutral { background: var(--border-light); color: var(--text-muted); }
-.dt-status--brand { background: var(--primary-soft); color: var(--primary-hover); }
+.dt-status--brand { background: var(--primary-soft); color: var(--primary-color); }
 .dt-status--info { background: rgba(37, 99, 235, 0.12); color: var(--info); }
 .dt-status--success { background: rgba(22, 163, 74, 0.12); color: var(--success); }
-.dt-status--warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+.dt-status--warning { background: rgba(252, 194, 69, 0.15); color: var(--warning); }
 .dt-status--danger { background: rgba(239, 68, 68, 0.12); color: var(--danger); }
 
 /* Aliases for tone names the existing statusTone() helpers already return, so
    those helpers keep working unchanged across the wallet/pricing pages. */
-.dt-status--pending { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+.dt-status--pending { background: rgba(252, 194, 69, 0.15); color: var(--warning); }
 .dt-status--muted { background: var(--border-light); color: var(--text-muted); }
 
 /* A coloured dot beside a label, so state is never colour-alone. */

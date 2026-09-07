@@ -22,6 +22,7 @@ describe('getPageTitleFor', () => {
     expect(getPageTitleFor('/admin/services/pricing-matrix')).toBe('Pricing Matrix')
     expect(getPageTitleFor('/admin/pricing/regional')).toBe('Regional Pricing')
     expect(getPageTitleFor('/admin/pricing/surge')).toBe('Surge Pricing')
+    expect(getPageTitleFor('/admin/pricing/rewards')).toBe('Rewards')
     expect(getPageTitleFor('/admin/assets/sizes')).toBe('Size Categories')
     expect(getPageTitleFor('/admin/communication/content')).toBe('Content Management')
   })
@@ -42,6 +43,7 @@ describe('getPageTitleFor', () => {
   it('names the create routes', () => {
     expect(getPageTitleFor('/admin/zones/add')).toBe('New Zone')
     expect(getPageTitleFor('/admin/customers/add')).toBe('Add Customer')
+    expect(getPageTitleFor('/admin/pricing/rewards/new')).toBe('New Reward')
   })
 
   it('prettifies an unmapped route rather than showing a slug', () => {

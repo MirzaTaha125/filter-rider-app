@@ -134,8 +134,8 @@
   flex-direction: column;
   gap: 0.4rem;
   align-items: flex-start;
-  color: #fcd34d;
-  background: rgba(245, 158, 11, 0.12);
+  color: #FCC245;
+  background: rgba(252, 194, 69, 0.12);
 }
 
 .sidebar-nav-notice--warn button {
@@ -294,7 +294,7 @@
 }
 
 .sidebar-submenu-item.active {
-  background: rgba(252, 194, 70, 0.15);
+  background: var(--primary-soft);
   color: var(--primary-color);
   font-weight: 600;
 }

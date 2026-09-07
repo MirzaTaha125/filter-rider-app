@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { MapPin } from 'lucide-react'
 import { isGoogleMapsKeyValid } from '../../utils/googleMapsKey'
 import { providerMarkerIcon } from '../map/providerPin'
+import { orderMarkerIcon, ORDER_PIN_COLOR } from '../map/orderPin'
 import './LiveTrackingMap.css'
 
 const PROVIDER_COLOR = '#10b981'
-const DESTINATION_COLOR = '#2563eb'
 
 /**
  * Two-point tracking map: where the provider is now, and where the job is.
@@ -109,19 +109,28 @@ function LiveTrackingMap({ apiKey, provider, destination }) {
       else store[key] = new MarkerCtor({ map, position, ...options })
     }
 
+    const hadDestination = Boolean(store.destination)
     upsert('destination', destination, {
       title: 'Job location',
       zIndex: 1,
       icon: {
-        path: 'M12 0C7.03 0 3 4.03 3 9c0 6.75 9 15 9 15s9-8.25 9-15c0-4.97-4.03-9-9-9z',
-        fillColor: DESTINATION_COLOR,
+        path: g.SymbolPath.CIRCLE,
+        scale: 7,
+        fillColor: ORDER_PIN_COLOR,
         fillOpacity: 1,
         strokeColor: '#ffffff',
-        strokeWeight: 1.5,
-        scale: 1.2,
-        anchor: new g.Point(12, 24),
+        strokeWeight: 2,
       },
     })
+
+    if (store.destination && !hadDestination) {
+      const marker = store.destination
+      orderMarkerIcon(g).then((icon) => {
+        if (icon && store.destination === marker && marker.getMap()) {
+          marker.setIcon(icon)
+        }
+      })
+    }
 
     upsert('provider', provider, {
       title: 'Service provider',

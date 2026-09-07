@@ -13,7 +13,7 @@ import '../adminForm.css'
 import './ServiceForm.css'
 
 const COLOR_SWATCHES = [
-  '#f0b020', '#3b82f6', '#10b981', '#ef4444',
+  '#FCC245', '#3b82f6', '#10b981', '#ef4444',
   '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16',
 ]
 
@@ -22,7 +22,7 @@ const EMPTY_FORM = {
   name_ar: '',
   category_id: '',
   icon: DEFAULT_SERVICE_ICON,
-  icon_color: '#f0b020',
+  icon_color: '#FCC245',
   base_price: '',
   duration_min: '',
   is_active: true,
@@ -63,7 +63,7 @@ function ServiceForm() {
           name_ar: found.name_ar ?? '',
           category_id: found.category_id ?? '',
           icon: found.icon || DEFAULT_SERVICE_ICON,
-          icon_color: found.icon_color || '#f0b020',
+          icon_color: found.icon_color || '#FCC245',
           base_price: String(found.base_price ?? ''),
           duration_min: String(found.duration_min ?? ''),
           is_active: found.is_active !== false,

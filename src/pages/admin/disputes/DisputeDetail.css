@@ -152,8 +152,8 @@
 }
 
 .dd-msg.is-internal {
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px dashed rgba(245, 158, 11, 0.5);
+  background: rgba(252, 194, 69,) 0.1);
+  border: 1px dashed rgba(252, 194, 69,) 0.5);
 }
 
 .dd-msg-head {
@@ -316,7 +316,7 @@
 }
 
 .dd-badge--pending {
-  background: rgba(245, 158, 11, 0.15);
+  background: rgba(252, 194, 69,) 0.15);
   color: var(--warning);
 }
 

@@ -95,6 +95,15 @@ export const PERMISSION_GROUPS = [
     ],
   },
   {
+    group: 'Rewards',
+    permissions: [
+      { name: 'Rewards View', slug: 'rewards.view', description: 'View reward rules for customers and providers' },
+      { name: 'Rewards Create', slug: 'rewards.create', description: 'Create a reward rule' },
+      { name: 'Rewards Edit', slug: 'rewards.edit', description: 'Edit or toggle a reward rule' },
+      { name: 'Rewards Delete', slug: 'rewards.delete', description: 'Delete a reward rule' },
+    ],
+  },
+  {
     group: 'Surge Pricing',
     permissions: [
       { name: 'Surge Pricing View', slug: 'surge.view', description: 'View surge pricing rules' },

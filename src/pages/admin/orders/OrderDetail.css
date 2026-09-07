@@ -190,7 +190,7 @@
   align-items: center;
   background: var(--primary-soft);
   border-radius: 50%;
-  color: var(--primary-hover);
+  color: var(--primary-color);
   display: flex;
   flex-shrink: 0;
   font-size: 0.8rem;
@@ -214,7 +214,7 @@
   align-items: center;
   background: none;
   border: none;
-  color: var(--primary-hover);
+  color: var(--primary-color);
   cursor: pointer;
   display: inline-flex;
   font-family: inherit;
@@ -605,8 +605,8 @@
 
 
 .modal-icon.warning {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--primary-soft);
+  color: var(--primary-color);
 }
 
 
@@ -907,12 +907,11 @@
 
 
 .tracking-pin {
-  background: #2563eb;
-  clip-path: polygon(50% 100%, 0 42%, 0 0, 100% 0, 100% 42%);
   display: inline-block;
   flex-shrink: 0;
-  height: 14px;
-  width: 10px;
+  height: 22px;
+  object-fit: contain;
+  width: 22px;
 }
 
 
