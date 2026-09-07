@@ -51,7 +51,7 @@
 
 .stat-tile.is-clickable:hover .stat-tile-go,
 .stat-tile.is-clickable:focus-visible .stat-tile-go {
-  color: var(--primary-hover);
+  color: var(--primary-color);
   opacity: 1;
 }
 

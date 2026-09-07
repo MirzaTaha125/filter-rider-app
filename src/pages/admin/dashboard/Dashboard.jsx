@@ -19,6 +19,7 @@ import {
 } from '../orders/orderStatus'
 import StatTile from '../../../components/StatTile/StatTile'
 import { providerMarkerIcon } from '../../../components/map/providerPin'
+import { orderMarkerIcon, ORDER_PIN_COLOR, ORDER_PIN_SRC } from '../../../components/map/orderPin'
 import { isGoogleMapsKeyValid } from '../../../utils/googleMapsKey'
 import './Dashboard.css'
 
@@ -31,8 +32,7 @@ function toList(data, ...keys) {
   return []
 }
 
-const PRESENCE_COLORS = { ONLINE: '#10b981', BUSY: '#f0b020', OFFLINE: '#6b7280' }
-const ORDER_PIN_COLOR = '#2563eb'
+const PRESENCE_COLORS = { ONLINE: '#10b981', BUSY: '#FCC245', OFFLINE: '#6b7280' }
 
 /**
  * Single ratio against a limit — a meter, drawn as a ring. The unfilled track
@@ -299,23 +299,26 @@ function GoogleMapsAdvanced({ apiKey, center, mapProviders = [], mapOrders = [] 
         attach(marker, providerTooltip(provider))
       })
 
-      // Orders sit above providers so a job pin is never hidden behind a dot.
+      // Orders sit above providers so a job pin is never hidden behind a van.
       mapOrders.forEach((order) => {
-        attach(new MarkerCtor({
+        const marker = new MarkerCtor({
           map,
           position: { lat: order.lat, lng: order.lng },
           title: order.orderNo,
           zIndex: 2,
           icon: {
-            path: 'M12 0C7.03 0 3 4.03 3 9c0 6.75 9 15 9 15s9-8.25 9-15c0-4.97-4.03-9-9-9z',
+            path: g.SymbolPath.CIRCLE,
+            scale: 7,
             fillColor: ORDER_PIN_COLOR,
             fillOpacity: 1,
             strokeColor: '#ffffff',
-            strokeWeight: 1.5,
-            scale: 1.1,
-            anchor: new g.Point(12, 24),
+            strokeWeight: 2,
           },
-        }), orderTooltip(order))
+        })
+        orderMarkerIcon(g).then((icon) => {
+          if (icon && marker.getMap()) marker.setIcon(icon)
+        })
+        attach(marker, orderTooltip(order))
       })
 
       // Fit the viewport to whatever we plotted. Without this the map stays on
@@ -980,7 +983,12 @@ function Dashboard() {
               <div className="dash-legend">
                 <span><i className="dash-dot dash-dot--online" />Online</span>
                 <span><i className="dash-dot dash-dot--busy" />Busy</span>
-                {canOrders && <span><i className="dash-pin" />Active order</span>}
+                {canOrders && (
+                  <span>
+                    <img src={ORDER_PIN_SRC} alt="" className="dash-pin" />
+                    Active order
+                  </span>
+                )}
               </div>
 
               <p className="dash-mapinfo-count">

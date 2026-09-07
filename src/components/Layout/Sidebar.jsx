@@ -96,7 +96,10 @@ function Sidebar({ isOpen, onClose }) {
     // Chat is its own destination rather than a Communication sub-item: it is
     // something support lives in all day, and it carries the unread badge.
     { path: "/admin/communication/chat", label: "Chat", icon: MessagesSquare, permission: "chat.view", badge: "chat" },
-    { path: "/admin/disputes", label: "Disputes", icon: AlertCircle, permission: "disputes.view" },
+    // Hidden for now — the /admin/disputes routes and their pages are all still
+    // in place, so restoring this means uncommenting the line below and adding
+    // AlertCircle back to the lucide-react import at the top.
+    // { path: "/admin/disputes", label: "Disputes", icon: AlertCircle, permission: "disputes.view" },
     { path: "/admin/zones", label: "Zones", icon: MapPin, permission: "zones.view" },
     { path: "/admin/analytics", label: "Analytics", icon: TrendingUp, permission: "analytics.view" },
     { path: "/admin/settings", label: "Settings", icon: Settings, permission: "settings.view" },
@@ -114,6 +117,7 @@ function Sidebar({ isOpen, onClose }) {
     { path: "/admin/pricing", label: "Fee Configuration", permission: "pricing_fees.view" },
     { path: "/admin/pricing/surge", label: "Surge Pricing", permission: "surge.view" },
     { path: "/admin/pricing/regional", label: "Regional Pricing", permission: "regional_pricing.view" },
+    { path: "/admin/pricing/rewards", label: "Rewards", permission: "rewards.view" },
   ];
 
   const assetsSubItems = [
@@ -169,6 +173,15 @@ function Sidebar({ isOpen, onClose }) {
   const handleLinkClick = () => {
     onClose();
   };
+
+  const isSubActive = (path) =>
+    location.pathname === path ||
+    (path !== "/admin/pricing" &&
+      path !== "/admin/services" &&
+      path !== "/admin/assets" &&
+      path !== "/admin/communication" &&
+      path !== "/admin/wallet" &&
+      location.pathname.startsWith(`${path}/`));
 
   const toggleServices = () => {
     setServicesOpen(!servicesOpen);
@@ -287,8 +300,7 @@ function Sidebar({ isOpen, onClose }) {
                 <li key={subItem.path}>
                   <Link
                     to={subItem.path}
-                    className={`sidebar-submenu-item ${location.pathname === subItem.path ? "active" : ""
-                      }`}
+                    className={`sidebar-submenu-item ${isSubActive(subItem.path) ? "active" : ""}`}
                     onClick={handleLinkClick}
                   >
                     {subItem.label}
@@ -322,8 +334,7 @@ function Sidebar({ isOpen, onClose }) {
                 <li key={subItem.path}>
                   <Link
                     to={subItem.path}
-                    className={`sidebar-submenu-item ${location.pathname === subItem.path ? "active" : ""
-                      }`}
+                    className={`sidebar-submenu-item ${isSubActive(subItem.path) ? "active" : ""}`}
                     onClick={handleLinkClick}
                   >
                     {subItem.label}
@@ -357,8 +368,7 @@ function Sidebar({ isOpen, onClose }) {
                 <li key={subItem.path}>
                   <Link
                     to={subItem.path}
-                    className={`sidebar-submenu-item ${location.pathname === subItem.path ? "active" : ""
-                      }`}
+                    className={`sidebar-submenu-item ${isSubActive(subItem.path) ? "active" : ""}`}
                     onClick={handleLinkClick}
                   >
                     {subItem.label}
@@ -396,8 +406,7 @@ function Sidebar({ isOpen, onClose }) {
                 <li key={subItem.path}>
                   <Link
                     to={subItem.path}
-                    className={`sidebar-submenu-item ${location.pathname === subItem.path ? "active" : ""
-                      }`}
+                    className={`sidebar-submenu-item ${isSubActive(subItem.path) ? "active" : ""}`}
                     onClick={handleLinkClick}
                   >
                     {subItem.label}
@@ -431,8 +440,7 @@ function Sidebar({ isOpen, onClose }) {
                 <li key={subItem.path}>
                   <Link
                     to={subItem.path}
-                    className={`sidebar-submenu-item ${location.pathname === subItem.path ? "active" : ""
-                      }`}
+                    className={`sidebar-submenu-item ${isSubActive(subItem.path) ? "active" : ""}`}
                     onClick={handleLinkClick}
                   >
                     {subItem.label}

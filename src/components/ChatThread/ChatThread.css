@@ -109,7 +109,7 @@
    words, so colour is never the only signal. */
 .ct-msg--customer .ct-msg-head strong { color: var(--info); }
 .ct-msg--provider .ct-msg-head strong { color: var(--success); }
-.ct-msg--admin .ct-msg-head strong { color: var(--primary-hover); }
+.ct-msg--admin .ct-msg-head strong { color: var(--primary-color); }
 
 .ct-role {
   border-radius: 999px;

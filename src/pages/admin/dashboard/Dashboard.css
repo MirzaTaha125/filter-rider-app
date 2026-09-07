@@ -188,7 +188,7 @@
 .dash-count {
   background: var(--primary-soft);
   border-radius: 999px;
-  color: var(--primary-hover);
+  color: var(--primary-color);
   font-size: 0.75rem;
   font-weight: 700;
   padding: 3px 10px;
@@ -239,12 +239,11 @@
 .dash-dot--busy { background: var(--primary-color); }
 
 .dash-pin {
-  background: #2563eb;
-  clip-path: polygon(50% 100%, 0 42%, 0 0, 100% 0, 100% 42%);
   display: inline-block;
   flex-shrink: 0;
-  height: 14px;
-  width: 10px;
+  height: 22px;
+  object-fit: contain;
+  width: 22px;
 }
 
 /* The map fills its card edge to edge — no padding, and the card's own
@@ -281,10 +280,10 @@
   justify-content: space-evenly;
 }
 
-/* The one branded slab — brand yellow with the same dark ink the sidebar's
-   active item and primary buttons already use. */
+/* The one branded slab — brand yellow (#FCC245) with the same dark ink the
+   sidebar's active item and primary buttons already use. */
 .dash-accent {
-  background: linear-gradient(140deg, var(--primary-color), var(--primary-hover));
+  background: var(--primary-color);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   color: #1a1a1a;
@@ -472,7 +471,7 @@
 .dash-chip--broadcasted,
 .dash-chip--created {
   background: var(--primary-soft);
-  color: var(--primary-hover);
+  color: var(--primary-color);
 }
 
 /* ── Locked state ────────────────────────────────────────────────────────── */
@@ -650,7 +649,7 @@
 .dash-filter-count {
   background: var(--primary-soft);
   border-radius: 999px;
-  color: var(--primary-hover);
+  color: var(--primary-color);
   font-size: 0.7rem;
   font-weight: 700;
   padding: 1px 7px;

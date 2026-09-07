@@ -349,7 +349,7 @@
 
 .cd-dialog-icon {
   align-items: center;
-  background: rgba(245, 158, 11, 0.15);
+  background: rgba(252, 194, 69,) 0.15);
   border-radius: 50%;
   color: var(--warning);
   display: inline-flex;

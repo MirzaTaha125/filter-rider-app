@@ -37,4 +37,5 @@ export * from './communication.js';
 export * from './chat.js';
 export * from './disputes.js';
 export * from './pricing.js';
+export * from './rewards.js';
 export * from './wallet.js';

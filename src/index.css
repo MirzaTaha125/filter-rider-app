@@ -8,14 +8,14 @@
   --radius-round: 50%;
 
   /* Brand */
-  --primary-color: #f0b020;
-  --primary-hover: #d39a18;
-  --primary-soft: rgba(240, 176, 32, 0.18);
+  --primary-color: #FCC245;
+  --primary-hover: #E5AD2A;
+  --primary-soft: rgba(252, 194, 69, 0.18);
   --secondary-color: #25262c;
   --secondary-hover: #1a1b20;
   --danger: #ef4444;
   --success: #16a34a;
-  --warning: #f59e0b;
+  --warning: #FCC245;
   --info: #2563eb;
 
   /* Surfaces */
@@ -33,7 +33,7 @@
   --topbar-text: #1a1a2e;
   --sidebar-text: rgba(255, 255, 255, 0.88);
   --sidebar-muted: rgba(255, 255, 255, 0.52);
-  --sidebar-active-bg: #f0b020;
+  --sidebar-active-bg: #FCC245;
   --sidebar-active-text: #1a1a1a;
   --sidebar-hover-bg: rgba(255, 255, 255, 0.06);
 
@@ -87,7 +87,7 @@ body.dark-mode {
 
   --chat-canvas: #0b0d13;
   --chat-bubble-in: #1f2330;
-  --chat-bubble-out: rgba(240, 176, 32, 0.16);
+  --chat-bubble-out: rgba(252, 194, 69, 0.16);
   --chat-divider: rgba(255, 255, 255, 0.08);
 
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);

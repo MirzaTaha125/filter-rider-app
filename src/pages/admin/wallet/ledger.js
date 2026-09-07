@@ -12,6 +12,9 @@ export const LEDGER_TYPES = [
   'REFUND',
   'ADJUSTMENT',
   'REVERSAL',
+  'GIFT_SEND',
+  'GIFT_REDEEM',
+  'REWARD',
 ]
 
 export function typeLabel(type) {

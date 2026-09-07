@@ -23,6 +23,7 @@ import {
   getPaymentState, formatMoney, PAYMENT_TIMING_LABELS, PAYMENT_RECORD_TONES,
 } from './paymentStatus'
 import { normalizeStatus, orderStatusTone } from './orderStatus'
+import { ORDER_PIN_SRC } from '../../../components/map/orderPin'
 import './OrderDetail.css'
 import TableScroll from '../../../components/DataTable/TableScroll'
 
@@ -651,7 +652,7 @@ function OrderDetail() {
                     )}
                   </span>
                   <span className="tracking-key">
-                    <i className="tracking-pin" />
+                    <img src={ORDER_PIN_SRC} alt="" className="tracking-pin" />
                     Job location
                     {order.address_text && (
                       <em className="tracking-stamp">{order.address_text}</em>

@@ -31,6 +31,8 @@ const EXACT = {
   '/admin/pricing/surge/configure': 'Configure Surge',
   '/admin/pricing/regional': 'Regional Pricing',
   '/admin/pricing/regional/add': 'New Region',
+  '/admin/pricing/rewards': 'Rewards',
+  '/admin/pricing/rewards/new': 'New Reward',
   '/admin/assets': 'Asset Categories',
   '/admin/assets/add': 'New Category',
   '/admin/assets/sizes': 'Size Categories',

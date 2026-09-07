@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   DollarSign, Users, ShoppingCart, UserCheck,
-  Loader2, RefreshCw, AlertTriangle, BarChart3,
+  Loader2, RefreshCw, AlertTriangle, BarChart3, Calendar,
 } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -13,13 +13,51 @@ import { getAdminOrders } from '../../../api/orders.js'
 import { getWalletOverview } from '../../../api/wallet.js'
 import './Analytics.css'
 
-const BRAND = '#F0B020'
+const BRAND = '#FCC245'
 const BRAND_DARK = '#D39A18'
 
-// How many recent orders to pull for the client-side charts. There is no
-// time-series endpoint, so the trend is derived from the order list.
+// How many orders to pull for the client-side charts. There is no time-series
+// endpoint, so the trend is derived from the order list.
 const CHART_ORDER_LIMIT = 500
-const TREND_DAYS = 14
+
+const PRESETS = [
+  { value: '7days', label: 'Last 7 days' },
+  { value: '30days', label: 'Last 30 days' },
+  { value: '90days', label: 'Last 90 days' },
+  { value: 'mtd', label: 'This month' },
+  { value: 'custom', label: 'Custom range' },
+]
+
+/** Turns a preset (or a pair of dates) into a concrete window. */
+function resolveRange(preset, from, to) {
+  const dayMs = 24 * 60 * 60 * 1000
+  const end = new Date()
+  end.setHours(23, 59, 59, 999)
+
+  if (preset === 'custom' && (from || to)) {
+    const start = from ? new Date(`${from}T00:00:00`) : null
+    const finish = to ? new Date(`${to}T23:59:59`) : end
+    return {
+      from: start,
+      to: finish,
+      label: start
+        ? `${start.toLocaleDateString()} – ${finish.toLocaleDateString()}`
+        : `Up to ${finish.toLocaleDateString()}`,
+    }
+  }
+
+  if (preset === 'mtd') {
+    const start = new Date()
+    start.setDate(1)
+    start.setHours(0, 0, 0, 0)
+    return { from: start, to: end, label: 'This month' }
+  }
+
+  const days = { '7days': 7, '30days': 30, '90days': 90 }[preset] ?? 7
+  const start = new Date(end.getTime() - (days - 1) * dayMs)
+  start.setHours(0, 0, 0, 0)
+  return { from: start, to: end, label: `Last ${days} days` }
+}
 
 const KPI_COLORS = {
   orders: '#3b82f6',
@@ -83,16 +121,37 @@ function Analytics() {
   const [wallet, setWallet] = useState(null)
   const [orders, setOrders] = useState([])
 
+  // `draft` is what the controls hold; `applied` is what the page was last
+  // fetched with. Nothing reloads until Apply is pressed, so half-typed dates
+  // never fire a request.
+  const [draft, setDraft] = useState({ preset: '30days', from: '', to: '' })
+  const [applied, setApplied] = useState({ preset: '30days', from: '', to: '' })
+
+  const range = useMemo(
+    () => resolveRange(applied.preset, applied.from, applied.to),
+    [applied.preset, applied.from, applied.to],
+  )
+
+  const fromIso = range.from ? range.from.toISOString() : undefined
+  const toIso = range.to.toISOString()
+
+  const dirty = draft.preset !== applied.preset
+    || draft.from !== applied.from
+    || draft.to !== applied.to
+
   /**
    * All state updates happen after the awaits — `loading` already starts true,
    * so the mount effect needs no synchronous setState before fetching.
    */
   const runFetch = useCallback(async () => {
     try {
+      // Only the orders endpoint takes a date range. The provider summary,
+      // customer count and wallet overview are platform totals with no window
+      // to ask for, so those cards stay all-time and say so.
       const [sp, cust, ord, wal] = await Promise.allSettled([
         getProviderSummary(),
         getCustomers({ limit: 1 }),
-        getAdminOrders({ limit: CHART_ORDER_LIMIT }),
+        getAdminOrders({ limit: CHART_ORDER_LIMIT, from: fromIso, to: toIso }),
         getWalletOverview(),
       ])
 
@@ -122,7 +181,7 @@ function Analytics() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [fromIso, toIso])
 
   useEffect(() => { runFetch() }, [runFetch])
 
@@ -133,37 +192,66 @@ function Analytics() {
     runFetch()
   }
 
+  const applyRange = () => {
+    setLoading(true)
+    setFailed([])
+    setApplied(draft)
+  }
+
+  const resetRange = () => {
+    const initial = { preset: '30days', from: '', to: '' }
+    setDraft(initial)
+    if (dirty || applied.preset !== initial.preset) {
+      setLoading(true)
+      setApplied(initial)
+    }
+  }
+
   /* ---------------- Derived chart data ---------------- */
 
+  /**
+   * The trend now spans whatever window is applied rather than a fixed
+   * fortnight. Past six weeks the buckets become weeks — sixty daily columns
+   * on one axis is a smear, not a trend.
+   */
   const revenueTrend = useMemo(() => {
-    const days = []
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const dayMs = 24 * 60 * 60 * 1000
+    const end = new Date(range.to)
+    end.setHours(0, 0, 0, 0)
+    const start = new Date(range.from ?? new Date(end.getTime() - 29 * dayMs))
+    start.setHours(0, 0, 0, 0)
 
-    for (let i = TREND_DAYS - 1; i >= 0; i -= 1) {
-      const day = new Date(today)
-      day.setDate(day.getDate() - i)
-      days.push({
-        key: day.toISOString().slice(0, 10),
+    const span = Math.max(1, Math.round((end - start) / dayMs) + 1)
+    const weekly = span > 45
+    const stepDays = weekly ? 7 : 1
+
+    const buckets = []
+    for (let t = start.getTime(); t <= end.getTime(); t += stepDays * dayMs) {
+      const day = new Date(t)
+      buckets.push({
+        start: t,
+        end: t + stepDays * dayMs,
         label: day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         revenue: 0,
         orders: 0,
       })
     }
 
-    const byKey = new Map(days.map(d => [d.key, d]))
     for (const order of orders) {
       if (String(order.status).toUpperCase() !== 'COMPLETED') continue
       if (!order.created_at) continue
-      const key = new Date(order.created_at).toISOString().slice(0, 10)
-      const bucket = byKey.get(key)
+      const at = new Date(order.created_at).getTime()
+      if (Number.isNaN(at)) continue
+      // Buckets are uniform, so the index is arithmetic rather than a scan.
+      const idx = Math.floor((at - start.getTime()) / (stepDays * dayMs))
+      const bucket = buckets[idx]
       if (!bucket) continue
       bucket.revenue += Number(order.total_price || 0)
       bucket.orders += 1
     }
 
-    return days
-  }, [orders])
+    return buckets
+  }, [orders, range.from, range.to])
 
   const serviceMix = useMemo(() => {
     const tally = new Map()
@@ -178,15 +266,17 @@ function Analytics() {
   }, [orders])
 
   const trendHasData = revenueTrend.some(d => d.revenue > 0)
-  const completedCount = orders.filter(o => String(o.status).toUpperCase() === 'COMPLETED').length
-
-  const totalRevenue = wallet?.total_revenue ?? wallet?.platform_commission ?? null
-  const pendingPayouts = wallet?.pending_payouts ?? null
-  const grossSales = wallet?.total_sales ?? null
+  const completedOrders = orders.filter(o => String(o.status).toUpperCase() === 'COMPLETED')
+  const completedCount = completedOrders.length
+  // Computed from the orders actually in the window, so this figure moves with
+  // the filter — unlike the wallet's platform-wide totals below.
+  const revenueInRange = completedOrders.reduce(
+    (sum, o) => sum + Number(o.total_price || 0), 0,
+  )
 
   const breakdown = [
     { label: 'Active', value: spSummary?.activeProviders, color: '#10b981' },
-    { label: 'Pending', value: spSummary?.pendingRequests, color: '#f59e0b' },
+    { label: 'Pending', value: spSummary?.pendingRequests, color: '#FCC245' },
     { label: 'Approved', value: spSummary?.approvedProviders, color: '#3b82f6' },
     { label: 'Rejected', value: spSummary?.rejectedProviders, color: '#ef4444' },
     { label: 'Suspended', value: spSummary?.suspendedProviders, color: '#8b5cf6' },
@@ -198,7 +288,7 @@ function Analytics() {
       <header className="an-header">
         <div>
           <p className="an-subtitle">
-            Live platform snapshot
+            {range.label}
             {refreshedAt && <> · updated {refreshedAt.toLocaleTimeString()}</>}
           </p>
         </div>
@@ -207,6 +297,67 @@ function Analytics() {
           Refresh
         </button>
       </header>
+
+      <div className="an-filters">
+        <div className="an-filter-field">
+          <label htmlFor="an-preset">Period</label>
+          <select
+            id="an-preset"
+            value={draft.preset}
+            onChange={(e) => setDraft(d => ({ ...d, preset: e.target.value }))}
+          >
+            {PRESETS.map(p => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {draft.preset === 'custom' && (
+          <>
+            <div className="an-filter-field">
+              <label htmlFor="an-from">From</label>
+              <input
+                id="an-from"
+                type="date"
+                value={draft.from}
+                max={draft.to || undefined}
+                onChange={(e) => setDraft(d => ({ ...d, from: e.target.value }))}
+              />
+            </div>
+            <div className="an-filter-field">
+              <label htmlFor="an-to">To</label>
+              <input
+                id="an-to"
+                type="date"
+                value={draft.to}
+                min={draft.from || undefined}
+                onChange={(e) => setDraft(d => ({ ...d, to: e.target.value }))}
+              />
+            </div>
+          </>
+        )}
+
+        <div className="an-filter-actions">
+          <button
+            className="an-btn an-btn--primary"
+            onClick={applyRange}
+            disabled={loading || !dirty}
+          >
+            <Calendar size={15} />
+            Apply
+          </button>
+          <button className="an-btn" onClick={resetRange} disabled={loading}>
+            Reset
+          </button>
+        </div>
+
+        {/* Said plainly rather than left for someone to discover: three of the
+            four cards below have no date-filtered endpoint behind them. */}
+        <p className="an-filter-note">
+          The range applies to orders — total orders, revenue in range and both
+          charts. Customers, providers and platform revenue are all-time totals.
+        </p>
+      </div>
 
       {failed.length > 0 && (
         <div className="an-alert">
@@ -219,16 +370,25 @@ function Analytics() {
 
       <div className="an-stats">
         <StatCard
-          label="Total orders"
+          label="Orders in range"
           value={count(orderMeta?.total)}
-          sub={`${count(wallet?.completed_orders_count ?? completedCount)} completed`}
+          sub={`${count(completedCount)} completed · ${range.label.toLowerCase()}`}
           icon={ShoppingCart}
           color={KPI_COLORS.orders}
           loading={loading}
         />
         <StatCard
+          label="Revenue in range"
+          value={<><Riyal />{money(revenueInRange)}</>}
+          sub={`from ${count(completedCount)} completed orders`}
+          icon={DollarSign}
+          color={KPI_COLORS.revenue}
+          loading={loading}
+        />
+        <StatCard
           label="Total customers"
           value={count(customerMeta?.total ?? customerMeta?.totalCount)}
+          sub="all time"
           icon={Users}
           color={KPI_COLORS.customers}
           loading={loading}
@@ -241,25 +401,51 @@ function Analytics() {
           color={KPI_COLORS.providers}
           loading={loading}
         />
-        <StatCard
-          label="Platform revenue"
-          value={totalRevenue != null ? <><Riyal />{money(totalRevenue)}</> : '—'}
-          sub={
-            pendingPayouts != null
-              ? <>Pending payouts: <Riyal />{money(pendingPayouts)}</>
-              : grossSales != null
-                ? <>Gross sales: <Riyal />{money(grossSales)}</>
-                : undefined
-          }
-          icon={DollarSign}
-          color={KPI_COLORS.revenue}
-          loading={loading}
-        />
       </div>
+
+      {/* The wallet endpoint has no date window, so these sit apart from the
+          filtered cards above rather than pretending to follow the range. */}
+      <section className="an-card">
+        <header className="an-card-head">
+          <h2>Platform totals</h2>
+          <span className="an-card-note">all time</span>
+        </header>
+        <div className="an-breakdown">
+          <div className="an-breakdown-item">
+            <span className="an-dot" style={{ background: KPI_COLORS.revenue }} />
+            <span className="an-breakdown-label">Platform revenue</span>
+            <span className="an-breakdown-value">
+              {loading ? '…' : <><Riyal />{money(wallet?.total_revenue ?? wallet?.platform_commission)}</>}
+            </span>
+          </div>
+          <div className="an-breakdown-item">
+            <span className="an-dot" style={{ background: KPI_COLORS.orders }} />
+            <span className="an-breakdown-label">Gross sales</span>
+            <span className="an-breakdown-value">
+              {loading ? '…' : <><Riyal />{money(wallet?.total_sales)}</>}
+            </span>
+          </div>
+          <div className="an-breakdown-item">
+            <span className="an-dot" style={{ background: '#FCC245' }} />
+            <span className="an-breakdown-label">Pending payouts</span>
+            <span className="an-breakdown-value">
+              {loading ? '…' : <><Riyal />{money(wallet?.pending_payouts)}</>}
+            </span>
+          </div>
+          <div className="an-breakdown-item">
+            <span className="an-dot" style={{ background: KPI_COLORS.providers }} />
+            <span className="an-breakdown-label">Completed orders</span>
+            <span className="an-breakdown-value">
+              {loading ? '…' : count(wallet?.completed_orders_count)}
+            </span>
+          </div>
+        </div>
+      </section>
 
       <section className="an-card">
         <header className="an-card-head">
           <h2>Service provider breakdown</h2>
+          <span className="an-card-note">all time</span>
         </header>
         <div className="an-breakdown">
           {breakdown.map(({ label, value, color }) => (
@@ -278,7 +464,7 @@ function Analytics() {
         <section className="an-card">
           <header className="an-card-head">
             <h2>Revenue trend</h2>
-            <p>Completed orders over the last {TREND_DAYS} days.</p>
+            <p>Completed orders · {range.label.toLowerCase()}.</p>
           </header>
           {loading ? (
             <div className="an-chart-state"><Loader2 size={26} className="spin" /></div>

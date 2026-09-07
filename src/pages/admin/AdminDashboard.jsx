@@ -28,6 +28,8 @@ import SurgePricing from "./pricing/SurgePricing";
 import SurgeConfigure from "./pricing/SurgeConfigure";
 import RegionalPricing from "./pricing/RegionalPricing";
 import RegionForm from "./pricing/RegionForm";
+import RewardsManagement from "./pricing/RewardsManagement";
+import RewardForm from "./pricing/RewardForm";
 import AssetCategories from "./assets/AssetCategories";
 import AssetCategoryForm from "./assets/AssetCategoryForm";
 // import AssetDefinitions from "./assets/AssetDefinitions";
@@ -120,6 +122,9 @@ function AdminDashboard() {
         <Route path="/pricing/regional" element={<RegionalPricing />} />
         <Route path="/pricing/regional/add" element={<RegionForm />} />
         <Route path="/pricing/regional/:regionId/edit" element={<RegionForm />} />
+        <Route path="/pricing/rewards" element={<RewardsManagement />} />
+        <Route path="/pricing/rewards/new" element={<RewardForm />} />
+        <Route path="/pricing/rewards/:rewardId/edit" element={<RewardForm />} />
         <Route path="/assets" element={<AssetCategories />} />
         <Route path="/assets/add" element={<AssetCategoryForm />} />
         <Route path="/assets/:categoryId/edit" element={<AssetCategoryForm />} />
