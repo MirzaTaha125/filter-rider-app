@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import ConfirmDialog from '../../../components/ConfirmDialog/ConfirmDialog'
 import { getSizeCategories, deleteSizeCategory } from '../../../api'
+import { carTypeLabel, carTypesLabel, toCarTypes } from './carTypes'
 import './SizeCategories.css'
 import SortableTh from '../../../components/DataTable/SortableTh'
 import { useTableSort } from '../../../components/DataTable/useTableSort'
@@ -68,11 +69,14 @@ function SizeCategories() {
 
   const term = search.trim().toLowerCase()
   const visibleSizes = sizes.filter(size =>
-    !term || (size.name || '').toLowerCase().includes(term),
+    !term
+    || (size.name || '').toLowerCase().includes(term)
+    || carTypesLabel(toCarTypes(size)).toLowerCase().includes(term),
   )
 
   const sortedSizes = sort.apply(visibleSizes, {
     name: (s) => s.name,
+    car_type: (s) => carTypesLabel(toCarTypes(s)),
     multiplier: (s) => Number(s.multiplier ?? 0),
     effect: (s) => Number(s.multiplier ?? 0),
   })
@@ -142,6 +146,7 @@ function SizeCategories() {
               <thead>
                 <tr>
                   <SortableTh sortKey="name" sort={sort}>Name</SortableTh>
+                  <SortableTh sortKey="car_type" sort={sort}>Car types</SortableTh>
                   <SortableTh sortKey="multiplier" sort={sort}>Multiplier</SortableTh>
                   <SortableTh sortKey="effect" sort={sort}>Effect on price</SortableTh>
                   <th aria-label="Actions" />
@@ -157,6 +162,15 @@ function SizeCategories() {
                           <Ruler size={15} />
                           {size.name}
                         </span>
+                      </td>
+                      <td>
+                        <div className="sz-type-pills">
+                          {toCarTypes(size).length
+                            ? toCarTypes(size).map((type) => (
+                              <span key={type} className="sz-type-pill">{carTypeLabel(type)}</span>
+                            ))
+                            : <span className="dt-muted">—</span>}
+                        </div>
                       </td>
                       <td className="sz-cell-multiplier">{Number(size.multiplier)}×</td>
                       <td>

@@ -61,6 +61,22 @@
   flex-shrink: 0;
 }
 
+.sz-type-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.sz-type-pill {
+  background: var(--border-light);
+  border-radius: 999px;
+  color: var(--text-main);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.18rem 0.55rem;
+  white-space: nowrap;
+}
+
 .sz-cell-multiplier {
   font-variant-numeric: tabular-nums;
   font-weight: 600;

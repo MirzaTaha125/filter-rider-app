@@ -44,6 +44,10 @@ import ChatMonitor from "./communication/ChatMonitor";
 import DisputeManagement from "./disputes/DisputeManagement";
 import DisputeDetail from "./disputes/DisputeDetail";
 import Analytics from "./analytics/Analytics";
+import AnalyticsProviderOrders from "./analytics/AnalyticsProviderOrders";
+import AnalyticsCustomerOrders from "./analytics/AnalyticsCustomerOrders";
+import AnalyticsZoneOrders from "./analytics/AnalyticsZoneOrders";
+import AnalyticsServiceOrders from "./analytics/AnalyticsServiceOrders";
 import Settings from "./settings/Settings";
 import AdminUserForm from "./settings/AdminUserForm";
 import RoleForm from "./settings/RoleForm";
@@ -144,6 +148,22 @@ function AdminDashboard() {
         <Route path="/disputes" element={<DisputeManagement />} />
         <Route path="/disputes/:disputeId" element={<DisputeDetail />} />
         <Route path="/analytics" element={<Analytics />} />
+        <Route
+          path="/analytics/providers/:providerId"
+          element={<AnalyticsProviderOrders />}
+        />
+        <Route
+          path="/analytics/customers/:customerId"
+          element={<AnalyticsCustomerOrders />}
+        />
+        <Route
+          path="/analytics/zones/:zoneId"
+          element={<AnalyticsZoneOrders />}
+        />
+        <Route
+          path="/analytics/services/:serviceId"
+          element={<AnalyticsServiceOrders />}
+        />
         <Route path="/settings" element={<Settings />} />
         <Route path="/settings/admin-users/new" element={<AdminUserForm />} />
         <Route path="/settings/roles/new" element={<RoleForm />} />

@@ -15,6 +15,7 @@ export async function createSizeCategory(payload) {
         method: 'POST',
         body: JSON.stringify({
             name: payload.name,
+            car_types: payload.car_types,
             multiplier: payload.multiplier,
         }),
     });
@@ -26,6 +27,7 @@ export async function updateSizeCategory(id, payload) {
         method: 'PATCH',
         body: JSON.stringify({
             name: payload.name,
+            car_types: payload.car_types,
             multiplier: payload.multiplier,
         }),
     });

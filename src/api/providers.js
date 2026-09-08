@@ -56,6 +56,15 @@ export async function getProviderDetails(id) {
   return apiRequest(`/service-providers/${id}`);
 }
 
+/** GET /service-providers/{id}/reviews – Customer reviews for this provider */
+export async function getProviderReviews(id, params = {}) {
+  const query = new URLSearchParams();
+  if (params.page) query.append('page', params.page);
+  if (params.limit) query.append('limit', params.limit);
+  const queryString = query.toString();
+  return apiRequest(`/service-providers/${id}/reviews${queryString ? `?${queryString}` : ''}`);
+}
+
 /** PATCH /service-providers/{id}/status – Update provider account status */
 export async function updateProviderStatus(id, status, reason, reasonCodeId) {
   return apiRequest(`/service-providers/${id}/status`, {

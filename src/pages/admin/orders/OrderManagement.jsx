@@ -11,7 +11,7 @@ import {
 import StatTile from '../../../components/StatTile/StatTile'
 import SortableTh from '../../../components/DataTable/SortableTh'
 import { useTableSort } from '../../../components/DataTable/useTableSort'
-import { getPaymentState, formatMoney } from './paymentStatus'
+import { getPaymentState, formatMoney, paymentMethodLabel } from './paymentStatus'
 import { normalizeStatus, orderStatusTone } from './orderStatus'
 import './OrderManagement.css'
 import TableScroll from '../../../components/DataTable/TableScroll'
@@ -267,6 +267,7 @@ function OrderManagement() {
     provider: (o) => providerNameOf(o),
     service: (o) => o.service?.name_en ?? o.service?.name ?? '',
     status: (o) => normalizeStatus(o.status),
+    payment_method: (o) => paymentMethodLabel(o) ?? '',
     payment: (o) => Number(o.total_price ?? 0),
   })
 
@@ -395,7 +396,7 @@ function OrderManagement() {
         )}
 
         <TableScroll>
-          <table className="dt-table" style={{ minWidth: 900 }}>
+          <table className="dt-table" style={{ minWidth: 1040 }}>
             <thead>
               <tr>
                 <SortableTh sortKey="order_no" sort={sort}>Order</SortableTh>
@@ -403,22 +404,24 @@ function OrderManagement() {
                 <SortableTh sortKey="provider" sort={sort}>Service provider</SortableTh>
                 <SortableTh sortKey="service" sort={sort}>Service</SortableTh>
                 <SortableTh sortKey="status" sort={sort}>Status</SortableTh>
+                <SortableTh sortKey="payment_method" sort={sort}>Payment method</SortableTh>
                 <SortableTh sortKey="payment" sort={sort}>Payment</SortableTh>
                 <th className="dt-col-actions">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="7" className="dt-state">Loading orders…</td></tr>
+                <tr><td colSpan="8" className="dt-state">Loading orders…</td></tr>
               ) : error ? (
-                <tr><td colSpan="7" className="dt-state dt-state--error">{error}</td></tr>
+                <tr><td colSpan="8" className="dt-state dt-state--error">{error}</td></tr>
               ) : orders.length === 0 ? (
-                <tr><td colSpan="7" className="dt-state">No orders match this view.</td></tr>
+                <tr><td colSpan="8" className="dt-state">No orders match this view.</td></tr>
               ) : (
                 sortedOrders.map((order) => {
                   const service = order.service || {}
                   const provider = providerNameOf(order)
                   const pay = getPaymentState(order)
+                  const method = paymentMethodLabel(order)
                   const money = formatMoney(order.total_price, order.currency)
                   const status = normalizeStatus(order.status)
 
@@ -441,6 +444,11 @@ function OrderManagement() {
                         <span className={`dt-status dt-status--${orderStatusTone(status)}`}>
                           {status.replace(/_/g, ' ')}
                         </span>
+                      </td>
+                      <td>
+                        {method
+                          ? method
+                          : <span className="dt-muted">—</span>}
                       </td>
                       <td>
                         <div className="dt-cell-stack">

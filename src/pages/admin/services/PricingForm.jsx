@@ -9,6 +9,7 @@ import {
   createPricingMatrix,
   updatePricingMatrix,
 } from '../../../api'
+import { sizeCategoryLabel } from '../assets/carTypes'
 import '../adminForm.css'
 import './PricingForm.css'
 
@@ -169,7 +170,7 @@ function PricingForm() {
 
   const title = isEdit ? 'Edit Pricing' : 'Add New Pricing'
   const serviceName = services.find(s => s.id === form.serviceId)?.name_en
-  const sizeName = sizeCategories.find(s => s.id === form.sizeCategoryId)?.name
+  const sizeName = sizeCategoryLabel(sizeCategories.find(s => s.id === form.sizeCategoryId))
 
   if (loading) {
     return (
@@ -248,7 +249,7 @@ function PricingForm() {
                   const taken = !isEdit && existingKeys.has(size.id)
                   return (
                     <option key={size.id} value={size.id} disabled={taken}>
-                      {size.name}{taken ? ' — already priced' : ''}
+                      {sizeCategoryLabel(size)}{taken ? ' — already priced' : ''}
                     </option>
                   )
                 })}

@@ -10,6 +10,7 @@ import {
   getPricingMatrix,
   deletePricingMatrix,
 } from '../../../api'
+import { sizeCategoryLabel } from '../assets/carTypes'
 import './PricingMatrix.css'
 import TableScroll from '../../../components/DataTable/TableScroll'
 
@@ -38,7 +39,7 @@ function PricingMatrix() {
       const serviceList = toArray(svcs)
       setServices(serviceList)
       setSizeNames(
-        Object.fromEntries(toArray(sizes).map(s => [s.id, s.name])),
+        Object.fromEntries(toArray(sizes).map(s => [s.id, sizeCategoryLabel(s)])),
       )
 
       const results = await Promise.allSettled(

@@ -51,6 +51,40 @@ export const PAYMENT_RECORD_TONES = {
   PARTIALLY_REFUNDED: 'warning',
 }
 
+const PAYMENT_METHOD_LABELS = {
+  CASH: 'Cash',
+  WALLET: 'Wallet',
+  PHYSICAL_CARD: 'Card',
+  CARD: 'Card',
+  CARD_IN_APP: 'Card',
+  TOKENIZED_CARD: 'Card',
+  IBAN_BANK: 'Bank transfer',
+  APPLE_PAY: 'Apple Pay',
+  MADA: 'Mada',
+  STC_PAY: 'STC Pay',
+}
+
+/**
+ * Cash / Card / Wallet for a list row. The admin list flattens the latest
+ * payment onto `payment_method`; detail and socket payloads may nest it.
+ */
+export function paymentMethodLabel(order) {
+  const method =
+    order?.payment_method
+    ?? order?.selected_payment_method
+    ?? order?.payment?.payment_method
+    ?? null
+
+  const code = String(method?.code ?? '').trim().toUpperCase()
+  if (code && PAYMENT_METHOD_LABELS[code]) return PAYMENT_METHOD_LABELS[code]
+
+  const name = String(method?.name ?? order?.payment?.provider_code ?? '').trim()
+  if (!name) return null
+
+  const nameKey = name.toUpperCase().replace(/[\s-]+/g, '_')
+  return PAYMENT_METHOD_LABELS[nameKey] ?? name
+}
+
 export function formatMoney(value, currency = 'SAR') {
   const n = Number(value ?? 0)
   const amount = Number.isNaN(n)

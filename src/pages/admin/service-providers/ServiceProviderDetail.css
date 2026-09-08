@@ -395,6 +395,132 @@
   border-radius: var(--radius-md);
 }
 
+.spd-reviews {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.spd-review {
+  align-items: flex-start;
+  background: var(--border-light);
+  border-radius: var(--radius-md);
+  display: flex;
+  gap: 0.85rem;
+  padding: 0.95rem 1rem;
+}
+
+.spd-review-avatar {
+  align-items: center;
+  background: var(--primary-soft);
+  border-radius: 50%;
+  color: var(--primary-color);
+  display: flex;
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  height: 40px;
+  justify-content: center;
+  overflow: hidden;
+  width: 40px;
+}
+
+.spd-review-avatar img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.spd-review-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.spd-review-top {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.7rem;
+}
+
+.spd-review-name {
+  background: none;
+  border: none;
+  color: var(--text-main);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 0;
+  text-align: left;
+}
+
+button.spd-review-name:hover {
+  color: var(--primary-color);
+}
+
+.spd-review-stars {
+  align-items: center;
+  color: var(--border-base);
+  display: inline-flex;
+  gap: 0.05rem;
+}
+
+.spd-review-stars .is-filled {
+  color: var(--primary-color);
+  fill: var(--primary-color);
+}
+
+.spd-review-date {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-style: normal;
+  margin-left: auto;
+}
+
+.spd-review-comment {
+  color: var(--text-main);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.spd-review-comment.is-empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.spd-review-meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+}
+
+.spd-review-link {
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  gap: 0.15rem;
+  padding: 0;
+}
+
+.spd-review-link:hover {
+  text-decoration: underline;
+}
+
 
 
 .spd-add-row {

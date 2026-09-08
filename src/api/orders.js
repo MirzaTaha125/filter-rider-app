@@ -13,6 +13,7 @@ export async function getAdminOrders(params = {}) {
     if (params.search) query.append('search', params.search);
     if (params.customerId)  query.append('customerId', params.customerId);
     if (params.providerId)  query.append('provider_id', params.providerId);
+    if (params.zoneId)      query.append('zone_id', params.zoneId);
     if (params.page) query.append('page', params.page);
     if (params.limit) query.append('limit', params.limit);
 
@@ -54,4 +55,13 @@ export async function rebroadcastOrder(id) {
     return apiRequest(`/admin/orders/${id}/rebroadcast`, {
         method: 'POST',
     });
+}
+
+/** GET /admin/analytics – order report for a datetime window */
+export async function getAdminAnalytics(params = {}) {
+    const query = new URLSearchParams();
+    if (params.from) query.append('from', params.from);
+    if (params.to) query.append('to', params.to);
+    const queryString = query.toString();
+    return apiRequest(`/admin/analytics${queryString ? `?${queryString}` : ''}`);
 }
