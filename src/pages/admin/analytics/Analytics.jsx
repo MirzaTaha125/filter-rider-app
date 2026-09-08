@@ -1,24 +1,22 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import {
-  DollarSign, Users, ShoppingCart, UserCheck,
-  Loader2, RefreshCw, AlertTriangle, BarChart3, Calendar,
-} from 'lucide-react'
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell,
-} from 'recharts'
-import { getProviderSummary } from '../../../api/providers.js'
-import { getCustomers } from '../../../api/customers.js'
-import { getAdminOrders } from '../../../api/orders.js'
-import { getWalletOverview } from '../../../api/wallet.js'
+import { useState, useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Loader2, AlertTriangle, Calendar } from 'lucide-react'
+import { getAdminAnalytics } from '../../../api/orders.js'
+import { normalizeStatus, orderStatusTone } from '../orders/orderStatus'
+import StatTile from '../../../components/StatTile/StatTile'
+import TableScroll from '../../../components/DataTable/TableScroll'
+import Pager from '../../../components/DataTable/Pager'
+import '../adminForm.css'
 import './Analytics.css'
 
-const BRAND = '#FCC245'
-const BRAND_DARK = '#D39A18'
-
-// How many orders to pull for the client-side charts. There is no time-series
-// endpoint, so the trend is derived from the order list.
-const CHART_ORDER_LIMIT = 500
+const TABS = [
+  { id: 'orders', label: 'Total Order' },
+  { id: 'provider', label: 'By Service Provider' },
+  { id: 'customer', label: 'Sales By Customer' },
+  { id: 'zone', label: 'Sales by Zone' },
+  { id: 'service', label: 'Sales by Services' },
+  { id: 'commission', label: 'Our Commission' },
+]
 
 const PRESETS = [
   { value: '7days', label: 'Last 7 days' },
@@ -28,21 +26,29 @@ const PRESETS = [
   { value: 'custom', label: 'Custom range' },
 ]
 
-/** Turns a preset (or a pair of dates) into a concrete window. */
-function resolveRange(preset, from, to) {
-  const dayMs = 24 * 60 * 60 * 1000
-  const end = new Date()
-  end.setHours(23, 59, 59, 999)
+const GROUP_META = {
+  provider: { key: 'by_provider', idField: 'provider_id', empty: 'No provider sales in this range.' },
+  customer: { key: 'by_customer', idField: 'customer_id', empty: 'No customer sales in this range.' },
+  zone: { key: 'by_zone', idField: 'zone_id', empty: 'No zone sales in this range.' },
+  service: { key: 'by_service', idField: 'service_id', empty: 'No service sales in this range.' },
+}
 
-  if (preset === 'custom' && (from || to)) {
-    const start = from ? new Date(`${from}T00:00:00`) : null
-    const finish = to ? new Date(`${to}T23:59:59`) : end
+function pad(n) {
+  return String(n).padStart(2, '0')
+}
+
+function toLocalInput(date) {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function rangeFromPreset(preset, from, to) {
+  const end = new Date()
+  end.setSeconds(59, 999)
+
+  if (preset === 'custom') {
     return {
-      from: start,
-      to: finish,
-      label: start
-        ? `${start.toLocaleDateString()} – ${finish.toLocaleDateString()}`
-        : `Up to ${finish.toLocaleDateString()}`,
+      from: from ? new Date(from) : null,
+      to: to ? new Date(to) : end,
     }
   }
 
@@ -50,30 +56,23 @@ function resolveRange(preset, from, to) {
     const start = new Date()
     start.setDate(1)
     start.setHours(0, 0, 0, 0)
-    return { from: start, to: end, label: 'This month' }
+    return { from: start, to: end }
   }
 
-  const days = { '7days': 7, '30days': 30, '90days': 90 }[preset] ?? 7
-  const start = new Date(end.getTime() - (days - 1) * dayMs)
+  const days = { '7days': 7, '30days': 30, '90days': 90 }[preset] ?? 30
+  const start = new Date(end)
+  start.setDate(start.getDate() - (days - 1))
   start.setHours(0, 0, 0, 0)
-  return { from: start, to: end, label: `Last ${days} days` }
+  return { from: start, to: end }
 }
 
-const KPI_COLORS = {
-  orders: '#3b82f6',
-  customers: BRAND,
-  providers: '#8b5cf6',
-  revenue: '#10b981',
-}
-
-function toOrders(data) {
-  if (Array.isArray(data)) return data
-  return data?.orders ?? data?.items ?? data?.data ?? []
-}
-
-function metaOf(data, fallbackList) {
-  if (Array.isArray(data)) return { total: data.length }
-  return data?.meta ?? data?.pagination ?? { total: fallbackList?.length ?? 0 }
+function defaultDraft(preset = '30days') {
+  const { from, to } = rangeFromPreset(preset)
+  return {
+    preset,
+    from: toLocalInput(from),
+    to: toLocalInput(to),
+  }
 }
 
 function money(value) {
@@ -87,471 +86,410 @@ function count(value) {
   return Number(value || 0).toLocaleString('en-US')
 }
 
-function Riyal() {
-  return <span className="riyal-symbol">&#x20C1;</span>
+function formatDateTime(value) {
+  if (!value) return '—'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleString()
 }
 
-function StatCard(props) {
-  const Icon = props.icon
-  const { label, value, sub, color, loading } = props
-  return (
-    <article className="an-stat">
-      <span className="an-stat-icon" style={{ background: `${color}1a`, color }}>
-        <Icon size={20} />
-      </span>
-      <span className="an-stat-body">
-        <span className="an-stat-label">{label}</span>
-        <span className="an-stat-value">
-          {loading ? <Loader2 size={18} className="spin" /> : value}
-        </span>
-        {sub && !loading && <span className="an-stat-sub">{sub}</span>}
-      </span>
-    </article>
-  )
+function emptyReport() {
+  return {
+    totals: {
+      order_count: 0,
+      completed_count: 0,
+      cancelled_count: 0,
+      sales: 0,
+      commission: 0,
+      provider_net: 0,
+    },
+    by_provider: [],
+    by_customer: [],
+    by_zone: [],
+    by_service: [],
+    orders: [],
+    meta: { truncated: false, total: 0, returned: 0 },
+  }
 }
 
 function Analytics() {
+  const navigate = useNavigate()
+  const [tab, setTab] = useState('orders')
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20)
+  const [draft, setDraft] = useState(() => defaultDraft())
+  const [applied, setApplied] = useState(() => defaultDraft())
+  const [report, setReport] = useState(emptyReport)
   const [loading, setLoading] = useState(true)
-  const [refreshedAt, setRefreshedAt] = useState(null)
-  const [failed, setFailed] = useState([])
-
-  const [spSummary, setSpSummary] = useState(null)
-  const [customerMeta, setCustomerMeta] = useState(null)
-  const [orderMeta, setOrderMeta] = useState(null)
-  const [wallet, setWallet] = useState(null)
-  const [orders, setOrders] = useState([])
-
-  // `draft` is what the controls hold; `applied` is what the page was last
-  // fetched with. Nothing reloads until Apply is pressed, so half-typed dates
-  // never fire a request.
-  const [draft, setDraft] = useState({ preset: '30days', from: '', to: '' })
-  const [applied, setApplied] = useState({ preset: '30days', from: '', to: '' })
-
-  const range = useMemo(
-    () => resolveRange(applied.preset, applied.from, applied.to),
-    [applied.preset, applied.from, applied.to],
-  )
-
-  const fromIso = range.from ? range.from.toISOString() : undefined
-  const toIso = range.to.toISOString()
+  const [error, setError] = useState('')
 
   const dirty = draft.preset !== applied.preset
     || draft.from !== applied.from
     || draft.to !== applied.to
 
-  /**
-   * All state updates happen after the awaits — `loading` already starts true,
-   * so the mount effect needs no synchronous setState before fetching.
-   */
-  const runFetch = useCallback(async () => {
-    try {
-      // Only the orders endpoint takes a date range. The provider summary,
-      // customer count and wallet overview are platform totals with no window
-      // to ask for, so those cards stay all-time and say so.
-      const [sp, cust, ord, wal] = await Promise.allSettled([
-        getProviderSummary(),
-        getCustomers({ limit: 1 }),
-        getAdminOrders({ limit: CHART_ORDER_LIMIT, from: fromIso, to: toIso }),
-        getWalletOverview(),
-      ])
+  const rangeLabel = useMemo(() => {
+    const from = applied.from ? new Date(applied.from) : null
+    const to = applied.to ? new Date(applied.to) : null
+    if (from && to) return `${from.toLocaleString()} – ${to.toLocaleString()}`
+    if (from) return `From ${from.toLocaleString()}`
+    if (to) return `Up to ${to.toLocaleString()}`
+    return 'All time'
+  }, [applied.from, applied.to])
 
-      // Report which sources failed rather than silently rendering zeros.
-      const problems = []
-      if (sp.status === 'fulfilled') setSpSummary(sp.value)
-      else problems.push('service providers')
-
-      if (cust.status === 'fulfilled') setCustomerMeta(metaOf(cust.value))
-      else problems.push('customers')
-
-      if (ord.status === 'fulfilled') {
-        const list = toOrders(ord.value)
-        setOrders(list)
-        setOrderMeta(metaOf(ord.value, list))
-      } else {
-        problems.push('orders')
-      }
-
-      if (wal.status === 'fulfilled') setWallet(wal.value)
-      else problems.push('wallet')
-
-      setFailed(problems)
-      setRefreshedAt(new Date())
-    } catch {
-      setFailed(['analytics data'])
-    } finally {
-      setLoading(false)
-    }
-  }, [fromIso, toIso])
-
-  useEffect(() => { runFetch() }, [runFetch])
-
-  // Refresh is a user action, so showing the spinner up front is fine here.
-  const handleRefresh = () => {
+  useEffect(() => {
+    let cancelled = false
     setLoading(true)
-    setFailed([])
-    runFetch()
-  }
+    setError('')
+    getAdminAnalytics({
+      from: applied.from ? new Date(applied.from).toISOString() : undefined,
+      to: applied.to ? new Date(applied.to).toISOString() : undefined,
+    })
+      .then((data) => {
+        if (!cancelled) setReport({ ...emptyReport(), ...data })
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setReport(emptyReport())
+          setError(err.message || 'Failed to load analytics')
+        }
+      })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [applied.from, applied.to])
 
   const applyRange = () => {
-    setLoading(true)
-    setFailed([])
-    setApplied(draft)
+    setPage(1)
+    setApplied({ ...draft })
   }
 
   const resetRange = () => {
-    const initial = { preset: '30days', from: '', to: '' }
-    setDraft(initial)
-    if (dirty || applied.preset !== initial.preset) {
-      setLoading(true)
-      setApplied(initial)
-    }
+    const next = defaultDraft()
+    setDraft(next)
+    setPage(1)
+    setApplied(next)
   }
 
-  /* ---------------- Derived chart data ---------------- */
-
-  /**
-   * The trend now spans whatever window is applied rather than a fixed
-   * fortnight. Past six weeks the buckets become weeks — sixty daily columns
-   * on one axis is a smear, not a trend.
-   */
-  const revenueTrend = useMemo(() => {
-    const dayMs = 24 * 60 * 60 * 1000
-    const end = new Date(range.to)
-    end.setHours(0, 0, 0, 0)
-    const start = new Date(range.from ?? new Date(end.getTime() - 29 * dayMs))
-    start.setHours(0, 0, 0, 0)
-
-    const span = Math.max(1, Math.round((end - start) / dayMs) + 1)
-    const weekly = span > 45
-    const stepDays = weekly ? 7 : 1
-
-    const buckets = []
-    for (let t = start.getTime(); t <= end.getTime(); t += stepDays * dayMs) {
-      const day = new Date(t)
-      buckets.push({
-        start: t,
-        end: t + stepDays * dayMs,
-        label: day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        revenue: 0,
-        orders: 0,
-      })
+  const handlePreset = (preset) => {
+    if (preset === 'custom') {
+      setDraft((d) => ({ ...d, preset }))
+      return
     }
+    setDraft(defaultDraft(preset))
+  }
 
-    for (const order of orders) {
-      if (String(order.status).toUpperCase() !== 'COMPLETED') continue
-      if (!order.created_at) continue
-      const at = new Date(order.created_at).getTime()
-      if (Number.isNaN(at)) continue
-      // Buckets are uniform, so the index is arithmetic rather than a scan.
-      const idx = Math.floor((at - start.getTime()) / (stepDays * dayMs))
-      const bucket = buckets[idx]
-      if (!bucket) continue
-      bucket.revenue += Number(order.total_price || 0)
-      bucket.orders += 1
+  const switchTab = (id) => {
+    setTab(id)
+    setPage(1)
+  }
+
+  const groupMeta = GROUP_META[tab]
+  const groups = groupMeta ? (report[groupMeta.key] ?? []) : []
+  const filteredOrders = useMemo(() => {
+    const list = report.orders ?? []
+    if (tab === 'commission') {
+      return list.filter((o) => normalizeStatus(o.status) === 'COMPLETED')
     }
+    return list
+  }, [report.orders, tab])
 
-    return buckets
-  }, [orders, range.from, range.to])
-
-  const serviceMix = useMemo(() => {
-    const tally = new Map()
-    for (const order of orders) {
-      const name = order.service?.name_en ?? 'Unknown'
-      tally.set(name, (tally.get(name) ?? 0) + 1)
-    }
-    return [...tally.entries()]
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 8)
-  }, [orders])
-
-  const trendHasData = revenueTrend.some(d => d.revenue > 0)
-  const completedOrders = orders.filter(o => String(o.status).toUpperCase() === 'COMPLETED')
-  const completedCount = completedOrders.length
-  // Computed from the orders actually in the window, so this figure moves with
-  // the filter — unlike the wallet's platform-wide totals below.
-  const revenueInRange = completedOrders.reduce(
-    (sum, o) => sum + Number(o.total_price || 0), 0,
-  )
-
-  const breakdown = [
-    { label: 'Active', value: spSummary?.activeProviders, color: '#10b981' },
-    { label: 'Pending', value: spSummary?.pendingRequests, color: '#FCC245' },
-    { label: 'Approved', value: spSummary?.approvedProviders, color: '#3b82f6' },
-    { label: 'Rejected', value: spSummary?.rejectedProviders, color: '#ef4444' },
-    { label: 'Suspended', value: spSummary?.suspendedProviders, color: '#8b5cf6' },
-    { label: 'Inactive', value: spSummary?.inactiveProviders, color: '#9ca3af' },
-  ]
+  const totals = report.totals
+  const activeTab = TABS.find((t) => t.id === tab)
+  const pageTotal = groupMeta ? groups.length : filteredOrders.length
+  const totalPages = Math.max(1, Math.ceil(pageTotal / limit) || 1)
+  const safePage = Math.min(page, totalPages)
+  const pagedGroups = groups.slice((safePage - 1) * limit, safePage * limit)
+  const pagedOrders = filteredOrders.slice((safePage - 1) * limit, safePage * limit)
 
   return (
-    <div className="analytics-page">
-      <header className="an-header">
+    <div className="dt-page-layout analytics-page">
+      <header className="dt-page-head">
         <div>
-          <p className="an-subtitle">
-            {range.label}
-            {refreshedAt && <> · updated {refreshedAt.toLocaleTimeString()}</>}
+          <p className="dt-page-sub">
+            Sales, commission and orders for {rangeLabel}.
           </p>
         </div>
-        <button className="an-btn" onClick={handleRefresh} disabled={loading}>
-          <RefreshCw size={15} className={loading ? 'spin' : ''} />
-          Refresh
-        </button>
       </header>
 
-      <div className="an-filters">
-        <div className="an-filter-field">
-          <label htmlFor="an-preset">Period</label>
-          <select
-            id="an-preset"
-            value={draft.preset}
-            onChange={(e) => setDraft(d => ({ ...d, preset: e.target.value }))}
-          >
-            {PRESETS.map(p => (
-              <option key={p.value} value={p.value}>{p.label}</option>
-            ))}
-          </select>
+      {error && (
+        <div className="sf-alert">
+          <AlertTriangle size={16} />
+          <span>{error}</span>
         </div>
+      )}
 
-        {draft.preset === 'custom' && (
-          <>
-            <div className="an-filter-field">
-              <label htmlFor="an-from">From</label>
-              <input
-                id="an-from"
-                type="date"
-                value={draft.from}
-                max={draft.to || undefined}
-                onChange={(e) => setDraft(d => ({ ...d, from: e.target.value }))}
-              />
-            </div>
-            <div className="an-filter-field">
-              <label htmlFor="an-to">To</label>
-              <input
-                id="an-to"
-                type="date"
-                value={draft.to}
-                min={draft.from || undefined}
-                onChange={(e) => setDraft(d => ({ ...d, to: e.target.value }))}
-              />
-            </div>
-          </>
-        )}
+      {report.meta?.truncated && (
+        <div className="sf-alert">
+          <AlertTriangle size={16} />
+          <span>
+            Showing the latest {count(report.meta.returned)} of {count(report.meta.total)} orders.
+            Narrow the range to include everything.
+          </span>
+        </div>
+      )}
 
-        <div className="an-filter-actions">
+      <div className="stat-tile-row">
+        <StatTile
+          label="Total orders"
+          value={loading ? null : totals.order_count}
+          hint={`${count(totals.completed_count)} completed · ${count(totals.cancelled_count)} cancelled`}
+          onClick={() => switchTab('orders')}
+          title="Show all orders"
+        />
+        <StatTile
+          label="Sales"
+          value={loading ? null : totals.sales}
+          money
+          hint="Completed orders"
+          onClick={() => switchTab('customer')}
+          title="Sales by customer"
+        />
+        <StatTile
+          label="Our commission"
+          value={loading ? null : totals.commission}
+          money
+          hint="Platform share"
+          onClick={() => switchTab('commission')}
+          title="Show commission"
+        />
+        <StatTile
+          label="Provider net"
+          value={loading ? null : totals.provider_net}
+          money
+          hint="After commission"
+          onClick={() => switchTab('provider')}
+          title="Sales by provider"
+        />
+      </div>
+
+      <div className="dt-card">
+        <div className="dt-filters an-filters">
+          <div className="dt-field">
+            <label htmlFor="an-preset">Period</label>
+            <select
+              id="an-preset"
+              value={draft.preset}
+              onChange={(e) => handlePreset(e.target.value)}
+            >
+              {PRESETS.map((p) => (
+                <option key={p.value} value={p.value}>{p.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="dt-field">
+            <label htmlFor="an-from">From</label>
+            <input
+              id="an-from"
+              type="datetime-local"
+              value={draft.from}
+              max={draft.to || undefined}
+              onChange={(e) => setDraft((d) => ({ ...d, preset: 'custom', from: e.target.value }))}
+            />
+          </div>
+          <div className="dt-field">
+            <label htmlFor="an-to">To</label>
+            <input
+              id="an-to"
+              type="datetime-local"
+              value={draft.to}
+              min={draft.from || undefined}
+              onChange={(e) => setDraft((d) => ({ ...d, preset: 'custom', to: e.target.value }))}
+            />
+          </div>
           <button
-            className="an-btn an-btn--primary"
+            className="dt-btn dt-btn--primary"
             onClick={applyRange}
             disabled={loading || !dirty}
           >
             <Calendar size={15} />
             Apply
           </button>
-          <button className="an-btn" onClick={resetRange} disabled={loading}>
+          <button className="dt-btn" onClick={resetRange} disabled={loading}>
             Reset
           </button>
         </div>
 
-        {/* Said plainly rather than left for someone to discover: three of the
-            four cards below have no date-filtered endpoint behind them. */}
-        <p className="an-filter-note">
-          The range applies to orders — total orders, revenue in range and both
-          charts. Customers, providers and platform revenue are all-time totals.
-        </p>
-      </div>
-
-      {failed.length > 0 && (
-        <div className="an-alert">
-          <AlertTriangle size={16} />
-          <span>
-            Could not load {failed.join(', ')}. Those figures below may be incomplete.
-          </span>
-        </div>
-      )}
-
-      <div className="an-stats">
-        <StatCard
-          label="Orders in range"
-          value={count(orderMeta?.total)}
-          sub={`${count(completedCount)} completed · ${range.label.toLowerCase()}`}
-          icon={ShoppingCart}
-          color={KPI_COLORS.orders}
-          loading={loading}
-        />
-        <StatCard
-          label="Revenue in range"
-          value={<><Riyal />{money(revenueInRange)}</>}
-          sub={`from ${count(completedCount)} completed orders`}
-          icon={DollarSign}
-          color={KPI_COLORS.revenue}
-          loading={loading}
-        />
-        <StatCard
-          label="Total customers"
-          value={count(customerMeta?.total ?? customerMeta?.totalCount)}
-          sub="all time"
-          icon={Users}
-          color={KPI_COLORS.customers}
-          loading={loading}
-        />
-        <StatCard
-          label="Active providers"
-          value={count(spSummary?.activeProviders)}
-          sub={`${count(spSummary?.pendingRequests)} pending · ${count(spSummary?.totalProviders)} total`}
-          icon={UserCheck}
-          color={KPI_COLORS.providers}
-          loading={loading}
-        />
-      </div>
-
-      {/* The wallet endpoint has no date window, so these sit apart from the
-          filtered cards above rather than pretending to follow the range. */}
-      <section className="an-card">
-        <header className="an-card-head">
-          <h2>Platform totals</h2>
-          <span className="an-card-note">all time</span>
-        </header>
-        <div className="an-breakdown">
-          <div className="an-breakdown-item">
-            <span className="an-dot" style={{ background: KPI_COLORS.revenue }} />
-            <span className="an-breakdown-label">Platform revenue</span>
-            <span className="an-breakdown-value">
-              {loading ? '…' : <><Riyal />{money(wallet?.total_revenue ?? wallet?.platform_commission)}</>}
-            </span>
-          </div>
-          <div className="an-breakdown-item">
-            <span className="an-dot" style={{ background: KPI_COLORS.orders }} />
-            <span className="an-breakdown-label">Gross sales</span>
-            <span className="an-breakdown-value">
-              {loading ? '…' : <><Riyal />{money(wallet?.total_sales)}</>}
-            </span>
-          </div>
-          <div className="an-breakdown-item">
-            <span className="an-dot" style={{ background: '#FCC245' }} />
-            <span className="an-breakdown-label">Pending payouts</span>
-            <span className="an-breakdown-value">
-              {loading ? '…' : <><Riyal />{money(wallet?.pending_payouts)}</>}
-            </span>
-          </div>
-          <div className="an-breakdown-item">
-            <span className="an-dot" style={{ background: KPI_COLORS.providers }} />
-            <span className="an-breakdown-label">Completed orders</span>
-            <span className="an-breakdown-value">
-              {loading ? '…' : count(wallet?.completed_orders_count)}
-            </span>
-          </div>
-        </div>
-      </section>
-
-      <section className="an-card">
-        <header className="an-card-head">
-          <h2>Service provider breakdown</h2>
-          <span className="an-card-note">all time</span>
-        </header>
-        <div className="an-breakdown">
-          {breakdown.map(({ label, value, color }) => (
-            <div key={label} className="an-breakdown-item">
-              <span className="an-dot" style={{ background: color }} />
-              <span className="an-breakdown-label">{label}</span>
-              <span className="an-breakdown-value" style={{ color }}>
-                {loading ? '…' : count(value)}
-              </span>
-            </div>
+        <div className="an-tabs" role="tablist">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.id}
+              className={`an-tab ${tab === t.id ? 'is-active' : ''}`}
+              onClick={() => switchTab(t.id)}
+            >
+              {t.label}
+            </button>
           ))}
         </div>
-      </section>
 
-      <div className="an-charts">
-        <section className="an-card">
-          <header className="an-card-head">
-            <h2>Revenue trend</h2>
-            <p>Completed orders · {range.label.toLowerCase()}.</p>
-          </header>
-          {loading ? (
-            <div className="an-chart-state"><Loader2 size={26} className="spin" /></div>
-          ) : !trendHasData ? (
-            <div className="an-chart-state">
-              <BarChart3 size={30} />
-              <p>No completed orders in this period.</p>
+        {loading ? (
+          <div className="dt-state">
+            <Loader2 size={22} className="spin" />
+            <span>Loading analytics…</span>
+          </div>
+        ) : (
+          <>
+            <div className="an-section-head">
+              <div>
+                <h2>{activeTab?.label}</h2>
+                <p>
+                  {tab === 'orders' && 'Every order created in this range.'}
+                  {tab === 'commission' && `Completed orders only · ${money(totals.commission)} commission.`}
+                  {tab === 'provider' && `${count(groups.length)} providers. Click a row to open their orders.`}
+                  {tab === 'customer' && `${count(groups.length)} customers. Click a row to open their orders.`}
+                  {tab === 'zone' && `${count(groups.length)} zones. Click a row to open their orders.`}
+                  {tab === 'service' && `${count(groups.length)} services. Click a row to open their orders.`}
+                </p>
+              </div>
             </div>
-          ) : (
-            <div className="an-chart">
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={revenueTrend} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-base)" />
-                  <XAxis
-                    dataKey="label"
-                    tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
-                    tickLine={false}
-                    axisLine={false}
-                    interval="preserveStartEnd"
-                  />
-                  <YAxis
-                    tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <Tooltip
-                    cursor={{ fill: 'var(--border-light)' }}
-                    contentStyle={{
-                      background: 'var(--bg-card)',
-                      border: '1px solid var(--border-base)',
-                      borderRadius: 8,
-                      fontSize: 12,
-                    }}
-                    formatter={(value, name) => (
-                      name === 'revenue'
-                        ? [`⃁${money(value)}`, 'Revenue']
-                        : [value, 'Orders']
-                    )}
-                  />
-                  <Bar dataKey="revenue" radius={[4, 4, 0, 0]}>
-                    {revenueTrend.map((entry, i) => (
-                      <Cell
-                        key={entry.key}
-                        fill={i === revenueTrend.length - 1 ? BRAND_DARK : BRAND}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </section>
 
-        <section className="an-card">
-          <header className="an-card-head">
-            <h2>Service distribution</h2>
-            <p>Orders per service, most recent {CHART_ORDER_LIMIT}.</p>
-          </header>
-          {loading ? (
-            <div className="an-chart-state"><Loader2 size={26} className="spin" /></div>
-          ) : serviceMix.length === 0 ? (
-            <div className="an-chart-state">
-              <BarChart3 size={30} />
-              <p>No orders to break down yet.</p>
-            </div>
-          ) : (
-            <ul className="an-mix">
-              {serviceMix.map((entry) => {
-                const top = serviceMix[0].value || 1
-                return (
-                  <li key={entry.name} className="an-mix-row">
-                    <span className="an-mix-name" title={entry.name}>{entry.name}</span>
-                    <span className="an-mix-bar">
-                      <span
-                        className="an-mix-fill"
-                        style={{ width: `${Math.max((entry.value / top) * 100, 3)}%` }}
-                      />
-                    </span>
-                    <span className="an-mix-value">{count(entry.value)}</span>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </section>
+            {groupMeta && (
+              groups.length === 0 ? (
+                <div className="dt-state">{groupMeta.empty}</div>
+              ) : (
+                <TableScroll>
+                  <table className="dt-table" style={{ minWidth: 720 }}>
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Orders</th>
+                        <th>Completed</th>
+                        <th>Sales</th>
+                        <th>Commission</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagedGroups.map((row) => (
+                        <tr
+                          key={row.id}
+                          className="is-clickable"
+                          onClick={() => {
+                            const drill = {
+                              provider: { path: 'providers', skip: ['unassigned', 'unknown'] },
+                              customer: { path: 'customers', skip: ['unknown'] },
+                              zone: { path: 'zones', skip: [] },
+                              service: { path: 'services', skip: ['unknown'] },
+                            }[tab]
+                            if (!drill || !row.id || drill.skip.includes(row.id)) return
+                            const qs = new URLSearchParams()
+                            qs.set('name', row.name)
+                            if (applied.from) qs.set('from', new Date(applied.from).toISOString())
+                            if (applied.to) qs.set('to', new Date(applied.to).toISOString())
+                            navigate(`/admin/analytics/${drill.path}/${row.id}?${qs}`)
+                          }}
+                        >
+                          <td><strong>{row.name}</strong></td>
+                          <td>{count(row.order_count)}</td>
+                          <td>{count(row.completed_count)}</td>
+                          <td>
+                            <strong>
+                              <span className="riyal-symbol">&#x20C1;</span>{money(row.sales)}
+                            </strong>
+                          </td>
+                          <td>
+                            <span className="riyal-symbol">&#x20C1;</span>{money(row.commission)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </TableScroll>
+              )
+            )}
+
+            {tab !== 'provider' && tab !== 'customer' && tab !== 'zone' && tab !== 'service' && (
+              <>
+                <OrderTable
+                  orders={pagedOrders}
+                  showCommission={tab === 'commission' || Boolean(groupMeta)}
+                  onOpen={(id) => navigate(`/admin/orders/${id}`)}
+                  empty={
+                    tab === 'commission'
+                      ? 'No completed orders — no commission in this range.'
+                      : 'No orders in this range.'
+                  }
+                />
+              </>
+            )}
+
+            <Pager
+              page={safePage}
+              total={pageTotal}
+              limit={limit}
+              onChange={setPage}
+              onLimitChange={setLimit}
+              unit={groupMeta ? 'rows' : 'orders'}
+              centered
+            />
+          </>
+        )}
       </div>
     </div>
+  )
+}
+
+function OrderTable({ orders, showCommission, onOpen, empty }) {
+  if (orders.length === 0) {
+    return <div className="dt-state">{empty}</div>
+  }
+
+  return (
+    <TableScroll>
+      <table className="dt-table" style={{ minWidth: showCommission ? 980 : 860 }}>
+        <thead>
+          <tr>
+            <th>Order</th>
+            <th>Date & time</th>
+            <th>Customer</th>
+            <th>Provider</th>
+            <th>Service</th>
+            <th>Zone</th>
+            <th>Status</th>
+            <th>Sales</th>
+            {showCommission && <th>Commission</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {orders.map((order) => {
+            const status = normalizeStatus(order.status)
+            return (
+              <tr
+                key={order.id}
+                className="is-clickable"
+                onClick={() => onOpen(order.id)}
+              >
+                <td><strong>{order.order_no ?? `#${String(order.id).slice(0, 8)}`}</strong></td>
+                <td className="dt-muted">{formatDateTime(order.created_at)}</td>
+                <td>{order.customer_name ?? '—'}</td>
+                <td>
+                  {order.provider_id
+                    ? order.provider_name
+                    : <span className="dt-muted">Unassigned</span>}
+                </td>
+                <td>{order.service_name ?? '—'}</td>
+                <td className="dt-muted">{order.zone_name ?? '—'}</td>
+                <td>
+                  <span className={`dt-status dt-status--${orderStatusTone(status)}`}>
+                    {status.replace(/_/g, ' ')}
+                  </span>
+                </td>
+                <td>
+                  <strong>
+                    <span className="riyal-symbol">&#x20C1;</span>{money(order.total_price)}
+                  </strong>
+                </td>
+                {showCommission && (
+                  <td>
+                    <span className="riyal-symbol">&#x20C1;</span>{money(order.commission)}
+                  </td>
+                )}
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </TableScroll>
   )
 }
 

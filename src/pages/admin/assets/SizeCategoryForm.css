@@ -5,3 +5,37 @@
   display: flex;
   flex-direction: column;
 }
+
+.sz-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sz-type {
+  background: var(--bg-input);
+  border: 1px solid var(--border-base);
+  border-radius: 999px;
+  color: var(--text-main);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.sz-type:hover:not(:disabled):not(.is-selected) {
+  border-color: var(--text-muted);
+}
+
+.sz-type.is-selected {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #1a1a1a;
+}
+
+.sz-type:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}

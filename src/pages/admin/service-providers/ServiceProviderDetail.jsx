@@ -13,6 +13,7 @@ import { normalizeStatus, orderStatusTone } from '../orders/orderStatus'
 import {
   getProviderDetails, updateProviderStatus,
   assignProviderServices, removeProviderService, getServices,
+  getProviderReviews,
 } from '../../../api'
 import { getAdminOrders } from '../../../api/orders.js'
 import { flattenDocs } from '../../../utils/spDocuments'
@@ -28,10 +29,13 @@ import TableScroll from '../../../components/DataTable/TableScroll'
 // place you go. Performance became the order table it always was.
 const TABS = [
   { id: 'orders', label: 'Orders' },
+  { id: 'reviews', label: 'Reviews' },
   { id: 'services', label: 'Services' },
   { id: 'wallet', label: 'Wallet' },
   { id: 'settings', label: 'Settings' },
 ]
+
+const REVIEWS_LIMIT = 20
 
 /** One labelled fact in the identity rail. */
 function Fact({ icon: Icon, label, children }) {
@@ -66,9 +70,13 @@ function ServiceProviderDetail() {
 
   const [provider, setProvider] = useState(null)
   const [orders, setOrders] = useState([])
+  const [reviews, setReviews] = useState([])
+  const [reviewsPage, setReviewsPage] = useState(1)
+  const [reviewsTotal, setReviewsTotal] = useState(0)
   const [allServices, setAllServices] = useState([])
   const [loading, setLoading] = useState(true)
   const [ordersLoading, setOrdersLoading] = useState(true)
+  const [reviewsLoading, setReviewsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [actionError, setActionError] = useState('')
   const [tab, setTab] = useState('orders')
@@ -123,6 +131,8 @@ function ServiceProviderDetail() {
 
   useEffect(() => { load() }, [load])
 
+  useEffect(() => { setReviewsPage(1) }, [providerId])
+
   useEffect(() => {
     getServices(null, true).then(list => setAllServices(toArray(list))).catch(() => {})
   }, [])
@@ -137,6 +147,27 @@ function ServiceProviderDetail() {
       .finally(() => { if (!cancelled) setOrdersLoading(false) })
     return () => { cancelled = true }
   }, [providerId])
+
+  useEffect(() => {
+    let cancelled = false
+    setReviewsLoading(true)
+    getProviderReviews(providerId, { page: reviewsPage, limit: REVIEWS_LIMIT })
+      .then((raw) => {
+        if (cancelled) return
+        const list = Array.isArray(raw) ? raw : (raw?.data ?? raw?.items ?? [])
+        const total = raw?.pagination?.total ?? list.length
+        setReviews(Array.isArray(list) ? list : [])
+        setReviewsTotal(total)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setReviews([])
+          setReviewsTotal(0)
+        }
+      })
+      .finally(() => { if (!cancelled) setReviewsLoading(false) })
+    return () => { cancelled = true }
+  }, [providerId, reviewsPage])
 
   const refreshServices = async () => {
     const refreshed = await getProviderDetails(providerId)
@@ -263,10 +294,14 @@ function ServiceProviderDetail() {
         />
         <StatTile
           label="Average rating"
-          value={ordersLoading ? provider.rating : provider.rating}
-          hint={provider.ratingCount > 0
-            ? `from ${provider.ratingCount} rating${provider.ratingCount === 1 ? '' : 's'}`
-            : 'no ratings yet'}
+          value={provider.rating}
+          hint={reviewsTotal > 0
+            ? `from ${reviewsTotal} review${reviewsTotal === 1 ? '' : 's'}`
+            : provider.ratingCount > 0
+              ? `from ${provider.ratingCount} rating${provider.ratingCount === 1 ? '' : 's'}`
+              : 'no ratings yet'}
+          onClick={() => setTab('reviews')}
+          title="View reviews"
         />
         <StatTile
           label="Earned"
@@ -365,6 +400,9 @@ function ServiceProviderDetail() {
                 onClick={() => setTab(t.id)}
               >
                 {t.label}
+                {t.id === 'reviews' && reviewsTotal > 0 && (
+                  <span className="spd-tab-count">{reviewsTotal}</span>
+                )}
                 {t.id === 'services' && provider.services?.length > 0 && (
                   <span className="spd-tab-count">{provider.services.length}</span>
                 )}
@@ -450,6 +488,109 @@ function ServiceProviderDetail() {
                       </tbody>
                     </table>
                   </TableScroll>
+                </>
+              )
+            )}
+
+            {/* REVIEWS */}
+            {tab === 'reviews' && (
+              reviewsLoading ? (
+                <div className="dt-state">Loading reviews…</div>
+              ) : reviews.length === 0 ? (
+                <p className="spd-empty">No customer reviews for this provider yet.</p>
+              ) : (
+                <>
+                  <div className="spd-panel-head">
+                    <div>
+                      <h3 className="spd-card-title">Customer reviews</h3>
+                      <p className="spd-panel-sub">
+                        What customers wrote after completing a job with {provider.name}.
+                      </p>
+                    </div>
+                  </div>
+
+                  <ul className="spd-reviews">
+                    {reviews.map((review) => {
+                      const name = review.reviewer_name ?? review.customer_name ?? 'Customer'
+                      const stars = Math.max(0, Math.min(5, Number(review.rating) || 0))
+                      return (
+                        <li key={review.id ?? `${review.order_id}-${review.created_at}`} className="spd-review">
+                          <span className="spd-review-avatar">
+                            {review.avatar_url
+                              ? <img src={review.avatar_url} alt="" />
+                              : initials(name)}
+                          </span>
+                          <div className="spd-review-body">
+                            <div className="spd-review-top">
+                              {review.customer_id ? (
+                                <button
+                                  type="button"
+                                  className="spd-review-name"
+                                  onClick={() => navigate(`/admin/customers/${review.customer_id}`)}
+                                >
+                                  {name}
+                                </button>
+                              ) : (
+                                <strong className="spd-review-name">{name}</strong>
+                              )}
+                              <span className="spd-review-stars" aria-label={`${stars} out of 5`}>
+                                {[1, 2, 3, 4, 5].map((n) => (
+                                  <Star key={n} size={13} className={n <= stars ? 'is-filled' : ''} />
+                                ))}
+                              </span>
+                              <em className="spd-review-date">{formatDate(review.created_at, true)}</em>
+                            </div>
+                            {review.comment
+                              ? <p className="spd-review-comment">{review.comment}</p>
+                              : <p className="spd-review-comment is-empty">No written comment.</p>}
+                            <div className="spd-review-meta">
+                              {review.order_id && (
+                                <button
+                                  type="button"
+                                  className="spd-review-link"
+                                  onClick={() => navigate(`/admin/orders/${review.order_id}`)}
+                                >
+                                  {review.order_no ?? 'View order'}
+                                  <ChevronRight size={14} />
+                                </button>
+                              )}
+                              {review.service_name && (
+                                <span className="dt-muted">{review.service_name}</span>
+                              )}
+                            </div>
+                          </div>
+                        </li>
+                      )
+                    })}
+                  </ul>
+
+                  {reviewsTotal > REVIEWS_LIMIT && (
+                    <footer className="dt-foot">
+                      <span className="dt-foot-info">
+                        Showing {((reviewsPage - 1) * REVIEWS_LIMIT) + 1}
+                        {' – '}
+                        {Math.min(reviewsPage * REVIEWS_LIMIT, reviewsTotal)}
+                        {' of '}
+                        {reviewsTotal.toLocaleString()}
+                      </span>
+                      <div className="dt-pager">
+                        <button
+                          className="dt-page"
+                          onClick={() => setReviewsPage((p) => p - 1)}
+                          disabled={reviewsPage === 1}
+                        >
+                          Prev
+                        </button>
+                        <button
+                          className="dt-page"
+                          onClick={() => setReviewsPage((p) => p + 1)}
+                          disabled={reviewsPage * REVIEWS_LIMIT >= reviewsTotal}
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </footer>
+                  )}
                 </>
               )
             )}

@@ -7,6 +7,7 @@ import {
   createSizeCategory,
   updateSizeCategory,
 } from '../../../api'
+import { CAR_TYPES, toCarTypes } from './carTypes'
 import '../adminForm.css'
 import './SizeCategoryForm.css'
 
@@ -32,7 +33,7 @@ function SizeCategoryForm() {
   const navigate = useNavigate()
   const isEdit = Boolean(sizeId)
 
-  const [form, setForm] = useState({ name: '', multiplier: '1.0' })
+  const [form, setForm] = useState({ name: '', car_types: [], multiplier: '1.0' })
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [loadError, setLoadError] = useState('')
@@ -50,6 +51,7 @@ function SizeCategoryForm() {
       }
       setForm({
         name: size.name ?? '',
+        car_types: toCarTypes(size),
         multiplier: String(size.multiplier ?? '1.0'),
       })
     } catch (err) {
@@ -72,6 +74,7 @@ function SizeCategoryForm() {
     if (name.length > MAX_NAME_LENGTH) {
       return `Category name must be ${MAX_NAME_LENGTH} characters or fewer.`
     }
+    if (!form.car_types.length) return 'Select at least one car type.'
 
     const multiplier = Number(form.multiplier)
     if (form.multiplier === '' || Number.isNaN(multiplier)) {
@@ -100,6 +103,7 @@ function SizeCategoryForm() {
     setFormError('')
     const payload = {
       name: form.name.trim(),
+      car_types: form.car_types,
       multiplier: String(Number(form.multiplier)),
     }
 
@@ -162,7 +166,7 @@ function SizeCategoryForm() {
         <section className="sf-card">
           <header className="sf-card-head">
             <h2>Size category</h2>
-            <p>Used by the pricing matrix and by customer vehicles.</p>
+            <p>Used by the pricing matrix and by customer vehicles. Pick every car type this size covers.</p>
           </header>
 
           <div className="sf-grid sf-grid--2">
@@ -200,6 +204,39 @@ function SizeCategoryForm() {
                 {hint ?? 'Use 1.0 for no change to the price.'}
               </span>
             </div>
+          </div>
+
+          <div className="sf-field">
+            <label id="car_types_label">
+              Car types <span className="sf-req">*</span>
+            </label>
+            <div className="sz-types" role="group" aria-labelledby="car_types_label">
+              {CAR_TYPES.map((type) => {
+                const selected = form.car_types.includes(type.value)
+                return (
+                  <button
+                    key={type.value}
+                    type="button"
+                    className={`sz-type ${selected ? 'is-selected' : ''}`}
+                    aria-pressed={selected}
+                    disabled={saving}
+                    onClick={() => setField(
+                      'car_types',
+                      selected
+                        ? form.car_types.filter((value) => value !== type.value)
+                        : [...form.car_types, type.value],
+                    )}
+                  >
+                    {type.label}
+                  </button>
+                )
+              })}
+            </div>
+            <span className="sf-hint">
+              {form.car_types.length
+                ? `${form.car_types.length} selected. Click again to remove.`
+                : 'Select every body type this size applies to — sedan, SUV, pickup, and so on.'}
+            </span>
           </div>
         </section>
 
