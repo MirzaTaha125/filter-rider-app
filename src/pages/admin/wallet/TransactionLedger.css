@@ -39,10 +39,91 @@
 }
 
 .tl-count {
-  margin-left: auto;
+  margin-left: 0;
   font-size: 0.8rem;
   color: var(--text-muted);
   white-space: nowrap;
+}
+
+.tl-combo {
+  flex: 1 1 320px;
+  max-width: 480px;
+  position: relative;
+}
+
+.tl-combo .dt-search {
+  max-width: none;
+  width: 100%;
+}
+
+.tl-combo-clear {
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  padding: 0.1rem;
+}
+
+.tl-combo-clear:hover {
+  color: var(--text-main);
+}
+
+.tl-combo-list {
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  left: 0;
+  list-style: none;
+  margin: 0.3rem 0 0;
+  max-height: 280px;
+  overflow: auto;
+  padding: 0.3rem;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 20;
+}
+
+.tl-combo-list button {
+  align-items: baseline;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  cursor: pointer;
+  display: flex;
+  font-family: inherit;
+  gap: 0.55rem;
+  justify-content: space-between;
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+  width: 100%;
+}
+
+.tl-combo-list button:hover,
+.tl-combo-list button.is-active {
+  background: var(--border-light);
+}
+
+.tl-combo-list strong {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.tl-combo-list em {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.tl-combo-empty {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  padding: 0.55rem 0.65rem;
 }
 
 /* ---------- Alert / state ---------- */

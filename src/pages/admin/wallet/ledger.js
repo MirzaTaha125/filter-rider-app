@@ -15,6 +15,9 @@ export const LEDGER_TYPES = [
   'GIFT_SEND',
   'GIFT_REDEEM',
   'REWARD',
+  'COMMISSION_HOLD',
+  'COMMISSION_RELEASE',
+  'COMMISSION_DEDUCT',
 ]
 
 export function typeLabel(type) {

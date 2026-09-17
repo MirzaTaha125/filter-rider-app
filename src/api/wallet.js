@@ -34,9 +34,20 @@ export async function rejectPayment(id, adminNote = '') {
 }
 
 /** GET /admin/wallet/ledger */
-export async function getWalletLedger({ type, order_id, page = 1, limit = 20 } = {}) {
+export async function getWalletLedger({
+  type,
+  order_id,
+  search,
+  customerId,
+  providerId,
+  page = 1,
+  limit = 20,
+} = {}) {
   const params = new URLSearchParams({ page, limit });
   if (type) params.set('type', type);
   if (order_id) params.set('order_id', order_id);
+  if (search) params.set('search', search);
+  if (customerId) params.set('customer_id', customerId);
+  if (providerId) params.set('provider_id', providerId);
   return apiRequest(`/admin/wallet/ledger?${params}`);
 }
