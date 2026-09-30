@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Search, Loader2, AlertTriangle, MessagesSquare, ExternalLink, Eye,
   ArrowLeft, X,
 } from 'lucide-react'
-import { getChatRooms, getChatThread } from '../../../api'
+import { getChatRooms, getChatThread, markChatThreadRead } from '../../../api'
 import { useSocket } from '../../../contexts/SocketContext'
 import { usePermissions } from '../../../contexts/PermissionsContext'
 import ChatThread from '../../../components/ChatThread/ChatThread'
@@ -77,18 +77,36 @@ function ChatMonitor() {
   // costs more than the answer is worth.
   const [peekOrderId, setPeekOrderId] = useState(null)
 
+  // Rooms this admin has opened this session. Refetches race mark-read when
+  // hopping A→B, so without this the previous chat's badge pops back.
+  const clearedOrderIdsRef = useRef(new Set())
+  const roomsFetchGenRef = useRef(0)
+  const prevOrderIdRef = useRef('')
+
+  const applyRooms = useCallback((items) => {
+    const cleared = clearedOrderIdsRef.current
+    setRooms(
+      items.map((room) =>
+        cleared.has(room.order_id) ? { ...room, unread_count: 0 } : room,
+      ),
+    )
+  }, [])
+
   const loadRooms = useCallback(async () => {
+    const gen = ++roomsFetchGenRef.current
     setRoomsError('')
     try {
       const res = await getChatRooms({ limit: 100, status: statusFilter })
-      setRooms(Array.isArray(res?.items) ? res.items : [])
+      if (gen !== roomsFetchGenRef.current) return
+      applyRooms(Array.isArray(res?.items) ? res.items : [])
     } catch (err) {
+      if (gen !== roomsFetchGenRef.current) return
       setRoomsError(err.message || 'Failed to load conversations')
       setRooms([])
     } finally {
-      setRoomsLoading(false)
+      if (gen === roomsFetchGenRef.current) setRoomsLoading(false)
     }
-  }, [statusFilter])
+  }, [statusFilter, applyRooms])
 
   useEffect(() => { loadRooms() }, [loadRooms])
 
@@ -108,15 +126,60 @@ function ChatMonitor() {
 
   useEffect(() => { loadThread(activeOrderId) }, [activeOrderId, loadThread])
 
+  const clearRoomBadge = useCallback((orderId) => {
+    if (!orderId) return
+    clearedOrderIdsRef.current.add(orderId)
+    setRooms((prev) =>
+      prev.map((room) =>
+        room.order_id === orderId ? { ...room, unread_count: 0 } : room,
+      ),
+    )
+  }, [])
+
+  const markRoomRead = useCallback((orderId) => {
+    if (!orderId) return Promise.resolve()
+    clearRoomBadge(orderId)
+    return markChatThreadRead(orderId)
+      .then(() => {
+        window.dispatchEvent(new CustomEvent('admin:chat-read'))
+      })
+      .catch(() => {})
+  }, [clearRoomBadge])
+
+  // Opening / switching conversations: clear the new room (and finish clearing
+  // the previous one) so hopping A→B never brings A's counter back.
+  useEffect(() => {
+    const previousId = prevOrderIdRef.current
+    prevOrderIdRef.current = activeOrderId
+
+    if (previousId && previousId !== activeOrderId) {
+      markRoomRead(previousId)
+    }
+    if (!activeOrderId) return
+
+    markRoomRead(activeOrderId).then(() => loadRooms())
+  }, [activeOrderId, markRoomRead, loadRooms])
+
   // ChatThread owns the room subscription for the open thread. This listens to
   // the admin firehose instead, so a message on any order reorders the list and
   // updates its unread count even with no thread open.
   useEffect(() => {
     if (!chatSocket) return
-    const onMessage = () => loadRooms()
+    const onMessage = (payload) => {
+      const orderId = payload?.order_id
+      if (orderId && orderId === activeOrderId) {
+        // Already viewing — keep badge off and re-mark read.
+        clearRoomBadge(orderId)
+        markChatThreadRead(orderId).catch(() => {})
+      } else if (orderId) {
+        // Fresh message on another room — allow its badge again.
+        clearedOrderIdsRef.current.delete(orderId)
+      }
+      loadRooms()
+    }
     chatSocket.on('chat.admin.new_message', onMessage)
     return () => chatSocket.off('chat.admin.new_message', onMessage)
-  }, [chatSocket, loadRooms])
+  }, [chatSocket, loadRooms, activeOrderId, clearRoomBadge])
 
   const term = search.trim().toLowerCase()
   const visibleRooms = rooms.filter((room) =>
@@ -285,7 +348,10 @@ function ChatMonitor() {
             <ChatThread
               key={activeOrderId}
               orderId={activeOrderId}
-              onRead={loadRooms}
+              onRead={() => {
+                clearRoomBadge(activeOrderId)
+                loadRooms()
+              }}
             />
           </>
         )}
