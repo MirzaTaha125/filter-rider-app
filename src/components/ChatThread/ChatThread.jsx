@@ -113,11 +113,12 @@ function ChatThread({ orderId, onLoaded, onRead }) {
     null,
   )
 
-  // Marking read clears the row's count. The sidebar badge only refetches on a
-  // route change, and picking a conversation just swaps a query param, so it is
-  // told directly rather than left showing a count of nothing.
+  // Marking read clears the row's count. Always run when the thread is open —
+  // not only when there is a customer/provider message id — so badges clear
+  // even if the last visible message is from support. Live arrivals change
+  // lastIncomingId and re-run this so an open thread never keeps a badge.
   useEffect(() => {
-    if (!orderId || loading || error || !lastIncomingId) return
+    if (!orderId || loading || error) return
     markChatThreadRead(orderId)
       .then(() => {
         onRead?.()

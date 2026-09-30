@@ -18,6 +18,8 @@ export const LEDGER_TYPES = [
   'COMMISSION_HOLD',
   'COMMISSION_RELEASE',
   'COMMISSION_DEDUCT',
+  'PENALTY',
+  'PENALTY_REWARD',
 ]
 
 export function typeLabel(type) {
@@ -36,6 +38,10 @@ export function typeLabel(type) {
 export function counterparty(txn) {
   const wallet = txn?.wallet
   if (!wallet) return { name: '—', role: '' }
+
+  if (wallet.owner_type === 'PLATFORM') {
+    return { name: 'Platform', role: 'Platform' }
+  }
 
   const owner = wallet.owner_type === 'PROVIDER' ? wallet.provider : wallet.customer
   const user = owner?.user

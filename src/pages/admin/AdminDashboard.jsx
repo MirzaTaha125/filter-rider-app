@@ -13,6 +13,14 @@ import WalletManagement from "./wallet/WalletManagement";
 import PaymentApproval from "./wallet/PaymentApproval";
 import PaymentApprovalDetail from "./wallet/PaymentApprovalDetail";
 import TransactionLedger from "./wallet/TransactionLedger";
+import {
+  ProviderLedgerDetail,
+  CustomerLedgerDetail,
+} from "./wallet/LedgerAccountDetail";
+import Penalties from "./wallet/Penalties";
+import ApplyPenalty from "./wallet/ApplyPenalty";
+import WalletRules from "./wallet/WalletRules";
+import Reviews from "./reviews/Reviews";
 import ServiceProviderManagement from "./service-providers/ServiceProviderManagement";
 import ServiceProviderDetail from "./service-providers/ServiceProviderDetail";
 import ProviderRequestDetail from "./service-providers/ProviderRequestDetail";
@@ -76,6 +84,7 @@ function AdminDashboard() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/orders" element={<OrderManagement />} />
         <Route path="/orders/:orderId" element={<OrderDetail />} />
+        <Route path="/reviews" element={<Reviews />} />
         <Route path="/customers" element={<CustomerManagement />} />
         <Route path="/customers/add" element={<CustomerAdd />} />
         <Route path="/customers/:customerId" element={<CustomerDetail />} />
@@ -89,6 +98,17 @@ function AdminDashboard() {
           path="/wallet/transaction-ledger"
           element={<TransactionLedger />}
         />
+        <Route
+          path="/wallet/transaction-ledger/providers/:providerId"
+          element={<ProviderLedgerDetail />}
+        />
+        <Route
+          path="/wallet/transaction-ledger/customers/:customerId"
+          element={<CustomerLedgerDetail />}
+        />
+        <Route path="/wallet/penalties" element={<Penalties />} />
+        <Route path="/wallet/penalties/apply" element={<ApplyPenalty />} />
+        <Route path="/wallet/rules" element={<WalletRules />} />
         <Route
           path="/service-providers"
           element={<ServiceProviderManagement />}

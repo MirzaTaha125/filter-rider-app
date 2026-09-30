@@ -26,6 +26,12 @@ export const PERMISSION_GROUPS = [
     ],
   },
   {
+    group: 'Reviews',
+    permissions: [
+      { name: 'Reviews View', slug: 'reviews.view', description: 'View customer, provider, and service reviews' },
+    ],
+  },
+  {
     group: 'Customers',
     permissions: [
       { name: 'Customers View', slug: 'customers.view', description: 'View customer list and profiles' },
@@ -49,6 +55,8 @@ export const PERMISSION_GROUPS = [
       { name: 'Payment Approvals View', slug: 'wallet.approvals.view', description: 'View provider withdrawal requests' },
       { name: 'Payment Approvals Manage', slug: 'wallet.approvals.manage', description: 'Approve or reject withdrawal requests' },
       { name: 'Transaction Ledger View', slug: 'wallet.ledger.view', description: 'View the immutable transaction ledger' },
+      { name: 'Penalties View', slug: 'wallet.penalties.view', description: 'View rider penalties' },
+      { name: 'Penalties Create', slug: 'wallet.penalties.create', description: 'Create, approve, or waive rider penalties' },
     ],
   },
   {

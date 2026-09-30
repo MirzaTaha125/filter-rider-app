@@ -5,6 +5,7 @@ import { useSocket } from "../../contexts/SocketContext";
 import { getChatUnreadCount } from "../../api";
 import frLogo from "../../assets/fr_logo.png";
 import {
+  Star,
   LayoutDashboard,
   Users,
   Package,
@@ -91,6 +92,7 @@ function Sidebar({ isOpen, onClose }) {
   const menuItems = [
     { path: "/admin", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard.view" },
     { path: "/admin/orders", label: "Orders", icon: ShoppingCart, permission: "orders.view" },
+    { path: "/admin/reviews", label: "Reviews", icon: Star, permission: "reviews.view" },
     { path: "/admin/customers", label: "Customers", icon: Users, permission: "customers.view" },
     { path: "/admin/promotions", label: "Promotions", icon: Tag, permission: "promotions.view" },
     // Chat is its own destination rather than a Communication sub-item: it is
@@ -134,6 +136,8 @@ function Sidebar({ isOpen, onClose }) {
   const walletSubItems = [
     { path: "/admin/wallet/payment-approval", label: "Payment Approval", permission: "wallet.approvals.view" },
     { path: "/admin/wallet/transaction-ledger", label: "Immutable Transaction Ledger", permission: "wallet.ledger.view" },
+    { path: "/admin/wallet/penalties", label: "Penalties", permission: "wallet.penalties.view" },
+    { path: "/admin/wallet/rules", label: "Wallet Rules", permission: "wallet.view" },
   ];
 
   // Unread chat count for the menu badge — refreshed on every new message and
@@ -241,7 +245,7 @@ function Sidebar({ isOpen, onClose }) {
           </div>
         )}
         <ul className="sidebar-menu">
-          {menuItems.slice(0, 3).filter(item => hasPermission(item.permission)).map((item) => {
+          {menuItems.slice(0, 4).filter(item => hasPermission(item.permission)).map((item) => {
             const IconComponent = item.icon;
             return (
               <li key={item.path}>
@@ -450,7 +454,7 @@ function Sidebar({ isOpen, onClose }) {
             </ul>
           </li>}
 
-          {menuItems.slice(3).filter(item => hasPermission(item.permission)).map((item) => {
+          {menuItems.slice(4).filter(item => hasPermission(item.permission)).map((item) => {
             const IconComponent = item.icon;
             return (
               <li key={item.path}>

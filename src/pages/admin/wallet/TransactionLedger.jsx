@@ -1,348 +1,140 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  Loader2, AlertTriangle, ScrollText, ArrowDownLeft, ArrowUpRight, Search, X,
+  Loader2, AlertTriangle, Search, ChevronRight, Building2, Users, Landmark,
 } from 'lucide-react'
-import { getWalletLedger, getCustomers, getProviders } from '../../../api'
-import { formatMoney, formatDate, unwrapList } from './walletFormat.js'
+import {
+  getWalletLedger,
+  getPlatformWallet,
+  getCustomers,
+  getProviders,
+} from '../../../api'
+import { formatMoney, unwrapList } from './walletFormat.js'
+import { LEDGER_TYPES, typeLabel } from './ledger.js'
+import LedgerTable from './LedgerTable'
 import SortableTh from '../../../components/DataTable/SortableTh'
 import { useTableSort } from '../../../components/DataTable/useTableSort'
-import {
-  LEDGER_TYPES,
-  typeLabel,
-  counterparty,
-  referenceLabel,
-  isCredit,
-  transactionStatusTone,
-} from './ledger.js'
-import './TransactionLedger.css'
 import TableScroll from '../../../components/DataTable/TableScroll'
+import './TransactionLedger.css'
+import './PaymentApproval.css'
 
 const PAGE_SIZE = 20
-const SUGGEST_LIMIT = 6
-
-function toCustomerPeople(data) {
-  const list = Array.isArray(data) ? data : data?.customers ?? data?.items ?? []
-  return list.map((row) => ({
-    id: row.id,
-    name: row.name || row.full_name || row.email || 'Customer',
-    role: 'Customer',
-    kind: 'customer',
-  }))
-}
-
-function toProviderPeople(data) {
-  const list = Array.isArray(data) ? data : data?.items ?? []
-  return list.map((row) => ({
-    id: row.id,
-    name: row.full_name || row.name || row.email || 'Provider',
-    role: 'Provider',
-    kind: 'provider',
-  }))
-}
-
-function NameSearchCombo({ value, onChange, onApply, onClear, applied }) {
-  const wrapRef = useRef(null)
-  const [open, setOpen] = useState(false)
-  const [suggestions, setSuggestions] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [highlight, setHighlight] = useState(-1)
-
-  useEffect(() => {
-    const term = value.trim()
-    if (term.length < 2) {
-      setSuggestions([])
-      setLoading(false)
-      return undefined
-    }
-
-    let cancelled = false
-    setLoading(true)
-    const timer = setTimeout(() => {
-      Promise.all([
-        getCustomers({ search: term, page: 1, limit: SUGGEST_LIMIT }).catch(() => []),
-        getProviders({ search: term, page: 1, limit: SUGGEST_LIMIT }).catch(() => []),
-      ]).then(([customers, providers]) => {
-        if (cancelled) return
-        setSuggestions([
-          ...toCustomerPeople(customers),
-          ...toProviderPeople(providers),
-        ].slice(0, 10))
-        setHighlight(-1)
-      }).finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    }, 250)
-
-    return () => {
-      cancelled = true
-      clearTimeout(timer)
-    }
-  }, [value])
-
-  useEffect(() => {
-    const onDocClick = (event) => {
-      if (!wrapRef.current?.contains(event.target)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onDocClick)
-    return () => document.removeEventListener('mousedown', onDocClick)
-  }, [])
-
-  const pick = (person) => {
-    onApply({
-      customerId: person.kind === 'customer' ? person.id : '',
-      providerId: person.kind === 'provider' ? person.id : '',
-      search: '',
-      label: person.name,
-    })
-    setOpen(false)
-  }
-
-  const submitText = () => {
-    onApply({
-      search: value.trim(),
-      customerId: '',
-      providerId: '',
-      label: value.trim(),
-    })
-    setOpen(false)
-  }
-
-  const onKeyDown = (event) => {
-    if (event.key === 'ArrowDown') {
-      event.preventDefault()
-      setOpen(true)
-      setHighlight((i) => Math.min(i + 1, suggestions.length - 1))
-      return
-    }
-    if (event.key === 'ArrowUp') {
-      event.preventDefault()
-      setHighlight((i) => Math.max(i - 1, -1))
-      return
-    }
-    if (event.key === 'Escape') {
-      setOpen(false)
-      return
-    }
-    if (event.key === 'Enter') {
-      event.preventDefault()
-      if (open && highlight >= 0 && suggestions[highlight]) {
-        pick(suggestions[highlight])
-        return
-      }
-      submitText()
-    }
-  }
-
-  const showClear = Boolean(value || applied.search || applied.customerId || applied.providerId)
-
-  return (
-    <div className="tl-combo" ref={wrapRef}>
-      <div className={`dt-search ${open ? 'is-open' : ''}`}>
-        <Search size={16} />
-        <input
-          type="search"
-          role="combobox"
-          aria-expanded={open}
-          aria-autocomplete="list"
-          aria-controls="tl-combo-list"
-          placeholder="Search customer or service provider…"
-          value={value}
-          onChange={(e) => {
-            onChange(e.target.value)
-            setOpen(true)
-          }}
-          onFocus={() => setOpen(true)}
-          onKeyDown={onKeyDown}
-        />
-        {showClear && (
-          <button
-            type="button"
-            className="tl-combo-clear"
-            aria-label="Clear search"
-            onClick={() => {
-              onClear()
-              setSuggestions([])
-              setOpen(false)
-            }}
-          >
-            <X size={14} />
-          </button>
-        )}
-      </div>
-
-      {open && value.trim().length >= 2 && (
-        <ul id="tl-combo-list" className="tl-combo-list" role="listbox">
-          {loading && suggestions.length === 0 && (
-            <li className="tl-combo-empty">Searching names…</li>
-          )}
-          {suggestions.map((person, index) => (
-            <li key={`${person.kind}-${person.id}`}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={highlight === index}
-                className={highlight === index ? 'is-active' : ''}
-                onMouseEnter={() => setHighlight(index)}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => pick(person)}
-              >
-                <strong>{person.name}</strong>
-                <em>{person.role}</em>
-              </button>
-            </li>
-          ))}
-          {!loading && suggestions.length === 0 && (
-            <li className="tl-combo-empty">No matching names. Press Enter to search anyway.</li>
-          )}
-        </ul>
-      )}
-    </div>
-  )
-}
+const TABS = [
+  { id: 'providers', label: 'Service Providers', icon: Building2 },
+  { id: 'customers', label: 'Customers', icon: Users },
+  { id: 'platform', label: 'Platform', icon: Landmark },
+]
 
 function TransactionLedger() {
-  const [type, setType] = useState('')
-  const [query, setQuery] = useState('')
-  const [applied, setApplied] = useState({ search: '', customerId: '', providerId: '' })
-  const [items, setItems] = useState([])
-  const sort = useTableSort()
-  const [total, setTotal] = useState(0)
-  const [totalVolume, setTotalVolume] = useState(null)
-  const [page, setPage] = useState(1)
-  const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [error, setError] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const tab = TABS.some((t) => t.id === tabParam) ? tabParam : 'providers'
 
-  const load = useCallback(async (nextPage, replace) => {
-    replace ? setLoading(true) : setLoadingMore(true)
-    setError('')
-    try {
-      const data = await getWalletLedger({
-        type: type || undefined,
-        search: applied.search || undefined,
-        customerId: applied.customerId || undefined,
-        providerId: applied.providerId || undefined,
-        page: nextPage,
-        limit: PAGE_SIZE,
-      })
-      const { items: rows, total: count } = unwrapList(data)
-      setItems(prev => (replace ? rows : [...prev, ...rows]))
-      setTotal(count)
-      setTotalVolume(data?.total_volume ?? null)
-      setPage(nextPage)
-    } catch (err) {
-      setError(err.message || 'Failed to load ledger')
-      if (replace) setItems([])
-    } finally {
-      replace ? setLoading(false) : setLoadingMore(false)
-    }
-  }, [type, applied.search, applied.customerId, applied.providerId])
-
-  useEffect(() => { load(1, true) }, [load])
-
-  const applySearch = (next) => {
-    setQuery(next.label ?? '')
-    setApplied({
-      search: next.search || '',
-      customerId: next.customerId || '',
-      providerId: next.providerId || '',
-    })
+  const setTab = (id) => {
+    setSearchParams(id === 'providers' ? {} : { tab: id })
   }
-
-  const clearSearch = () => {
-    setQuery('')
-    setApplied({ search: '', customerId: '', providerId: '' })
-  }
-
-  const hasMore = items.length < total
-  const searching = Boolean(applied.search || applied.customerId || applied.providerId)
-
-  const sortedItems = sort.apply(items, {
-    ref: (t) => t.transaction_no,
-    date: (t) => new Date(t.created_at ?? 0).getTime(),
-    account: (t) => counterparty(t).name,
-    type: (t) => typeLabel(t.type),
-    amount: (t) => Number(t.amount ?? 0),
-    fee: (t) => Number(t.fee_amount ?? 0),
-    net: (t) => Number(t.net_amount ?? 0),
-    balance: (t) => Number(t.available_after ?? 0),
-    status: (t) => t.status,
-  })
 
   return (
     <div className="transaction-ledger">
       <header className="dt-page-head">
         <div>
-          <p className="dt-page-sub">Immutable audit trail of every wallet movement.</p>
+          <p className="dt-page-sub">
+            Browse wallet ledgers by service provider, customer, or platform (commission &amp; penalty residual).
+          </p>
         </div>
       </header>
 
-      <div className="tl-stats">
-        <div className="tl-stat">
-          <span className="tl-stat-label">
-            {type ? `${typeLabel(type)} transactions` : 'Total transactions'}
-          </span>
-          <span className="tl-stat-value">{loading ? '—' : total.toLocaleString()}</span>
-        </div>
-        <div className="tl-stat">
-          <span className="tl-stat-label">Net volume</span>
-          <span className="tl-stat-value">
-            {loading || totalVolume === null
-              ? '—'
-              : <><span className="riyal-symbol">&#x20C1;</span>{formatMoney(totalVolume)}</>}
-          </span>
-        </div>
+      <div className="pv-tabs" role="tablist">
+        {TABS.map((t) => {
+          const Icon = t.icon
+          return (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.id}
+              className={`pv-tab ${tab === t.id ? 'is-active' : ''}`}
+              onClick={() => setTab(t.id)}
+            >
+              <Icon size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
+              {t.label}
+            </button>
+          )
+        })}
       </div>
 
-      <div className="dt-toolbar">
-        <NameSearchCombo
-          value={query}
-          applied={applied}
-          onChange={setQuery}
-          onApply={applySearch}
-          onClear={clearSearch}
-        />
-        <div className="dt-toolbar-actions">
-          <div className="dt-field">
-            <select value={type} onChange={(e) => setType(e.target.value)} aria-label="Transaction type">
-              <option value="">All types</option>
-              {LEDGER_TYPES.map(t => (
-                <option key={t} value={t}>{typeLabel(t)}</option>
-              ))}
-            </select>
-          </div>
-          {!loading && (
-            <span className="tl-count">
-              Showing {items.length.toLocaleString()} of {total.toLocaleString()}
-            </span>
-          )}
-        </div>
-      </div>
+      {tab === 'providers' && <ProvidersTab />}
+      {tab === 'customers' && <CustomersTab />}
+      {tab === 'platform' && <PlatformTab />}
+    </div>
+  )
+}
 
-      {error && (
-        <div className="tl-alert">
-          <AlertTriangle size={16} />
-          <span>{error}</span>
-        </div>
-      )}
+function useDebounced(value, ms = 300) {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), ms)
+    return () => clearTimeout(t)
+  }, [value, ms])
+  return debounced
+}
 
+function ProvidersTab() {
+  const navigate = useNavigate()
+  const [search, setSearch] = useState('')
+  const applied = useDebounced(search.trim())
+  const [items, setItems] = useState([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [error, setError] = useState('')
+  const sort = useTableSort()
+
+  const load = useCallback(async (nextPage, replace) => {
+    replace ? setLoading(true) : setLoadingMore(true)
+    setError('')
+    try {
+      const data = await getProviders({
+        page: nextPage,
+        limit: PAGE_SIZE,
+        search: applied || undefined,
+      })
+      const rows = Array.isArray(data) ? data : (data?.items ?? [])
+      const count = data?.meta?.total ?? data?.total ?? rows.length
+      setItems((prev) => (replace ? rows : [...prev, ...rows]))
+      setTotal(count)
+      setPage(nextPage)
+    } catch (err) {
+      setError(err.message || 'Failed to load service providers')
+      if (replace) setItems([])
+    } finally {
+      replace ? setLoading(false) : setLoadingMore(false)
+    }
+  }, [applied])
+
+  useEffect(() => { load(1, true) }, [load])
+
+  const sorted = sort.apply(items, {
+    name: (p) => p.full_name || p.name,
+    balance: (p) => Number(p.wallet_balance ?? p.wallet?.available_balance ?? 0),
+    earnings: (p) => Number(p.total_earnings ?? 0),
+    status: (p) => p.provider_status || p.status,
+  })
+
+  return (
+    <>
+      <ListToolbar
+        search={search}
+        onSearchChange={setSearch}
+        placeholder="Search service provider…"
+        countLabel={!loading ? `${total.toLocaleString()} providers` : ''}
+      />
+      {error && <Alert error={error} />}
       {loading ? (
-        <div className="dt-empty">
-          <Loader2 size={32} className="spin" />
-          <span>Loading ledger…</span>
-        </div>
+        <Loading />
       ) : items.length === 0 ? (
-        <div className="dt-empty">
-          <ScrollText size={32} />
-          <h2>No transactions</h2>
-          <p>
-            {searching
-              ? 'No wallet movements match that customer or provider.'
-              : type
-                ? `No ${typeLabel(type).toLowerCase()} transactions recorded.`
-                : 'The ledger is empty.'}
-          </p>
-        </div>
+        <Empty text="No service providers found." />
       ) : (
         <>
           <div className="dt-card">
@@ -350,91 +142,335 @@ function TransactionLedger() {
               <table className="dt-table">
                 <thead>
                   <tr>
-                    <SortableTh sortKey="ref" sort={sort}>Transaction</SortableTh>
-                    <SortableTh sortKey="date" sort={sort}>Date</SortableTh>
-                    <SortableTh sortKey="account" sort={sort}>Account</SortableTh>
-                    <SortableTh sortKey="type" sort={sort}>Type</SortableTh>
-                    <SortableTh sortKey="amount" sort={sort} className="tl-num">Amount</SortableTh>
-                    <SortableTh sortKey="fee" sort={sort} className="tl-num">Fee</SortableTh>
-                    <SortableTh sortKey="net" sort={sort} className="tl-num">Net</SortableTh>
-                    <SortableTh sortKey="balance" sort={sort} className="tl-num">Balance after</SortableTh>
+                    <SortableTh sortKey="name" sort={sort}>Provider</SortableTh>
+                    <SortableTh sortKey="balance" sort={sort} className="tl-num">Wallet balance</SortableTh>
+                    <SortableTh sortKey="earnings" sort={sort} className="tl-num">Lifetime earnings</SortableTh>
                     <SortableTh sortKey="status" sort={sort}>Status</SortableTh>
+                    <th aria-hidden />
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedItems.map(txn => {
-                    const party = counterparty(txn)
-                    const reference = referenceLabel(txn)
-                    const credit = isCredit(txn)
-                    const fee = Number(txn.fee_amount ?? 0)
-                    return (
-                      <tr key={txn.id}>
-                        <td>
-                          <span className="tl-ref">
-                            <strong>{txn.transaction_no ?? '—'}</strong>
-                            {reference && (
-                              <em>{reference.kind} {reference.label}</em>
-                            )}
-                          </span>
-                        </td>
-                        <td className="dt-muted">{formatDate(txn.created_at, true)}</td>
-                        <td>
-                          <span className="tl-party">
-                            <strong>{party.name}</strong>
-                            {party.role && <em>{party.role}</em>}
-                          </span>
-                        </td>
-                        <td>
-                          <span className="tl-type">{typeLabel(txn.type)}</span>
-                        </td>
-                        <td className="tl-num">
-                          <span className={`tl-amount ${credit ? 'is-credit' : 'is-debit'}`}>
-                            {credit
-                              ? <ArrowDownLeft size={13} aria-label="Credit" />
-                              : <ArrowUpRight size={13} aria-label="Debit" />}
-                            {credit ? '+' : '−'}
-                            <span className="riyal-symbol">&#x20C1;</span>{formatMoney(Math.abs(txn.amount))}
-                          </span>
-                        </td>
-                        <td className="tl-num dt-muted">
-                          {fee !== 0
-                            ? <><span className="riyal-symbol">&#x20C1;</span>{formatMoney(Math.abs(fee))}</>
-                            : '—'}
-                        </td>
-                        <td className="tl-num tl-net">
-                          <span className="riyal-symbol">&#x20C1;</span>{formatMoney(Math.abs(txn.net_amount))}
-                        </td>
-                        <td className="tl-num dt-muted">
-                          <span className="riyal-symbol">&#x20C1;</span>{formatMoney(txn.available_after)}
-                        </td>
-                        <td>
-                          <span className={`dt-status dt-status--${transactionStatusTone(txn.status)}`}>
-                            {txn.status}
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  })}
+                  {sorted.map((p) => (
+                    <tr
+                      key={p.id}
+                      className="tl-row-link"
+                      onClick={() => navigate(`/admin/wallet/transaction-ledger/providers/${p.id}`)}
+                    >
+                      <td>
+                        <strong>{p.full_name || p.name || '—'}</strong>
+                        <div className="dt-muted tl-sub">{p.email || p.phone || ''}</div>
+                      </td>
+                      <td className="tl-num">
+                        <span className="riyal-symbol">&#x20C1;</span>
+                        {formatMoney(p.wallet_balance ?? p.wallet?.available_balance)}
+                      </td>
+                      <td className="tl-num">
+                        <span className="riyal-symbol">&#x20C1;</span>
+                        {formatMoney(p.total_earnings)}
+                      </td>
+                      <td>{p.provider_status || p.status || '—'}</td>
+                      <td className="tl-chevron"><ChevronRight size={16} /></td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </TableScroll>
           </div>
-
-          {hasMore && (
-            <div className="tl-more">
-              <button
-                className="dt-btn"
-                onClick={() => load(page + 1, false)}
-                disabled={loadingMore}
-              >
-                {loadingMore
-                  ? <><Loader2 size={16} className="spin" /> Loading…</>
-                  : `Load more (${items.length} of ${total})`}
-              </button>
-            </div>
-          )}
+          <LoadMore
+            hasMore={items.length < total}
+            loading={loadingMore}
+            onClick={() => load(page + 1, false)}
+          />
         </>
       )}
+    </>
+  )
+}
+
+function CustomersTab() {
+  const navigate = useNavigate()
+  const [search, setSearch] = useState('')
+  const applied = useDebounced(search.trim())
+  const [items, setItems] = useState([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [error, setError] = useState('')
+  const sort = useTableSort()
+
+  const load = useCallback(async (nextPage, replace) => {
+    replace ? setLoading(true) : setLoadingMore(true)
+    setError('')
+    try {
+      const data = await getCustomers({
+        page: nextPage,
+        limit: PAGE_SIZE,
+        search: applied || undefined,
+      })
+      const rows = Array.isArray(data)
+        ? data
+        : (data?.customers ?? data?.items ?? [])
+      const count = data?.total ?? data?.meta?.total ?? rows.length
+      setItems((prev) => (replace ? rows : [...prev, ...rows]))
+      setTotal(count)
+      setPage(nextPage)
+    } catch (err) {
+      setError(err.message || 'Failed to load customers')
+      if (replace) setItems([])
+    } finally {
+      replace ? setLoading(false) : setLoadingMore(false)
+    }
+  }, [applied])
+
+  useEffect(() => { load(1, true) }, [load])
+
+  const sorted = sort.apply(items, {
+    name: (c) => c.name || c.full_name,
+    balance: (c) => Number(c.walletBalance ?? c.wallet_balance ?? 0),
+    status: (c) => c.status,
+  })
+
+  return (
+    <>
+      <ListToolbar
+        search={search}
+        onSearchChange={setSearch}
+        placeholder="Search customer…"
+        countLabel={!loading ? `${total.toLocaleString()} customers` : ''}
+      />
+      {error && <Alert error={error} />}
+      {loading ? (
+        <Loading />
+      ) : items.length === 0 ? (
+        <Empty text="No customers found." />
+      ) : (
+        <>
+          <div className="dt-card">
+            <TableScroll>
+              <table className="dt-table">
+                <thead>
+                  <tr>
+                    <SortableTh sortKey="name" sort={sort}>Customer</SortableTh>
+                    <SortableTh sortKey="balance" sort={sort} className="tl-num">Wallet balance</SortableTh>
+                    <SortableTh sortKey="status" sort={sort}>Status</SortableTh>
+                    <th aria-hidden />
+                  </tr>
+                </thead>
+                <tbody>
+                  {sorted.map((c) => (
+                    <tr
+                      key={c.id}
+                      className="tl-row-link"
+                      onClick={() => navigate(`/admin/wallet/transaction-ledger/customers/${c.id}`)}
+                    >
+                      <td>
+                        <strong>{c.name || c.full_name || '—'}</strong>
+                        <div className="dt-muted tl-sub">{c.email || c.phone || ''}</div>
+                      </td>
+                      <td className="tl-num">
+                        <span className="riyal-symbol">&#x20C1;</span>
+                        {formatMoney(c.walletBalance ?? c.wallet_balance)}
+                      </td>
+                      <td>{c.status || '—'}</td>
+                      <td className="tl-chevron"><ChevronRight size={16} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableScroll>
+          </div>
+          <LoadMore
+            hasMore={items.length < total}
+            loading={loadingMore}
+            onClick={() => load(page + 1, false)}
+          />
+        </>
+      )}
+    </>
+  )
+}
+
+function PlatformTab() {
+  const [summary, setSummary] = useState(null)
+  const [summaryLoading, setSummaryLoading] = useState(true)
+  const [summaryError, setSummaryError] = useState('')
+  const [type, setType] = useState('')
+  const [items, setItems] = useState([])
+  const [total, setTotal] = useState(0)
+  const [totalVolume, setTotalVolume] = useState(null)
+  const [page, setPage] = useState(1)
+  const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    setSummaryLoading(true)
+    getPlatformWallet()
+      .then((data) => setSummary(data))
+      .catch((e) => setSummaryError(e.message || 'Failed to load platform wallet'))
+      .finally(() => setSummaryLoading(false))
+  }, [])
+
+  const load = useCallback(async (nextPage, replace) => {
+    replace ? setLoading(true) : setLoadingMore(true)
+    setError('')
+    try {
+      const data = await getWalletLedger({
+        ownerType: 'PLATFORM',
+        type: type || undefined,
+        page: nextPage,
+        limit: PAGE_SIZE,
+      })
+      const { items: rows, total: count } = unwrapList(data)
+      setItems((prev) => (replace ? rows : [...prev, ...rows]))
+      setTotal(count)
+      setTotalVolume(data?.total_volume ?? null)
+      setPage(nextPage)
+    } catch (err) {
+      setError(err.message || 'Failed to load platform ledger')
+      if (replace) setItems([])
+    } finally {
+      replace ? setLoading(false) : setLoadingMore(false)
+    }
+  }, [type])
+
+  useEffect(() => { load(1, true) }, [load])
+
+  const platformTypes = LEDGER_TYPES.filter((t) =>
+    ['COMMISSION_DEDUCT', 'COMMISSION_RELEASE', 'PENALTY', 'REVERSAL', 'ADJUSTMENT'].includes(t),
+  )
+
+  return (
+    <>
+      <div className="tl-stats">
+        <div className="tl-stat">
+          <span className="tl-stat-label">Platform balance</span>
+          <span className="tl-stat-value">
+            {summaryLoading
+              ? <Loader2 size={18} className="spin" />
+              : <><span className="riyal-symbol">&#x20C1;</span>{formatMoney(summary?.available_balance)}</>}
+          </span>
+        </div>
+        <div className="tl-stat">
+          <span className="tl-stat-label">Net commission</span>
+          <span className="tl-stat-value">
+            {summaryLoading
+              ? '—'
+              : <><span className="riyal-symbol">&#x20C1;</span>{formatMoney(summary?.net_commission)}</>}
+          </span>
+        </div>
+        <div className="tl-stat">
+          <span className="tl-stat-label">Net penalty retained</span>
+          <span className="tl-stat-value">
+            {summaryLoading
+              ? '—'
+              : <><span className="riyal-symbol">&#x20C1;</span>{formatMoney(summary?.net_penalty_retained)}</>}
+          </span>
+        </div>
+        <div className="tl-stat">
+          <span className="tl-stat-label">Ledger entries</span>
+          <span className="tl-stat-value">
+            {summaryLoading ? '—' : Number(summary?.transaction_count ?? 0).toLocaleString()}
+          </span>
+        </div>
+      </div>
+
+      {summaryError && <Alert error={summaryError} />}
+
+      <div className="dt-toolbar">
+        <div className="dt-toolbar-actions">
+          <div className="dt-field">
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              aria-label="Transaction type"
+            >
+              <option value="">All platform types</option>
+              {platformTypes.map((t) => (
+                <option key={t} value={t}>{typeLabel(t)}</option>
+              ))}
+            </select>
+          </div>
+          {!loading && (
+            <span className="tl-count">
+              Showing {items.length.toLocaleString()} of {total.toLocaleString()}
+              {totalVolume != null && (
+                <> · Net volume <span className="riyal-symbol">&#x20C1;</span>{formatMoney(totalVolume)}</>
+              )}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <LedgerTable
+        items={items}
+        loading={loading}
+        error={error}
+        hideAccount
+        emptyTitle="No platform transactions"
+        emptyHint="Commission credits appear here after orders complete; penalty residuals after penalties are applied."
+        hasMore={items.length < total}
+        loadingMore={loadingMore}
+        onLoadMore={() => load(page + 1, false)}
+        moreLabel={`Load more (${items.length} of ${total})`}
+      />
+    </>
+  )
+}
+
+function ListToolbar({ search, onSearchChange, placeholder, countLabel }) {
+  return (
+    <div className="dt-toolbar">
+      <div className="dt-search">
+        <Search size={16} />
+        <input
+          type="search"
+          placeholder={placeholder}
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+        />
+      </div>
+      {countLabel ? <span className="tl-count">{countLabel}</span> : null}
+    </div>
+  )
+}
+
+function Alert({ error }) {
+  return (
+    <div className="tl-alert">
+      <AlertTriangle size={16} />
+      <span>{error}</span>
+    </div>
+  )
+}
+
+function Loading() {
+  return (
+    <div className="dt-empty">
+      <Loader2 size={32} className="spin" />
+      <span>Loading…</span>
+    </div>
+  )
+}
+
+function Empty({ text }) {
+  return (
+    <div className="dt-empty">
+      <span>{text}</span>
+    </div>
+  )
+}
+
+function LoadMore({ hasMore, loading, onClick }) {
+  if (!hasMore) return null
+  return (
+    <div className="tl-more">
+      <button type="button" className="dt-btn" onClick={onClick} disabled={loading}>
+        {loading
+          ? <><Loader2 size={16} className="spin" /> Loading…</>
+          : 'Load more'}
+      </button>
     </div>
   )
 }

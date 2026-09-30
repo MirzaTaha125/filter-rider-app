@@ -9,6 +9,7 @@ describe('getPageTitleFor', () => {
 
   it('names top-level sections', () => {
     expect(getPageTitleFor('/admin/orders')).toBe('Orders')
+    expect(getPageTitleFor('/admin/reviews')).toBe('Reviews')
     expect(getPageTitleFor('/admin/service-providers')).toBe('Service Providers')
     expect(getPageTitleFor('/admin/analytics')).toBe('Analytics')
   })
@@ -18,6 +19,11 @@ describe('getPageTitleFor', () => {
   it('names sub-pages, not just their section', () => {
     expect(getPageTitleFor('/admin/wallet/payment-approval')).toBe('Payment Approval')
     expect(getPageTitleFor('/admin/wallet/transaction-ledger')).toBe('Transaction Ledger')
+    expect(getPageTitleFor('/admin/wallet/transaction-ledger/providers')).toBe('Provider Ledger')
+    expect(getPageTitleFor('/admin/wallet/transaction-ledger/customers')).toBe('Customer Ledger')
+    expect(getPageTitleFor('/admin/wallet/penalties')).toBe('Penalties')
+    expect(getPageTitleFor('/admin/wallet/penalties/apply')).toBe('Apply Penalty')
+    expect(getPageTitleFor('/admin/wallet/rules')).toBe('Wallet Rules')
     expect(getPageTitleFor('/admin/services/addons')).toBe('Service Add-ons')
     expect(getPageTitleFor('/admin/services/pricing-matrix')).toBe('Pricing Matrix')
     expect(getPageTitleFor('/admin/pricing/regional')).toBe('Regional Pricing')
