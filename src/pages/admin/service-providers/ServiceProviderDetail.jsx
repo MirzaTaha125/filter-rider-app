@@ -437,57 +437,59 @@ function ServiceProviderDetail() {
                     </div>
                   </div>
 
-                  <TableScroll>
-                    <table className="dt-table" style={{ minWidth: 780 }}>
-                      <thead>
-                        <tr>
-                          <SortableTh sortKey="order_no" sort={sort}>Order</SortableTh>
-                          <SortableTh sortKey="service" sort={sort}>Service</SortableTh>
-                          <SortableTh sortKey="customer" sort={sort}>Customer</SortableTh>
-                          <SortableTh sortKey="date" sort={sort}>Date</SortableTh>
-                          <SortableTh sortKey="status" sort={sort}>Status</SortableTh>
-                          <SortableTh sortKey="amount" sort={sort}>Amount</SortableTh>
-                          <th className="dt-col-actions" aria-label="Open" />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sortedOrders.length === 0 ? (
-                          <tr><td colSpan="7" className="dt-state">No orders in this view.</td></tr>
-                        ) : sortedOrders.map(order => {
-                          const status = normalizeStatus(order.status)
-                          return (
-                            <tr
-                              key={order.id}
-                              className="is-clickable"
-                              onClick={() => navigate(`/admin/orders/${order.id}`)}
-                            >
-                              <td><strong>{order.order_no ?? `#${order.id?.slice(0, 8)}`}</strong></td>
-                              <td>{order.service?.name_en ?? '—'}</td>
-                              <td className="dt-muted">
-                                {order.customer?.user?.full_name
-                                  ?? order.customer?.profile?.company_name
-                                  ?? '—'}
-                              </td>
-                              <td className="dt-muted">{formatDate(order.created_at)}</td>
-                              <td>
-                                <span className={`dt-status dt-status--${orderStatusTone(status)}`}>
-                                  {status.replace(/_/g, ' ')}
-                                </span>
-                              </td>
-                              <td>
-                                <strong>
-                                  <span className="riyal-symbol">&#x20C1;</span>{formatMoney(order.total_price)}
-                                </strong>
-                              </td>
-                              <td className="dt-col-actions">
-                                <ChevronRight size={16} className="dt-muted" />
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </TableScroll>
+                  <div className="spd-panel-body">
+                    <TableScroll>
+                      <table className="dt-table" style={{ minWidth: 780 }}>
+                        <thead>
+                          <tr>
+                            <SortableTh sortKey="order_no" sort={sort}>Order</SortableTh>
+                            <SortableTh sortKey="service" sort={sort}>Service</SortableTh>
+                            <SortableTh sortKey="customer" sort={sort}>Customer</SortableTh>
+                            <SortableTh sortKey="date" sort={sort}>Date</SortableTh>
+                            <SortableTh sortKey="status" sort={sort}>Status</SortableTh>
+                            <SortableTh sortKey="amount" sort={sort}>Amount</SortableTh>
+                            <th className="dt-col-actions" aria-label="Open" />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sortedOrders.length === 0 ? (
+                            <tr><td colSpan="7" className="dt-state">No orders in this view.</td></tr>
+                          ) : sortedOrders.map(order => {
+                            const status = normalizeStatus(order.status)
+                            return (
+                              <tr
+                                key={order.id}
+                                className="is-clickable"
+                                onClick={() => navigate(`/admin/orders/${order.id}`)}
+                              >
+                                <td><strong>{order.order_no ?? `#${order.id?.slice(0, 8)}`}</strong></td>
+                                <td>{order.service?.name_en ?? '—'}</td>
+                                <td className="dt-muted">
+                                  {order.customer?.user?.full_name
+                                    ?? order.customer?.profile?.company_name
+                                    ?? '—'}
+                                </td>
+                                <td className="dt-muted">{formatDate(order.created_at)}</td>
+                                <td>
+                                  <span className={`dt-status dt-status--${orderStatusTone(status)}`}>
+                                    {status.replace(/_/g, ' ')}
+                                  </span>
+                                </td>
+                                <td>
+                                  <strong>
+                                    <span className="riyal-symbol">&#x20C1;</span>{formatMoney(order.total_price)}
+                                  </strong>
+                                </td>
+                                <td className="dt-col-actions">
+                                  <ChevronRight size={16} className="dt-muted" />
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </TableScroll>
+                  </div>
                 </>
               )
             )}
@@ -509,60 +511,62 @@ function ServiceProviderDetail() {
                     </div>
                   </div>
 
-                  <ul className="spd-reviews">
-                    {reviews.map((review) => {
-                      const name = review.reviewer_name ?? review.customer_name ?? 'Customer'
-                      const stars = Math.max(0, Math.min(5, Number(review.rating) || 0))
-                      return (
-                        <li key={review.id ?? `${review.order_id}-${review.created_at}`} className="spd-review">
-                          <span className="spd-review-avatar">
-                            {review.avatar_url
-                              ? <img src={review.avatar_url} alt="" />
-                              : initials(name)}
-                          </span>
-                          <div className="spd-review-body">
-                            <div className="spd-review-top">
-                              {review.customer_id ? (
-                                <button
-                                  type="button"
-                                  className="spd-review-name"
-                                  onClick={() => navigate(`/admin/customers/${review.customer_id}`)}
-                                >
-                                  {name}
-                                </button>
-                              ) : (
-                                <strong className="spd-review-name">{name}</strong>
-                              )}
-                              <span className="spd-review-stars" aria-label={`${stars} out of 5`}>
-                                {[1, 2, 3, 4, 5].map((n) => (
-                                  <Star key={n} size={13} className={n <= stars ? 'is-filled' : ''} />
-                                ))}
-                              </span>
-                              <em className="spd-review-date">{formatDate(review.created_at, true)}</em>
+                  <div className="spd-panel-body">
+                    <ul className="spd-reviews">
+                      {reviews.map((review) => {
+                        const name = review.reviewer_name ?? review.customer_name ?? 'Customer'
+                        const stars = Math.max(0, Math.min(5, Number(review.rating) || 0))
+                        return (
+                          <li key={review.id ?? `${review.order_id}-${review.created_at}`} className="spd-review">
+                            <span className="spd-review-avatar">
+                              {review.avatar_url
+                                ? <img src={review.avatar_url} alt="" />
+                                : initials(name)}
+                            </span>
+                            <div className="spd-review-body">
+                              <div className="spd-review-top">
+                                {review.customer_id ? (
+                                  <button
+                                    type="button"
+                                    className="spd-review-name"
+                                    onClick={() => navigate(`/admin/customers/${review.customer_id}`)}
+                                  >
+                                    {name}
+                                  </button>
+                                ) : (
+                                  <strong className="spd-review-name">{name}</strong>
+                                )}
+                                <span className="spd-review-stars" aria-label={`${stars} out of 5`}>
+                                  {[1, 2, 3, 4, 5].map((n) => (
+                                    <Star key={n} size={13} className={n <= stars ? 'is-filled' : ''} />
+                                  ))}
+                                </span>
+                                <em className="spd-review-date">{formatDate(review.created_at, true)}</em>
+                              </div>
+                              {review.comment
+                                ? <p className="spd-review-comment">{review.comment}</p>
+                                : <p className="spd-review-comment is-empty">No written comment.</p>}
+                              <div className="spd-review-meta">
+                                {review.order_id && (
+                                  <button
+                                    type="button"
+                                    className="spd-review-link"
+                                    onClick={() => navigate(`/admin/orders/${review.order_id}`)}
+                                  >
+                                    {review.order_no ?? 'View order'}
+                                    <ChevronRight size={14} />
+                                  </button>
+                                )}
+                                {review.service_name && (
+                                  <span className="dt-muted">{review.service_name}</span>
+                                )}
+                              </div>
                             </div>
-                            {review.comment
-                              ? <p className="spd-review-comment">{review.comment}</p>
-                              : <p className="spd-review-comment is-empty">No written comment.</p>}
-                            <div className="spd-review-meta">
-                              {review.order_id && (
-                                <button
-                                  type="button"
-                                  className="spd-review-link"
-                                  onClick={() => navigate(`/admin/orders/${review.order_id}`)}
-                                >
-                                  {review.order_no ?? 'View order'}
-                                  <ChevronRight size={14} />
-                                </button>
-                              )}
-                              {review.service_name && (
-                                <span className="dt-muted">{review.service_name}</span>
-                              )}
-                            </div>
-                          </div>
-                        </li>
-                      )
-                    })}
-                  </ul>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
 
                   {reviewsTotal > REVIEWS_LIMIT && (
                     <footer className="dt-foot">

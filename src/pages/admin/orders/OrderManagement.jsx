@@ -76,15 +76,45 @@ function OrderManagement() {
     fetchOrders()
   }, [page, filters.status, filters.serviceId, dateFilters.from, dateFilters.to, search])
 
-  // Real-time order updates via orders namespace
+  // Real-time order updates via orders namespace.
+  // Socket payloads are often bare Prisma rows (no nested `service`/`customer`),
+  // while the list API includes them — enrich from the catalog so the Service
+  // column does not go blank until the next reload.
   const handleOrderEvent = useCallback((updatedOrder) => {
     if (!updatedOrder?.id) return
+    // Rating / checklist events reuse the orders socket but are not order rows.
+    if (!updatedOrder.order_no && !updatedOrder.status && !updatedOrder.service_id) return
+
+    const withService = (order) => {
+      if (order.service?.name_en || order.service?.name) return order
+      const fromCatalog = availableServices.find((s) => s.id === order.service_id)
+      if (!fromCatalog) return order
+      return {
+        ...order,
+        service: {
+          id: fromCatalog.id,
+          name_en: fromCatalog.name_en ?? fromCatalog.name,
+          name_ar: fromCatalog.name_ar,
+        },
+      }
+    }
+
     setOrders((prev) => {
       const exists = prev.some((o) => o.id === updatedOrder.id)
-      if (exists) return prev.map((o) => o.id === updatedOrder.id ? { ...o, ...updatedOrder } : o)
-      return [updatedOrder, ...prev]  // order.created — prepend
+      if (exists) {
+        return prev.map((o) => {
+          if (o.id !== updatedOrder.id) return o
+          const merged = { ...o, ...updatedOrder }
+          // Spreading a bare socket row must not wipe nested fields from the list API.
+          if (updatedOrder.service == null && o.service) merged.service = o.service
+          if (updatedOrder.customer == null && o.customer) merged.customer = o.customer
+          if (updatedOrder.provider == null && o.provider) merged.provider = o.provider
+          return withService(merged)
+        })
+      }
+      return [withService(updatedOrder), ...prev]
     })
-  }, [])
+  }, [availableServices])
 
   useEffect(() => {
     if (!ordersSocket) return

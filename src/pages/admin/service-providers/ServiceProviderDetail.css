@@ -15,11 +15,29 @@
   width: 100%;
 }
 
+/* On wide screens fill the layout-main viewport and scroll only the tab body
+   (orders / reviews), instead of growing the whole page. */
+@media (min-width: 1001px) {
+  .sp-detail-page {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+
 .spd-layout {
   align-items: start;
   display: grid;
   gap: 1.25rem;
   grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+}
+
+@media (min-width: 1001px) {
+  .spd-layout {
+    align-items: stretch;
+    flex: 1;
+    min-height: 0;
+  }
 }
 
 @media (max-width: 1000px) {
@@ -33,6 +51,17 @@
   flex-direction: column;
   gap: 1rem;
   min-width: 0;
+}
+
+@media (min-width: 1001px) {
+  .spd-main {
+    min-height: 0;
+  }
+
+  .spd-rail {
+    max-height: 100%;
+    overflow-y: auto;
+  }
 }
 
 /* ── Rail ─────────────────────────────────────────────────────────────────── */
@@ -73,6 +102,7 @@
   position: absolute;
   right: 0;
   width: 18px;
+  z-index: 1;
 }
 
 .spd-presence.is-online {
@@ -152,12 +182,38 @@
   background: var(--bg-card);
   border: 1px solid var(--border-base);
   border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   padding: 1.25rem;
 }
 
-/* The order table brings its own edge-to-edge chrome — including the scroll
-   bar mirrored above it, which is a sibling of the table's own frame. */
+@media (min-width: 1001px) {
+  .spd-panel {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+
+/* Orders / reviews list — this is the scrollport, not the whole page. */
+.spd-panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 1000px) {
+  .spd-panel-body {
+    max-height: min(55vh, 520px);
+  }
+}
+
+/* Full-bleed only when the table is a direct panel child. Inside
+   .spd-panel-body the negative margins were clipped by the scrollport and
+   ate the left edge of the Order column. */
 .spd-panel > .dt-table-wrap,
 .spd-panel > .dt-scroll-top {
   margin-left: -1.25rem;
@@ -169,8 +225,26 @@
   margin-bottom: -1.25rem;
 }
 
+.spd-panel-body > .dt-table-wrap {
+  margin-bottom: -1.25rem;
+}
+
 .spd-panel > .dt-toolbar {
+  flex-shrink: 0;
   padding: 0 0 1rem;
+}
+
+.spd-panel > .spd-panel-head,
+.spd-panel > .dt-foot {
+  flex-shrink: 0;
+}
+
+/* Keep column headers visible while the orders list scrolls. */
+.spd-panel-body .dt-table thead th {
+  background: var(--primary-soft);
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .spd-panel-head {
@@ -271,18 +345,21 @@
 
 
 .spd-avatar {
-  width: 60px;
-  height: 60px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  overflow: hidden;
-  display: flex;
   align-items: center;
-  justify-content: center;
   background: var(--primary-soft);
+  border-radius: 50%;
   color: var(--text-main);
+  display: flex;
+  flex-shrink: 0;
   font-size: 1.15rem;
   font-weight: 700;
+  height: 60px;
+  justify-content: center;
+  /* Must be relative so .spd-presence anchors to the avatar, not the page.
+     visible so the online badge is not clipped by the circle. */
+  overflow: visible;
+  position: relative;
+  width: 60px;
 }
 
 
