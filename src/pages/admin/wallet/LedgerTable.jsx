@@ -117,7 +117,10 @@ export default function LedgerTable({
                       </td>
                     )}
                     <td>
-                      <span className="tl-type">{typeLabel(txn.type)}</span>
+                      <span className="tl-type">
+                        <strong>{typeLabel(txn.type)}</strong>
+                        {txn.description && <em>{txn.description}</em>}
+                      </span>
                     </td>
                     <td className="tl-num">
                       <span className={`tl-amount ${credit ? 'is-credit' : 'is-debit'}`}>

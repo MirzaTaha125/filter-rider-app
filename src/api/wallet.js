@@ -59,6 +59,18 @@ export async function getPlatformWallet() {
   return apiRequest('/admin/wallet/platform');
 }
 
+/**
+ * POST /admin/wallet/topups
+ * Manual admin credit to a customer or provider wallet (ledger ADJUSTMENT).
+ * @param {{ owner_type: 'CUSTOMER' | 'PROVIDER', owner_id: string, amount: number, reason: string }} body
+ */
+export async function adminWalletTopup(body) {
+  return apiRequest('/admin/wallet/topups', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
 /** GET /admin/penalties */
 export async function getPenalties({ status, search, page = 1, limit = 20 } = {}) {
   const params = new URLSearchParams({ page, limit });

@@ -9,6 +9,7 @@ import PageHeader from '../../../components/PageHeader/PageHeader'
 import StatTile from '../../../components/StatTile/StatTile'
 import SortableTh from '../../../components/DataTable/SortableTh'
 import { useTableSort } from '../../../components/DataTable/useTableSort'
+import WalletTopupDialog from '../../../components/WalletTopupDialog/WalletTopupDialog'
 import { normalizeStatus, orderStatusTone } from '../orders/orderStatus'
 import './CustomerDetail.css'
 import TableScroll from '../../../components/DataTable/TableScroll'
@@ -70,6 +71,8 @@ function CustomerDetail() {
   const [error, setError] = useState('')
   const [statusUpdating, setStatusUpdating] = useState(false)
   const [confirmDialog, setConfirmDialog] = useState({ open: false, action: '' })
+  const [topupOpen, setTopupOpen] = useState(false)
+  const [topupNotice, setTopupNotice] = useState('')
   const [avatarBroken, setAvatarBroken] = useState(false)
 
   const load = useCallback(async () => {
@@ -222,6 +225,24 @@ function CustomerDetail() {
             <StatTile label="Wallet balance" value={customer.walletBalance ?? 0} money hint="Available now" />
           </div>
 
+          <div className="cd-wallet-actions">
+            <button
+              type="button"
+              className="dt-btn dt-btn--primary"
+              onClick={() => { setTopupNotice(''); setTopupOpen(true) }}
+            >
+              Top up wallet
+            </button>
+            <button
+              type="button"
+              className="dt-btn"
+              onClick={() => navigate(`/admin/wallet/transaction-ledger/customers/${customer.id}`)}
+            >
+              View ledger
+            </button>
+            {topupNotice && <span className="cd-wallet-notice">{topupNotice}</span>}
+          </div>
+
           <section className="dt-card">
             <div className="dt-toolbar">
               <h3 className="cd-card-title">
@@ -312,6 +333,23 @@ function CustomerDetail() {
           </div>
         </div>
       )}
+
+      <WalletTopupDialog
+        open={topupOpen}
+        ownerType="CUSTOMER"
+        ownerId={customer.id}
+        ownerName={customer.name}
+        onClose={() => setTopupOpen(false)}
+        onSuccess={(result) => {
+          const credited = Number(result?.transaction?.net_amount ?? result?.transaction?.amount ?? 0)
+          setTopupNotice(
+            credited > 0
+              ? `Topped up ${money(credited)} SAR — ledger updated.`
+              : 'Top-up posted to the ledger.',
+          )
+          load()
+        }}
+      />
     </div>
   )
 }

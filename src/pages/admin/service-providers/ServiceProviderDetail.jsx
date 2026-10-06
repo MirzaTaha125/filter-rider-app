@@ -9,6 +9,7 @@ import ConfirmDialog from '../../../components/ConfirmDialog/ConfirmDialog'
 import StatTile from '../../../components/StatTile/StatTile'
 import SortableTh from '../../../components/DataTable/SortableTh'
 import { useTableSort } from '../../../components/DataTable/useTableSort'
+import WalletTopupDialog from '../../../components/WalletTopupDialog/WalletTopupDialog'
 import { normalizeStatus, orderStatusTone } from '../orders/orderStatus'
 import {
   getProviderDetails, updateProviderStatus,
@@ -89,6 +90,8 @@ function ServiceProviderDetail() {
   const [servicesBusy, setServicesBusy] = useState(false)
   const [statusBusy, setStatusBusy] = useState(false)
   const [confirm, setConfirm] = useState(null)
+  const [topupOpen, setTopupOpen] = useState(false)
+  const [topupNotice, setTopupNotice] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -703,6 +706,33 @@ function ServiceProviderDetail() {
             {/* WALLET */}
             {tab === 'wallet' && (
               <div className="spd-stack">
+                <div className="spd-panel-head">
+                  <div>
+                    <h3 className="spd-card-title">Wallet</h3>
+                    <p className="spd-panel-sub">
+                      Available balance and bank details for withdrawals.
+                    </p>
+                  </div>
+                  <div className="spd-wallet-actions">
+                    <button
+                      type="button"
+                      className="dt-btn dt-btn--primary"
+                      onClick={() => { setTopupNotice(''); setTopupOpen(true) }}
+                    >
+                      Top up wallet
+                    </button>
+                    <button
+                      type="button"
+                      className="dt-btn"
+                      onClick={() => navigate(`/admin/wallet/transaction-ledger/providers/${provider.id}`)}
+                    >
+                      View ledger
+                    </button>
+                  </div>
+                </div>
+
+                {topupNotice && <p className="spd-wallet-notice">{topupNotice}</p>}
+
                 <div className="spd-breakdown">
                   {[
                     ['Available balance', provider.wallet?.available_balance],
@@ -799,6 +829,24 @@ function ServiceProviderDetail() {
           const pending = confirm
           setConfirm(null)
           if (pending) handleRemoveService(pending.serviceId)
+        }}
+      />
+
+      <WalletTopupDialog
+        open={topupOpen}
+        ownerType="PROVIDER"
+        ownerId={provider.id}
+        ownerName={provider.name}
+        onClose={() => setTopupOpen(false)}
+        onSuccess={(result) => {
+          const credited = Number(result?.transaction?.net_amount ?? result?.transaction?.amount ?? 0)
+          setTopupNotice(
+            credited > 0
+              ? `Topped up ${formatMoney(credited)} SAR — ledger updated.`
+              : 'Top-up posted to the ledger.',
+          )
+          setTab('wallet')
+          load()
         }}
       />
     </div>

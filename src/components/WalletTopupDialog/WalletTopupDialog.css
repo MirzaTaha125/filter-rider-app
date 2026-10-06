@@ -1,0 +1,162 @@
+.wtd-overlay {
+  align-items: center;
+  backdrop-filter: blur(2px);
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 1rem;
+  position: fixed;
+  z-index: 2000;
+  animation: wtd-fade 0.15s ease;
+}
+
+.wtd-dialog {
+  animation: wtd-pop 0.18s ease;
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  max-width: 420px;
+  padding: 1.75rem;
+  text-align: left;
+  width: 100%;
+}
+
+.wtd-icon {
+  align-items: center;
+  background: var(--primary-soft);
+  border-radius: 50%;
+  color: var(--primary-color);
+  display: flex;
+  height: 48px;
+  justify-content: center;
+  margin: 0 auto;
+  width: 48px;
+}
+
+.wtd-title {
+  color: var(--text-main);
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0;
+  text-align: center;
+}
+
+.wtd-sub {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0;
+  text-align: center;
+}
+
+.wtd-sub em {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.wtd-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.wtd-field > span {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.wtd-field input,
+.wtd-field textarea {
+  background: var(--bg-admin);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.9rem;
+  padding: 0.65rem 0.75rem;
+  resize: vertical;
+}
+
+.wtd-field input:focus,
+.wtd-field textarea:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+.wtd-error {
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: var(--radius-sm);
+  color: var(--danger);
+  font-size: 0.82rem;
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+}
+
+.wtd-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.wtd-btn {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  flex: 1;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  gap: 0.4rem;
+  justify-content: center;
+  padding: 0.65rem 1rem;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.wtd-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.wtd-btn--secondary {
+  background: var(--bg-card);
+  border-color: var(--border-base);
+  color: var(--text-main);
+}
+
+.wtd-btn--secondary:hover:not(:disabled) {
+  background: var(--border-light);
+}
+
+.wtd-btn--primary {
+  background: var(--primary-color);
+  color: #fff;
+}
+
+.wtd-btn--primary:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+
+@keyframes wtd-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes wtd-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 480px) {
+  .wtd-actions { flex-direction: column-reverse; }
+}

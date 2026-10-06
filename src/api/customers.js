@@ -27,3 +27,10 @@ export async function updateCustomerStatus(id, status) {
         body: JSON.stringify({ status }),
     });
 }
+
+/** DELETE /customers/{id} – Soft-delete customer (keeps orders; name → “Name (deleted)”) */
+export async function deleteCustomer(id) {
+    return apiRequest(`/customers/${id}`, {
+        method: 'DELETE',
+    });
+}
