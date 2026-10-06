@@ -15,6 +15,7 @@ export {
 } from './auth.js';
 export * from './admin.js';
 export * from './users.js';
+export * from './deleteAccount.js';
 export * from './serviceCategories.js';
 export * from './services.js';
 export * from './serviceAddons.js';

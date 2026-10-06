@@ -73,6 +73,13 @@ export async function updateProviderStatus(id, status, reason, reasonCodeId) {
   });
 }
 
+/** DELETE /service-providers/{id} – Soft-delete provider (keeps orders; name → “Name (deleted)”) */
+export async function deleteProvider(id) {
+  return apiRequest(`/service-providers/${id}`, {
+    method: 'DELETE',
+  });
+}
+
 /** POST /service-providers/{id}/services – Assign services to provider */
 export async function assignProviderServices(id, serviceIds) {
   return apiRequest(`/service-providers/${id}/services`, {

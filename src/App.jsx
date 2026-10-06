@@ -3,6 +3,8 @@ import SignIn from "./pages/signin/SignIn";
 import ForgotPassword from "./pages/signin/ForgotPassword";
 import ResetPassword from "./pages/signin/ResetPassword";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import DeleteAccountCustomers from "./pages/delete-account/DeleteAccountCustomers";
+import DeleteAccountProviders from "./pages/delete-account/DeleteAccountProviders";
 import SessionExpiryModal from "./components/SessionExpiryModal/SessionExpiryModal";
 import { ThemeProvider } from "./context/ThemeContext";
 import { getAuthToken } from "./api";
@@ -23,6 +25,8 @@ function App() {
         <Route path="/signin" element={<SignIn />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/delete-account/customer" element={<DeleteAccountCustomers />} />
+        <Route path="/delete-account/service-provider" element={<DeleteAccountProviders />} />
         <Route
           path="/admin/*"
           element={
