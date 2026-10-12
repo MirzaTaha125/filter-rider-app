@@ -190,6 +190,9 @@ function PromotionsManagement() {
             const used = promo.usage_count ?? 0
             const limit = promo.total_usage_limit ?? null
             const pct = limit ? Math.min((used / limit) * 100, 100) : 0
+            // Published from the ERP marketing portal: read-only here, the ERP sync owns it.
+            const erp = Boolean(promo.managed_by_erp)
+            const erpHint = 'Managed in the ERP marketing portal — change it there'
 
             return (
               <article key={promo.id} className={`pm2-card ${promo.is_active ? '' : 'is-inactive'}`}>
@@ -207,6 +210,10 @@ function PromotionsManagement() {
                     {promo.status ?? (promo.is_active ? 'ACTIVE' : 'DRAFT')}
                   </span>
                 </header>
+
+                {erp && (
+                  <p className="pm2-erp-badge" title={erpHint}>Managed by ERP</p>
+                )}
 
                 {promo.title && <p className="pm2-card-title">{promo.title}</p>}
 
@@ -232,12 +239,15 @@ function PromotionsManagement() {
                 </p>
 
                 <footer className="pm2-card-actions">
-                  <label className="pm2-toggle" title={promo.is_active ? 'Deactivate' : 'Activate'}>
+                  <label
+                    className="pm2-toggle"
+                    title={erp ? erpHint : promo.is_active ? 'Deactivate' : 'Activate'}
+                  >
                     <input
                       type="checkbox"
                       checked={promo.is_active ?? false}
                       onChange={() => togglePromotion(promo)}
-                      disabled={toggling}
+                      disabled={toggling || erp}
                     />
                     <span className="pm2-toggle-track"><span className="pm2-toggle-thumb" /></span>
                     <span className="pm2-toggle-text">
@@ -249,16 +259,18 @@ function PromotionsManagement() {
                     <button
                       className="pm2-icon-btn"
                       onClick={() => navigate(`/admin/promotions/edit/${promo.id}`)}
-                      title={`Edit ${promo.code}`}
+                      title={erp ? erpHint : `Edit ${promo.code}`}
                       aria-label={`Edit ${promo.code}`}
+                      disabled={erp}
                     >
                       <Pencil size={15} />
                     </button>
                     <button
                       className="pm2-icon-btn pm2-icon-btn--danger"
                       onClick={() => askDelete(promo)}
-                      title={`Delete ${promo.code}`}
+                      title={erp ? erpHint : `Delete ${promo.code}`}
                       aria-label={`Delete ${promo.code}`}
+                      disabled={erp}
                     >
                       <Trash2 size={15} />
                     </button>
