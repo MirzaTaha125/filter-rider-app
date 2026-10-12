@@ -41,3 +41,4 @@ export * from './pricing.js';
 export * from './rewards.js';
 export * from './wallet.js';
 export * from './reviews.js';
+export * from './filterOrders.js';

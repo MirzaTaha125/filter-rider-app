@@ -13,6 +13,7 @@ import WalletTopupDialog from '../../../components/WalletTopupDialog/WalletTopup
 import { normalizeStatus, orderStatusTone } from '../orders/orderStatus'
 import './CustomerDetail.css'
 import TableScroll from '../../../components/DataTable/TableScroll'
+import FilterOrdersSection from './FilterOrdersSection'
 
 const ADDRESS_ICONS = { HOME: Home, OFFICE: Briefcase, OTHER: MapPin }
 
@@ -301,6 +302,8 @@ function CustomerDetail() {
               </table>
             </TableScroll>
           </section>
+
+          <FilterOrdersSection customerId={customer.id} />
         </div>
       </div>
 
