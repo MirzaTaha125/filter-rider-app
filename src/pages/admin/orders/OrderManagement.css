@@ -1,4 +1,0 @@
-/* The orders list uses the shared list furniture in src/styles/dataTable.css.
-   Nothing page-specific is left here — kept as a stub so the import in
-   OrderManagement.jsx stays valid and there is an obvious place for any
-   orders-only rule that comes up later. */
