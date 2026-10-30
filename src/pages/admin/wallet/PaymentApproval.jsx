@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Loader2, AlertTriangle, Wallet, ChevronRight, Building2,
+  AlertTriangle, Wallet, ChevronRight, Building2, User,
 } from 'lucide-react'
 import { getPaymentApprovals } from '../../../api'
 import {
   WITHDRAWAL_STATUS_TABS,
-  providerName,
+  ownerName,
+  ownerRoleLabel,
+  ownerType,
   bankLabel,
   accountLabel,
   formatMoney,
@@ -18,8 +20,9 @@ import './PaymentApproval.css'
 import SortableTh from '../../../components/DataTable/SortableTh'
 import { useTableSort } from '../../../components/DataTable/useTableSort'
 import TableScroll from '../../../components/DataTable/TableScroll'
+import Pager from '../../../components/DataTable/Pager'
+import { TableBlockShimmer } from '../../../components/Shimmer/Shimmer'
 
-const PAGE_SIZE = 20
 
 function PaymentApproval() {
   const navigate = useNavigate()
@@ -29,37 +32,41 @@ function PaymentApproval() {
   const sort = useTableSort()
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20)
   const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState('')
+  const [tabCounts, setTabCounts] = useState({})
 
-  const load = useCallback(async (nextPage, replace) => {
-    replace ? setLoading(true) : setLoadingMore(true)
+  const load = useCallback(async (pageNo) => {
+    setLoading(true)
     setError('')
     try {
-      const data = await getPaymentApprovals({ status, page: nextPage, limit: PAGE_SIZE })
+      const data = await getPaymentApprovals({ status, page: pageNo, limit })
       const { items: rows, total: count } = unwrapList(data)
-      setItems(prev => (replace ? rows : [...prev, ...rows]))
+      setItems(rows)
       setTotal(count)
-      setPage(nextPage)
     } catch (err) {
       setError(err.message || 'Failed to load payment approvals')
-      if (replace) setItems([])
+      setItems([])
     } finally {
-      replace ? setLoading(false) : setLoadingMore(false)
+      setLoading(false)
     }
-  }, [status])
+  }, [status, limit])
 
-  useEffect(() => { load(1, true) }, [load])
+  useEffect(() => { load(page) }, [load, page])
 
-  const hasMore = items.length < total
+  useEffect(() => {
+    if (loading) return
+    setTabCounts((prev) => (prev[status] === total ? prev : { ...prev, [status]: total }))
+  }, [loading, status, total])
 
   // Only the visible page is summed, so label it as such rather than implying
   // it is the total across every page.
   const pageTotal = items.reduce((sum, i) => sum + Number(i.amount || 0), 0)
 
   const sortedItems = sort.apply(items, {
-    provider: (i) => providerName(i),
+    requester: (i) => ownerName(i),
+    role: (i) => ownerRoleLabel(i),
     bank: (i) => bankLabel(i),
     amount: (i) => Number(i.amount ?? 0),
     requested: (i) => new Date(i.requested_at ?? 0).getTime(),
@@ -70,7 +77,7 @@ function PaymentApproval() {
     <div className="payment-approval">
       <header className="dt-page-head">
         <div>
-          <p className="dt-page-sub">Provider withdrawal requests awaiting review.</p>
+          <p className="dt-page-sub">Provider and customer withdrawal requests awaiting review.</p>
         </div>
       </header>
 
@@ -96,9 +103,10 @@ function PaymentApproval() {
             role="tab"
             aria-selected={status === s}
             className={`pv-tab ${status === s ? 'is-active' : ''}`}
-            onClick={() => setStatus(s)}
+            onClick={() => { setStatus(s); setPage(1) }}
           >
             {s.charAt(0) + s.slice(1).toLowerCase()}
+            {tabCounts[s] != null && <span className="tab-count">{tabCounts[s]}</span>}
           </button>
         ))}
       </div>
@@ -111,10 +119,7 @@ function PaymentApproval() {
       )}
 
       {loading ? (
-        <div className="dt-empty">
-          <Loader2 size={32} className="spin" />
-          <span>Loading requests…</span>
-        </div>
+        <TableBlockShimmer columns={6} />
       ) : items.length === 0 ? (
         <div className="dt-empty">
           <Wallet size={32} />
@@ -128,7 +133,7 @@ function PaymentApproval() {
               <table className="dt-table">
                 <thead>
                   <tr>
-                    <SortableTh sortKey="provider" sort={sort}>Provider</SortableTh>
+                    <SortableTh sortKey="requester" sort={sort}>Requester</SortableTh>
                     <SortableTh sortKey="bank" sort={sort}>Bank</SortableTh>
                     <SortableTh sortKey="amount" sort={sort}>Amount</SortableTh>
                     <SortableTh sortKey="requested" sort={sort}>Requested</SortableTh>
@@ -152,10 +157,13 @@ function PaymentApproval() {
                     >
                       <td>
                         <span className="pv-provider">
-                          <Building2 size={15} />
+                          {ownerType(item) === 'CUSTOMER' ? <User size={15} /> : <Building2 size={15} />}
                           <span>
-                            <strong>{providerName(item)}</strong>
-                            <em>{item.request_no ?? ''}</em>
+                            <strong>{ownerName(item)}</strong>
+                            <em>
+                              {ownerRoleLabel(item)}
+                              {item.request_no ? ` · ${item.request_no}` : ''}
+                            </em>
                           </span>
                         </span>
                       </td>
@@ -178,21 +186,16 @@ function PaymentApproval() {
                 </tbody>
               </table>
             </TableScroll>
+            <Pager
+              page={page}
+              total={total}
+              limit={limit}
+              onChange={setPage}
+              onLimitChange={(n) => { setLimit(n); setPage(1) }}
+              unit="requests"
+              disabled={loading}
+            />
           </div>
-
-          {hasMore && (
-            <div className="pv-more">
-              <button
-                className="dt-btn"
-                onClick={() => load(page + 1, false)}
-                disabled={loadingMore}
-              >
-                {loadingMore
-                  ? <><Loader2 size={16} className="spin" /> Loading…</>
-                  : `Load more (${items.length} of ${total})`}
-              </button>
-            </div>
-          )}
         </>
       )}
     </div>

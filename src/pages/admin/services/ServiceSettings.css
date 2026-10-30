@@ -95,52 +95,7 @@
   to { opacity: 1; transform: none; }
 }
 
-/* ---------- Tabs ---------- */
-.ss-tabs {
-  display: flex;
-  gap: 0.5rem;
-  border-bottom: 1px solid var(--border-base);
-  padding-bottom: 0;
-}
-
-.ss-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.1rem;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  font-family: inherit;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-
-.ss-tab:hover { color: var(--text-main); }
-
-.ss-tab.is-active {
-  color: var(--text-main);
-  border-bottom-color: var(--primary-color);
-}
-
-.ss-tab-count {
-  min-width: 20px;
-  padding: 0.1rem 0.4rem;
-  border-radius: 999px;
-  background: var(--border-light);
-  color: var(--text-muted);
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-
-.ss-tab.is-active .ss-tab-count {
-  background: var(--primary-soft);
-  color: var(--text-main);
-}
+/* Tabs: src/styles/listTabs.css */
 
 /* ---------- Layout ---------- */
 .ss-split {
@@ -172,7 +127,7 @@
 .ss-card-head h2 {
   margin: 0;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -237,7 +192,7 @@
   padding: 0.15rem 0.5rem;
   border-radius: 4px;
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.04em;
   background: var(--border-light);
   color: var(--text-muted);
@@ -316,7 +271,7 @@
 
 .ss-field label {
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -424,7 +379,7 @@
 .ss-pill-main {
   padding: 0.45rem 0.5rem 0.45rem 0.95rem;
   font-size: 0.825rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .ss-pill-edit {
@@ -441,9 +396,9 @@
   justify-content: center;
   gap: 0.45rem;
   padding: 0.65rem 1.15rem;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-btn);
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
   border: 1px solid transparent;
@@ -480,3 +435,12 @@
   .ss-field-row { grid-template-columns: 1fr; }
   .ss-toast { left: 1rem; right: 1rem; max-width: none; }
 }
+
+/* Arabic version under an English title */
+.ss-title-ar {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+

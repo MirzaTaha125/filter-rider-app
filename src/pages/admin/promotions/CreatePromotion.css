@@ -27,7 +27,7 @@
   background: transparent;
   color: var(--text-muted);
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
@@ -56,7 +56,7 @@
   background: var(--primary-soft);
   color: var(--text-main);
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .cp-pills {
@@ -75,7 +75,7 @@
   background: var(--bg-card);
   color: var(--text-main);
   font-size: 0.825rem;
-  font-weight: 600;
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease;
@@ -106,7 +106,7 @@
 
 .cp-pill.is-retired em {
   color: var(--danger);
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   font-size: 0.62rem;
   letter-spacing: 0.04em;

@@ -39,7 +39,7 @@
 
 .wallet-kpi-label {
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -58,7 +58,7 @@
   align-items: center;
   gap: 0.4rem;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   margin-top: 0.5rem;
 }
 
@@ -134,7 +134,7 @@
 
 .alert-title {
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   margin-bottom: 0.25rem;
 }
@@ -151,7 +151,7 @@
   border: none;
   border-radius: 8px;
   color: var(--bg-card);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -187,7 +187,7 @@
 
 .card-title {
   font-size: 1.125rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   margin: 0;
 }
@@ -198,7 +198,7 @@
   border: 1px solid var(--border-base);
   border-radius: 8px;
   color: var(--text-main);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -229,13 +229,13 @@
 
 .reconciliation-label {
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
 }
 
 .reconciliation-percentage {
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .reconciliation-percentage.yellow {
@@ -248,7 +248,7 @@
 
 .reconciliation-amount {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
 }
 
@@ -310,13 +310,13 @@
 
 .approval-entity {
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
 }
 
 .approval-amount {
   font-size: 1.125rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
 }
 
@@ -356,7 +356,7 @@
   border: none;
   border-radius: 8px;
   color: var(--bg-card);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -374,7 +374,7 @@
 .link-view-all {
   color: var(--primary-color);
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   text-decoration: none;
   transition: color 0.2s;
 }
@@ -404,7 +404,7 @@
 
 .ledger-title {
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   margin: 0;
 }
@@ -424,7 +424,7 @@
   border: 1px solid var(--border-base);
   border-radius: 8px;
   color: var(--text-main);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -454,7 +454,7 @@
   padding: 1rem 1.25rem;
   text-align: left;
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.8px;
@@ -478,7 +478,7 @@
 }
 
 .transaction-id {
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
   font-size: 0.9rem;
 }
@@ -501,19 +501,19 @@
   background: var(--bg-hover-primary);
   color: var(--primary-color);
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .transaction-gross {
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
   font-size: 0.9rem;
 }
 
 .transaction-commission {
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
   font-size: 0.9rem;
 }
@@ -523,7 +523,7 @@
 }
 
 .transaction-net {
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
   font-size: 0.9rem;
 }
@@ -540,7 +540,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .status-dot {
@@ -644,6 +644,6 @@
   background: var(--color-danger);
   color: var(--bg-card);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
 }
 

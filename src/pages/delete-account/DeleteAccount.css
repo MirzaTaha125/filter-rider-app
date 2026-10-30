@@ -36,7 +36,7 @@
 .da-kicker {
   color: var(--text-muted);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.06em;
   margin: 0 0 0.15rem;
   text-transform: uppercase;
@@ -61,7 +61,7 @@
 .da-done em {
   color: var(--text-main);
   font-style: normal;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .da-steps {
@@ -78,7 +78,7 @@
   color: var(--text-muted);
   flex: 1;
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 600;
   padding: 0.4rem 0.35rem;
   text-align: center;
 }
@@ -120,7 +120,7 @@
 .da-field > span {
   color: var(--text-muted);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -176,7 +176,7 @@
   border-radius: var(--radius-sm);
   color: var(--primary-hover);
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 600;
   margin: 0;
   padding: 0.5rem 0.7rem;
 }
@@ -190,7 +190,7 @@
   display: inline-flex;
   font-family: inherit;
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 600;
   gap: 0.4rem;
   justify-content: center;
   padding: 0.75rem 1rem;
@@ -239,7 +239,7 @@
   cursor: pointer;
   font-family: inherit;
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 500;
   padding: 0;
 }
 
@@ -299,7 +299,7 @@
 
 .da-switch-line a {
   color: var(--primary-color);
-  font-weight: 600;
+  font-weight: 500;
   text-decoration: none;
 }
 

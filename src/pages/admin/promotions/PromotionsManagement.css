@@ -16,7 +16,7 @@
 .pm2-title {
   margin: 0 0 0.25rem;
   font-size: 1.75rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
 }
 
@@ -37,13 +37,13 @@
 .pm2-search {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.55rem;
   flex: 1;
   min-width: 220px;
-  max-width: 360px;
-  padding: 0 0.85rem;
+  max-width: 520px;
+  padding: 0 1rem;
   border: 1px solid var(--border-base);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-search);
   background: var(--bg-input);
   color: var(--text-muted);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -59,7 +59,7 @@
   min-width: 0;
   border: none;
   background: transparent;
-  padding: 0.65rem 0;
+  padding: 0.7rem 0;
   font-size: 0.875rem;
   font-family: inherit;
   color: var(--text-main);
@@ -69,24 +69,25 @@
 
 .pm2-search input::placeholder {
   color: var(--text-muted);
-  opacity: 0.75;
+  opacity: 0.85;
 }
 
 .pm2-filter {
-  padding: 0.65rem 0.85rem;
+  padding: 0.7rem 2.4rem 0.7rem 1rem;
   border: 1px solid var(--border-base);
-  border-radius: var(--radius-sm);
-  background: var(--bg-input);
+  border-radius: var(--radius-search);
+  background-color: var(--bg-input);
   color: var(--text-main);
   font-size: 0.875rem;
   font-family: inherit;
   cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .pm2-filter:focus {
   outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px var(--primary-soft);
+  border-color: var(--border-base);
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.06);
 }
 
 .pm2-count {
@@ -206,7 +207,7 @@
 
 .pm2-code {
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--text-main);
   overflow-wrap: anywhere;
@@ -214,7 +215,7 @@
 
 .pm2-discount {
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--success);
 }
 
@@ -223,7 +224,7 @@
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   background: var(--border-light);
@@ -263,7 +264,7 @@
 }
 
 .pm2-usage-head span:last-child {
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   font-variant-numeric: tabular-nums;
 }
@@ -301,7 +302,7 @@
 
 .pm2-expiry--muted { color: var(--text-muted); }
 .pm2-expiry--warn { color: var(--warning); }
-.pm2-expiry--danger { color: var(--danger); font-weight: 600; }
+.pm2-expiry--danger { color: var(--danger); font-weight: 500; }
 
 /* ---------- Actions ---------- */
 .pm2-card-actions {
@@ -369,7 +370,7 @@
 
 .pm2-toggle-text {
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-muted);
 }
 
@@ -413,7 +414,7 @@
   padding: 0.65rem 1.25rem;
   border-radius: var(--radius-sm);
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
   border: 1px solid transparent;
@@ -443,4 +444,78 @@
   .pm2-search { max-width: none; }
 
   .pm2-grid { grid-template-columns: 1fr; }
+}
+
+/* Promotions published from the ERP marketing portal (read-only here). */
+.pm2-erp-badge {
+  align-self: flex-start;
+  background: var(--primary-soft, rgba(37, 99, 235, 0.12));
+  border-radius: 999px;
+  color: var(--primary-color, #2563eb);
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin: 0;
+  padding: 2px 10px;
+}
+
+.pm2-icon-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* Tabs: src/styles/listTabs.css */
+
+.pm2-btn--ghost {
+  background: transparent;
+  border: 1px solid var(--border-base);
+  color: var(--text-main);
+}
+
+.pm2-btn--ghost:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.pm2-tab-note {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+/* ---------- Workshop offer cards ---------- */
+.pm2-offer-banner {
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--border-light);
+}
+
+.pm2-offer-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+}
+
+.pm2-offer-meta li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.pm2-offer-meta span { color: var(--text-muted); }
+
+.pm2-offer-meta strong {
+  color: var(--text-main);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.pm2-offer-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--text-muted);
 }

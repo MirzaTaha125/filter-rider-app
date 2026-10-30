@@ -15,7 +15,7 @@
 
 .account-settings-title {
   font-size: 2rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   margin: 0 0 0.5rem 0;
 }
@@ -35,7 +35,7 @@
   border-radius: 10px;
   background: var(--primary-color);
   color: var(--bg-card);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -59,7 +59,7 @@
   border-radius: 10px;
   background: var(--bg-card);
   color: var(--text-main);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -79,7 +79,7 @@
   border-radius: 10px;
   background: var(--primary-color);
   color: var(--bg-card);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -118,7 +118,7 @@
   border-radius: 10px;
   background: var(--primary-color);
   color: var(--bg-card);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -163,7 +163,7 @@
   border: none;
   background: transparent;
   color: var(--text-muted);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -230,7 +230,7 @@
   border-radius: 8px;
   background: var(--bg-card);
   color: var(--text-main);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -249,7 +249,7 @@
 
 .section-title {
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   margin: 0;
 }
@@ -272,7 +272,7 @@
 
 .form-group label {
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
   display: flex;
   align-items: center;
@@ -391,7 +391,7 @@
 
 .success-title {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   margin: 0;
 }
@@ -409,7 +409,7 @@
   border-radius: 8px;
   background: var(--primary-color);
   color: var(--bg-card);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;

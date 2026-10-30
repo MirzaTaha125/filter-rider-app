@@ -7,6 +7,7 @@ import { getChatThread, sendChatMessage, markChatThreadRead } from '../../api'
 import { useSocket } from '../../contexts/SocketContext'
 import { usePermissions } from '../../contexts/PermissionsContext'
 import { formatClock, formatDayLabel, isNewDay } from './formatChatTime'
+import { ChatThreadShimmer } from '../Shimmer/Shimmer'
 import './ChatThread.css'
 
 const TYPE_ICONS = {
@@ -14,6 +15,32 @@ const TYPE_ICONS = {
   AUDIO: Mic,
   VIDEO: Video,
   FILE: Paperclip,
+}
+
+function monogram(name) {
+  const parts = (name ?? '').trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+function senderAvatar(thread, message) {
+  const people = thread?.participants
+  if (message.sender_role === 'CUSTOMER') return people?.customer?.avatar || ''
+  if (message.sender_role === 'PROVIDER') return people?.provider?.avatar || ''
+  return ''
+}
+
+function SenderAvatar({ name, src }) {
+  const [broken, setBroken] = useState(false)
+  if (!src || broken) {
+    return <span className="ct-msg-avatar" aria-hidden="true">{monogram(name)}</span>
+  }
+  return (
+    <span className="ct-msg-avatar" aria-hidden="true">
+      <img src={src} alt="" onError={() => setBroken(true)} />
+    </span>
+  )
 }
 
 /**
@@ -261,10 +288,7 @@ function ChatThread({ orderId, onLoaded, onRead }) {
 
   if (loading) {
     return (
-      <div className="ct-state">
-        <Loader2 size={28} className="spin" />
-        <span>Loading conversation…</span>
-      </div>
+      <ChatThreadShimmer />
     )
   }
 
@@ -335,8 +359,11 @@ function ChatThread({ orderId, onLoaded, onRead }) {
             >
               {!grouped && (
                 <div className="ct-msg-head">
-                  <strong>{message.sender_name}</strong>
-                  <span className={`ct-role ct-role--${role.toLowerCase()}`}>{role}</span>
+                  <SenderAvatar name={message.sender_name} src={senderAvatar(thread, message)} />
+                  <span className="ct-msg-who">
+                    <span className={`ct-role ct-role--${role.toLowerCase()}`}>{role}</span>
+                    <strong>{message.sender_name}</strong>
+                  </span>
                 </div>
               )}
               <div className="ct-msg-body">

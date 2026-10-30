@@ -16,7 +16,7 @@
 .sp-title {
   margin: 0 0 0.25rem;
   font-size: 1.75rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
 }
 
@@ -127,7 +127,7 @@
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -145,7 +145,7 @@
 .sp-card-title {
   margin: 0;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -159,7 +159,7 @@
 .sp-multiplier {
   margin: 0.85rem 0 0;
   font-size: 2.25rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1;
   color: var(--text-main);
   font-variant-numeric: tabular-nums;
@@ -168,7 +168,7 @@
 .sp-multiplier span {
   margin-left: 0.15rem;
   font-size: 1.15rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-muted);
 }
 
@@ -189,7 +189,7 @@
   padding: 0.65rem 1.25rem;
   border-radius: var(--radius-sm);
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
   border: 1px solid transparent;

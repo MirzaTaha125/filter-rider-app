@@ -1,10 +1,14 @@
 @import './styles/dataTable.css';
+@import './styles/listTabs.css';
+@import './components/Shimmer/Shimmer.css';
 :root {
   /* Radii — workshop portal style */
   --radius-xl: 14px;
   --radius-lg: 12px;
   --radius-md: 10px;
   --radius-sm: 6px;
+  --radius-btn: 12px;
+  --radius-search: 14px;
   --radius-round: 50%;
 
   /* Brand */
@@ -130,7 +134,7 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-sans);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -189,4 +193,59 @@ textarea {
   50% {
     opacity: 1;
   }
+}
+
+/* Admin buttons share Edit / Deactivate corner radius */
+.sm-btn,
+.sf-btn,
+.dt-btn,
+.ss-btn,
+.iu-btn,
+.iu-drop,
+.mcp-trigger,
+.mcp-add-btn,
+.confirm-btn,
+.btn-primary,
+.btn-secondary,
+.btn-danger,
+.btn-review-providers,
+.vt-status-btn,
+.shimmer-service-action {
+  border-radius: var(--radius-btn);
+}
+
+/* Dropdowns / filters match text-field border; chevron inset from the edge */
+.sm-filter,
+.rw-filter,
+.pm2-filter,
+.form-select,
+.mcp-toolbar select,
+.mcp-field select,
+.dash-period select,
+.dash-filter-field select,
+.sf-field select {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-search);
+  background-color: var(--bg-input);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.9rem center;
+  background-size: 16px 16px;
+  padding-right: 2.4rem;
+}
+
+.sm-filter:focus,
+.rw-filter:focus,
+.pm2-filter:focus,
+.form-select:focus,
+.mcp-toolbar select:focus,
+.mcp-field select:focus,
+.dash-period select:focus,
+.dash-filter-field select:focus,
+.sf-field select:focus {
+  outline: none;
+  border-color: var(--border-base);
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.06);
 }

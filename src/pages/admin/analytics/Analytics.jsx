@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Loader2, AlertTriangle, Calendar } from 'lucide-react'
+import { AlertTriangle, Calendar } from 'lucide-react'
 import { getAdminAnalytics } from '../../../api/orders.js'
 import { normalizeStatus, orderStatusTone } from '../orders/orderStatus'
 import StatTile from '../../../components/StatTile/StatTile'
@@ -8,6 +8,18 @@ import TableScroll from '../../../components/DataTable/TableScroll'
 import Pager from '../../../components/DataTable/Pager'
 import '../adminForm.css'
 import './Analytics.css'
+import { TableBlockShimmer } from '../../../components/Shimmer/Shimmer'
+
+
+function analyticsTabCount(id, report) {
+  if (id === 'orders') return report.totals?.order_count ?? 0
+  if (id === 'commission') return report.totals?.completed_count ?? 0
+  if (id === 'provider') return report.by_provider?.length ?? 0
+  if (id === 'customer') return report.by_customer?.length ?? 0
+  if (id === 'zone') return report.by_zone?.length ?? 0
+  if (id === 'service') return report.by_service?.length ?? 0
+  return 0
+}
 
 const TABS = [
   { id: 'orders', label: 'Total Order' },
@@ -319,15 +331,13 @@ function Analytics() {
               onClick={() => switchTab(t.id)}
             >
               {t.label}
+              {!loading && <span className="tab-count">{analyticsTabCount(t.id, report)}</span>}
             </button>
           ))}
         </div>
 
         {loading ? (
-          <div className="dt-state">
-            <Loader2 size={22} className="spin" />
-            <span>Loading analytics…</span>
-          </div>
+          <TableBlockShimmer columns={6} />
         ) : (
           <>
             <div className="an-section-head">

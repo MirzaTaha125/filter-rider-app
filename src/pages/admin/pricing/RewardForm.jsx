@@ -9,10 +9,15 @@ import {
 } from '../../../api'
 import '../adminForm.css'
 import './RewardForm.css'
+import { PageShimmer } from '../../../components/Shimmer/Shimmer'
+import ArabicField from '../../../components/ArabicField/ArabicField'
+
 
 const EMPTY_FORM = {
   name: '',
+  nameAr: '',
   description: '',
+  descriptionAr: '',
   audience: 'CUSTOMER',
   trigger: 'SIGN_UP',
   threshold: '10',
@@ -64,7 +69,9 @@ function RewardForm() {
       }
       setForm({
         name: rule.name ?? '',
+        nameAr: rule.name_ar ?? '',
         description: rule.description ?? '',
+        descriptionAr: rule.description_ar ?? '',
         audience: rule.audience ?? 'CUSTOMER',
         trigger: rule.trigger ?? 'SIGN_UP',
         threshold: rule.threshold != null ? String(rule.threshold) : '10',
@@ -129,7 +136,9 @@ function RewardForm() {
     setFormError('')
     const payload = {
       name: form.name.trim(),
+      nameAr: form.nameAr.trim(),
       description: form.description.trim(),
+      descriptionAr: form.descriptionAr.trim(),
       audience: form.audience,
       trigger: form.trigger,
       rewardAmount: form.rewardAmount,
@@ -161,7 +170,7 @@ function RewardForm() {
     return (
       <div className="reward-form-page">
         <PageHeader title={title} />
-        <div className="sf-state"><Loader2 size={32} className="spin" /><span>Loading…</span></div>
+        <PageShimmer />
       </div>
     )
   }
@@ -214,6 +223,16 @@ function RewardForm() {
             />
           </div>
 
+          <ArabicField
+            id="rw-name-ar"
+            label="Name"
+            placeholder="مثال: مكافأة الترحيب"
+            value={form.nameAr}
+            onChange={(value) => setField('nameAr', value)}
+            disabled={saving}
+            maxLength={120}
+          />
+
           <div className="sf-field">
             <label htmlFor="rw-description">Description</label>
             <textarea
@@ -226,6 +245,17 @@ function RewardForm() {
               disabled={saving}
             />
           </div>
+
+          <ArabicField
+            id="rw-description-ar"
+            label="Description"
+            placeholder="وصف اختياري"
+            value={form.descriptionAr}
+            onChange={(value) => setField('descriptionAr', value)}
+            disabled={saving}
+            maxLength={500}
+            multiline
+          />
 
           <div className="sf-field">
             <label>Audience <span className="sf-req">*</span></label>

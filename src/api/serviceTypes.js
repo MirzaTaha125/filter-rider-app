@@ -28,7 +28,11 @@ export async function updateServiceType(id, payload) {
             name_ar: payload.nameAr,
             price_mode: payload.priceMode,
             price_value: payload.priceValue !== undefined ? String(payload.priceValue) : undefined,
-            duration_min: payload.duration !== undefined ? Number(payload.duration) : undefined,
+            duration_min: payload.duration === undefined
+                ? undefined
+                : payload.duration == null
+                    ? null
+                    : Number(payload.duration),
             is_active: payload.isActive,
         }),
     });

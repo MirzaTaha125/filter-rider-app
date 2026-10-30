@@ -66,7 +66,6 @@ export const PERMISSION_GROUPS = [
       { name: 'Services View', slug: 'services.view', description: 'View the service catalog' },
       { name: 'Services Create', slug: 'services.create', description: 'Create a service' },
       { name: 'Services Edit', slug: 'services.edit', description: 'Edit a service' },
-      { name: 'Services Delete', slug: 'services.delete', description: 'Delete a service' },
     ],
   },
   {
@@ -134,7 +133,6 @@ export const PERMISSION_GROUPS = [
       { name: 'Asset Categories View', slug: 'asset_categories.view', description: 'View asset/service categories' },
       { name: 'Asset Categories Create', slug: 'asset_categories.create', description: 'Create an asset category' },
       { name: 'Asset Categories Edit', slug: 'asset_categories.edit', description: 'Edit an asset category' },
-      { name: 'Asset Categories Delete', slug: 'asset_categories.delete', description: 'Delete an asset category' },
     ],
   },
   {
@@ -144,6 +142,31 @@ export const PERMISSION_GROUPS = [
       { name: 'Size Categories Create', slug: 'size_categories.create', description: 'Create a size category' },
       { name: 'Size Categories Edit', slug: 'size_categories.edit', description: 'Edit a size category' },
       { name: 'Size Categories Delete', slug: 'size_categories.delete', description: 'Delete a size category' },
+    ],
+  },
+  {
+    group: 'Vehicle Size Master',
+    permissions: [
+      { name: 'Vehicle Sizes View', slug: 'vehicle_sizes.view', description: 'View the vehicle size master' },
+      { name: 'Vehicle Sizes Create', slug: 'vehicle_sizes.create', description: 'Create a vehicle size' },
+      { name: 'Vehicle Sizes Edit', slug: 'vehicle_sizes.edit', description: 'Edit a vehicle size or change its status' },
+      { name: 'Vehicle Sizes Delete', slug: 'vehicle_sizes.delete', description: 'Delete a vehicle size' },
+    ],
+  },
+  {
+    group: 'Vehicle Types',
+    permissions: [
+      { name: 'Vehicle Types View', slug: 'vehicle_types.view', description: 'View vehicle types and their linked size' },
+      { name: 'Vehicle Types Create', slug: 'vehicle_types.create', description: 'Create a vehicle type' },
+      { name: 'Vehicle Types Edit', slug: 'vehicle_types.edit', description: 'Edit, activate or deactivate a vehicle type' },
+    ],
+  },
+  {
+    group: 'Vehicle Catalog',
+    permissions: [
+      { name: 'Vehicle Catalog View', slug: 'vehicle_catalog.view', description: 'View car makes and models' },
+      { name: 'Vehicle Catalog Create', slug: 'vehicle_catalog.create', description: 'Add car makes and models' },
+      { name: 'Vehicle Catalog Edit', slug: 'vehicle_catalog.edit', description: 'Edit, activate or deactivate car makes and models' },
     ],
   },
   {

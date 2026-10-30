@@ -16,7 +16,7 @@
 .sm-title {
   margin: 0 0 0.25rem;
   font-size: 1.75rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
 }
 
@@ -37,13 +37,13 @@
 .sm-search {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.55rem;
   flex: 1;
   min-width: 220px;
-  max-width: 380px;
-  padding: 0 0.85rem;
+  max-width: 520px;
+  padding: 0 1rem;
   border: 1px solid var(--border-base);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-search);
   background: var(--bg-input);
   color: var(--text-muted);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -59,7 +59,7 @@
   min-width: 0;
   border: none;
   background: transparent;
-  padding: 0.65rem 0;
+  padding: 0.7rem 0;
   font-size: 0.875rem;
   font-family: inherit;
   color: var(--text-main);
@@ -69,24 +69,25 @@
 
 .sm-search input::placeholder {
   color: var(--text-muted);
-  opacity: 0.75;
+  opacity: 0.85;
 }
 
 .sm-filter {
-  padding: 0.65rem 0.85rem;
+  padding: 0.7rem 2.4rem 0.7rem 1rem;
   border: 1px solid var(--border-base);
-  border-radius: var(--radius-sm);
-  background: var(--bg-input);
+  border-radius: var(--radius-search);
+  background-color: var(--bg-input);
   color: var(--text-main);
   font-size: 0.875rem;
   font-family: inherit;
   cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .sm-filter:focus {
   outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px var(--primary-soft);
+  border-color: var(--border-base);
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.06);
 }
 
 .sm-count {
@@ -160,14 +161,12 @@
 
 .sm-card:hover {
   box-shadow: var(--shadow-md);
-  border-color: var(--accent);
-  transform: translateY(-2px);
 }
 
 .sm-card-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   padding: 1.25rem 1.25rem 0;
 }
 
@@ -187,14 +186,15 @@
   padding: 0.25rem 0.6rem;
   border-radius: 999px;
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .sm-badge.is-active {
-  background: rgba(22, 163, 74, 0.14);
-  color: var(--success);
+  background: #166534;
+  color: #fff;
+  font-weight: 500;
 }
 
 .sm-badge.is-inactive {
@@ -210,29 +210,55 @@
   padding: 0.9rem 1.25rem 1.25rem;
 }
 
+.sm-card-names {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 0.75rem;
+}
+
 .sm-card-title {
   margin: 0;
+  min-width: 0;
   font-size: 1.05rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
   line-height: 1.3;
 }
 
 .sm-card-subtitle {
   margin: 0;
+  margin-inline-start: auto;
   font-size: 0.825rem;
   color: var(--text-muted);
+  text-align: end;
+}
+
+.sm-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.sm-card-duration {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-main);
+  white-space: nowrap;
 }
 
 .sm-card-category {
   align-self: flex-start;
-  margin-top: 0.2rem;
+  margin-top: 0;
   padding: 0.2rem 0.55rem;
   border-radius: 4px;
   background: var(--border-light);
   color: var(--text-muted);
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .sm-stats {
@@ -259,17 +285,42 @@
 .sm-stats dd {
   margin: 0;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.sm-price-dd {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.sm-price-was {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.sm-price-now {
+  font-weight: 500;
   color: var(--text-main);
 }
 
 /* ---------- Card actions ---------- */
 .sm-card-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.75rem;
   padding: 0.85rem 1.25rem;
   border-top: 1px solid var(--border-light);
   background: var(--bg-card);
+}
+
+.sm-card-actions .sm-btn {
+  flex: 1 1 50%;
+  width: 50%;
+  min-width: 0;
+  font-weight: 500;
 }
 
 .sm-btn {
@@ -278,9 +329,9 @@
   justify-content: center;
   gap: 0.4rem;
   padding: 0.6rem 1rem;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-btn);
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
   border: 1px solid transparent;
@@ -307,19 +358,13 @@
   background: var(--action-btn-bg-hover);
 }
 
-.sm-btn--icon-danger {
-  width: 38px;
-  padding: 0;
-  flex-shrink: 0;
-  background: var(--action-btn-bg);
-  border-color: var(--border-base);
-  color: var(--text-muted);
+.sm-btn--secondary {
+  background: var(--secondary-color);
+  color: #ffffff;
 }
 
-.sm-btn--icon-danger:hover {
-  background: rgba(239, 68, 68, 0.12);
-  border-color: rgba(239, 68, 68, 0.4);
-  color: var(--danger);
+.sm-btn--secondary:hover {
+  background: var(--secondary-hover);
 }
 
 /* ---------- Responsive ---------- */
@@ -340,3 +385,64 @@
 
   .sm-grid { grid-template-columns: 1fr; }
 }
+
+/* ---------- Activate / deactivate (no delete) ---------- */
+.sm-btn--status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.sm-btn--status.is-deactivate:hover:not(:disabled) {
+  background: var(--secondary-color);
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.sm-btn--status.is-activate:hover:not(:disabled) {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.sm-btn--status:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+/* ---------- Card image ---------- */
+.sm-card-cover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 168px;
+  margin: 0.75rem 0.75rem 0;
+  padding: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+
+.sm-card-cover .shimmer-image {
+  min-height: 0;
+}
+
+.sm-card-cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.sm-card-cover--empty {
+  flex-direction: column;
+  gap: 0.4rem;
+  border-radius: var(--radius-md);
+  background: var(--border-light);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+

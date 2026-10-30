@@ -25,7 +25,7 @@
 
 .pv-stat-label {
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -33,39 +33,12 @@
 
 .pv-stat-value {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- Tabs ---------- */
-.pv-tabs {
-  display: flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-  border-bottom: 1px solid var(--border-base);
-}
-
-.pv-tab {
-  padding: 0.7rem 1rem;
-  margin-bottom: -1px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  font-size: 0.875rem;
-  font-weight: 600;
-  font-family: inherit;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-
-.pv-tab:hover { color: var(--text-main); }
-
-.pv-tab.is-active {
-  color: var(--text-main);
-  border-bottom-color: var(--primary-color);
-}
+/* Tabs: src/styles/listTabs.css */
 
 /* ---------- Alert / state ---------- */
 .pv-alert {
@@ -97,7 +70,7 @@
 
 .pv-provider strong {
   display: block;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .pv-provider em {
@@ -114,7 +87,7 @@
 }
 
 .pv-amount {
-  font-weight: 700;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
@@ -128,4 +101,10 @@
 @media (max-width: 768px) {
   .pv-header { flex-direction: column; }
   .pv-tabs { overflow-x: auto; flex-wrap: nowrap; }
+}
+
+/* Shared pager under card lists (reviews and similar): no top rule, aligned to the cards. */
+.pv-pager .dt-foot {
+  border-top: none;
+  padding: 0.75rem 0 0;
 }

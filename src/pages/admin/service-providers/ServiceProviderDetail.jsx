@@ -25,6 +25,11 @@ import {
 import '../adminForm.css'
 import './ServiceProviderDetail.css'
 import TableScroll from '../../../components/DataTable/TableScroll'
+import { fetchAllPages } from '../../../utils/fetchAllPages'
+import Pager from '../../../components/DataTable/Pager'
+import { usePager } from '../../../components/DataTable/usePagedRows'
+import { DetailShimmer, TableBlockShimmer, ListRowsShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 // Documents moved into the rail — they are a checklist you glance at, not a
 // place you go. Performance became the order table it always was.
@@ -36,7 +41,6 @@ const TABS = [
   { id: 'settings', label: 'Settings' },
 ]
 
-const REVIEWS_LIMIT = 20
 
 /** One labelled fact in the identity rail. */
 function Fact({ icon: Icon, label, children }) {
@@ -73,6 +77,7 @@ function ServiceProviderDetail() {
   const [orders, setOrders] = useState([])
   const [reviews, setReviews] = useState([])
   const [reviewsPage, setReviewsPage] = useState(1)
+  const [reviewsLimit, setReviewsLimit] = useState(20)
   const [reviewsTotal, setReviewsTotal] = useState(0)
   const [allServices, setAllServices] = useState([])
   const [loading, setLoading] = useState(true)
@@ -144,8 +149,8 @@ function ServiceProviderDetail() {
   useEffect(() => {
     let cancelled = false
     setOrdersLoading(true)
-    getAdminOrders({ providerId, limit: 100 })
-      .then(data => { if (!cancelled) setOrders(toArray(data)) })
+    fetchAllPages(({ page, limit }) => getAdminOrders({ providerId, page, limit }))
+      .then(list => { if (!cancelled) setOrders(list) })
       .catch(() => { if (!cancelled) setOrders([]) })
       .finally(() => { if (!cancelled) setOrdersLoading(false) })
     return () => { cancelled = true }
@@ -154,7 +159,7 @@ function ServiceProviderDetail() {
   useEffect(() => {
     let cancelled = false
     setReviewsLoading(true)
-    getProviderReviews(providerId, { page: reviewsPage, limit: REVIEWS_LIMIT })
+    getProviderReviews(providerId, { page: reviewsPage, limit: reviewsLimit })
       .then((raw) => {
         if (cancelled) return
         const list = Array.isArray(raw) ? raw : (raw?.data ?? raw?.items ?? [])
@@ -170,7 +175,7 @@ function ServiceProviderDetail() {
       })
       .finally(() => { if (!cancelled) setReviewsLoading(false) })
     return () => { cancelled = true }
-  }, [providerId, reviewsPage])
+  }, [providerId, reviewsPage, reviewsLimit])
 
   const refreshServices = async () => {
     const refreshed = await getProviderDetails(providerId)
@@ -228,11 +233,14 @@ function ServiceProviderDetail() {
     }
   }
 
+  // Order table pages; set up before the early returns below (rules of hooks).
+  const orderPager = usePager({ defaultLimit: 10, resetKey: orderFilter })
+
   if (loading) {
     return (
       <div className="sp-detail-page">
         <PageHeader title="Service Provider" />
-        <div className="sf-state"><Loader2 size={32} className="spin" /><span>Loading…</span></div>
+        <DetailShimmer />
       </div>
     )
   }
@@ -277,6 +285,7 @@ function ServiceProviderDetail() {
     date: (o) => new Date(o.created_at ?? 0).getTime(),
     status: (o) => normalizeStatus(o.status),
   })
+  const { pageRows, pagerProps } = orderPager.paginate(sortedOrders)
 
   return (
     <div className="sp-detail-page">
@@ -403,11 +412,14 @@ function ServiceProviderDetail() {
                 onClick={() => setTab(t.id)}
               >
                 {t.label}
-                {t.id === 'reviews' && reviewsTotal > 0 && (
+                {t.id === 'orders' && !ordersLoading && (
+                  <span className="spd-tab-count">{orders.length}</span>
+                )}
+                {t.id === 'reviews' && !reviewsLoading && (
                   <span className="spd-tab-count">{reviewsTotal}</span>
                 )}
-                {t.id === 'services' && provider.services?.length > 0 && (
-                  <span className="spd-tab-count">{provider.services.length}</span>
+                {t.id === 'services' && (
+                  <span className="spd-tab-count">{provider.services?.length ?? 0}</span>
                 )}
               </button>
             ))}
@@ -417,7 +429,7 @@ function ServiceProviderDetail() {
             {/* ORDERS */}
             {tab === 'orders' && (
               ordersLoading ? (
-                <div className="dt-state">Loading orders…</div>
+                <TableBlockShimmer columns={7} rows={6} />
               ) : (
                 <>
                   {/* One table with a filter beats two stacked tables — the
@@ -457,7 +469,7 @@ function ServiceProviderDetail() {
                         <tbody>
                           {sortedOrders.length === 0 ? (
                             <tr><td colSpan="7" className="dt-state">No orders in this view.</td></tr>
-                          ) : sortedOrders.map(order => {
+                          ) : pageRows.map(order => {
                             const status = normalizeStatus(order.status)
                             return (
                               <tr
@@ -492,6 +504,7 @@ function ServiceProviderDetail() {
                         </tbody>
                       </table>
                     </TableScroll>
+                    <Pager {...pagerProps} unit="orders" />
                   </div>
                 </>
               )
@@ -500,7 +513,7 @@ function ServiceProviderDetail() {
             {/* REVIEWS */}
             {tab === 'reviews' && (
               reviewsLoading ? (
-                <div className="dt-state">Loading reviews…</div>
+                <ListRowsShimmer rows={4} />
               ) : reviews.length === 0 ? (
                 <p className="spd-empty">No customer reviews for this provider yet.</p>
               ) : (
@@ -571,33 +584,15 @@ function ServiceProviderDetail() {
                     </ul>
                   </div>
 
-                  {reviewsTotal > REVIEWS_LIMIT && (
-                    <footer className="dt-foot">
-                      <span className="dt-foot-info">
-                        Showing {((reviewsPage - 1) * REVIEWS_LIMIT) + 1}
-                        {' – '}
-                        {Math.min(reviewsPage * REVIEWS_LIMIT, reviewsTotal)}
-                        {' of '}
-                        {reviewsTotal.toLocaleString()}
-                      </span>
-                      <div className="dt-pager">
-                        <button
-                          className="dt-page"
-                          onClick={() => setReviewsPage((p) => p - 1)}
-                          disabled={reviewsPage === 1}
-                        >
-                          Prev
-                        </button>
-                        <button
-                          className="dt-page"
-                          onClick={() => setReviewsPage((p) => p + 1)}
-                          disabled={reviewsPage * REVIEWS_LIMIT >= reviewsTotal}
-                        >
-                          Next
-                        </button>
-                      </div>
-                    </footer>
-                  )}
+                  <Pager
+                    page={reviewsPage}
+                    total={reviewsTotal}
+                    limit={reviewsLimit}
+                    onChange={setReviewsPage}
+                    onLimitChange={(n) => { setReviewsLimit(n); setReviewsPage(1) }}
+                    unit="reviews"
+                    disabled={reviewsLoading}
+                  />
                 </>
               )
             )}

@@ -7,6 +7,10 @@ import {
 import ConfirmDialog from '../../../components/ConfirmDialog/ConfirmDialog'
 import { getZones, deleteZone, refreshZoneProviderCounts } from '../../../api'
 import './ZoneManagement.css'
+import Pager from '../../../components/DataTable/Pager'
+import { usePagedRows } from '../../../components/DataTable/usePagedRows'
+import { ListCardsShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 function toArray(value) {
   if (Array.isArray(value)) return value
@@ -84,6 +88,10 @@ function ZoneManagement() {
     (z.zone_name || '').toLowerCase().includes(term) ||
     (z.city || '').toLowerCase().includes(term),
   )
+  const { pageRows, pagerProps } = usePagedRows(visible, {
+    defaultLimit: 20,
+    resetKey: term,
+  })
 
   const activeCount = zones.filter(z => z.is_active !== false).length
 
@@ -143,10 +151,7 @@ function ZoneManagement() {
       )}
 
       {loading ? (
-        <div className="zm-state">
-          <Loader2 size={32} className="spin" />
-          <span>Loading zones…</span>
-        </div>
+        <ListCardsShimmer />
       ) : zones.length === 0 ? (
         <div className="zm-state">
           <MapPin size={32} />
@@ -164,7 +169,7 @@ function ZoneManagement() {
         </div>
       ) : (
         <div className="zm-grid">
-          {visible.map(zone => {
+          {pageRows.map(zone => {
             const active = zone.is_active !== false
             const count = zone.service_providers_count ?? 0
             return (
@@ -209,6 +214,11 @@ function ZoneManagement() {
               </article>
             )
           })}
+        </div>
+      )}
+      {pageRows.length > 0 && (
+        <div className="dt-pager-wrap">
+          <Pager {...pagerProps} unit="zones" />
         </div>
       )}
 

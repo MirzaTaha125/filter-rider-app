@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Loader2, AlertTriangle } from 'lucide-react'
 import PageHeader from '../../../components/PageHeader/PageHeader'
 import {
@@ -10,6 +10,8 @@ import {
 } from '../../../api'
 import '../adminForm.css'
 import './AddonForm.css'
+import { PageShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 const EMPTY_FORM = {
   serviceId: '',
@@ -28,7 +30,6 @@ function AddonForm() {
   const { addonId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const [searchParams] = useSearchParams()
   const isEdit = Boolean(addonId)
 
   const [form, setForm] = useState(EMPTY_FORM)
@@ -46,11 +47,12 @@ function AddonForm() {
       setServices(serviceList)
 
       if (!isEdit) {
-        // Adding from a specific service's row pre-selects that service.
-        const preselected = searchParams.get('serviceId')
+        // A new add-on is only a title and a price. It stays off until
+        // someone ticks it on a service.
         setForm(f => ({
           ...f,
-          serviceId: preselected || serviceList[0]?.id || '',
+          serviceId: serviceList[0]?.id || '',
+          is_active: false,
         }))
         return
       }
@@ -92,7 +94,7 @@ function AddonForm() {
     } finally {
       setLoading(false)
     }
-  }, [addonId, isEdit, location.state, searchParams])
+  }, [addonId, isEdit, location.state])
 
   useEffect(() => { loadData() }, [loadData])
 
@@ -102,15 +104,11 @@ function AddonForm() {
   }
 
   const validate = () => {
-    if (!form.serviceId) return 'Please choose the service this add-on belongs to.'
-    if (!form.name_en.trim()) return 'Add-on name (English) is required.'
+    if (!form.serviceId) return 'Create a service before adding add-ons.'
+    if (!form.name_en.trim()) return 'Title is required.'
     const price = Number(form.price)
     if (form.price === '' || Number.isNaN(price) || price < 0) {
       return 'Price must be a valid number of 0 or more.'
-    }
-    const duration = form.additional_duration === '' ? 0 : Number(form.additional_duration)
-    if (!Number.isInteger(duration) || duration < 0) {
-      return 'Extra duration must be a whole number of 0 or more minutes.'
     }
     return ''
   }
@@ -130,14 +128,15 @@ function AddonForm() {
       nameAr: form.name_ar.trim() || form.name_en.trim(),
       price: Number(form.price).toFixed(2),
       duration: form.additional_duration === '' ? 0 : Number(form.additional_duration),
-      isActive: form.is_active,
+      isActive: isEdit ? form.is_active : false,
+      serviceId: form.serviceId,
     }
 
     try {
       if (isEdit) {
         await updateServiceAddon(addonId, payload)
       } else {
-        await createServiceAddon({ ...payload, serviceId: form.serviceId })
+        await createServiceAddon(payload)
       }
       navigate('/admin/services/addons')
     } catch (err) {
@@ -152,10 +151,7 @@ function AddonForm() {
     return (
       <div className="addon-form-page">
         <PageHeader title={title} />
-        <div className="sf-state">
-          <Loader2 size={32} className="spin" />
-          <span>Loading…</span>
-        </div>
+        <PageShimmer />
       </div>
     )
   }
@@ -180,7 +176,7 @@ function AddonForm() {
     <div className="addon-form-page">
       <PageHeader
         title={title}
-        subtitle={isEdit ? form.name_en : 'Create an optional extra customers can add to a service'}
+        subtitle={isEdit ? form.name_en : 'Title and one price. Tick it on a service when that service should offer it.'}
       />
 
       <form className="sf-form" onSubmit={handleSubmit}>
@@ -193,70 +189,29 @@ function AddonForm() {
 
         <section className="sf-card">
           <header className="sf-card-head">
-            <h2>Basic information</h2>
-            <p>Which service this add-on belongs to, and what customers will see.</p>
+            <h2>Add-on</h2>
+            <p>A title and one price. Not priced by vehicle size.</p>
           </header>
 
-          <div className="sf-field">
-            <label htmlFor="serviceId">Service <span className="sf-req">*</span></label>
-            <select
-              id="serviceId"
-              value={form.serviceId}
-              onChange={(e) => setField('serviceId', e.target.value)}
-              disabled={saving || isEdit || services.length === 0}
-            >
-              <option value="">Select a service…</option>
-              {services.map(service => (
-                <option key={service.id} value={service.id}>{service.name_en}</option>
-              ))}
-            </select>
-            {isEdit ? (
-              <span className="sf-hint">
-                An add-on cannot be moved to a different service. Delete it and create a new one instead.
-              </span>
-            ) : services.length === 0 ? (
-              <span className="sf-hint sf-hint--warn">
-                No services found. Create a service before adding add-ons.
-              </span>
-            ) : null}
-          </div>
+          {services.length === 0 && (
+            <span className="sf-hint sf-hint--warn">
+              No services found. Create a service before adding add-ons.
+            </span>
+          )}
 
           <div className="sf-grid sf-grid--2">
             <div className="sf-field">
-              <label htmlFor="name_en">Add-on name (English) <span className="sf-req">*</span></label>
+              <label htmlFor="name_en">Title <span className="sf-req">*</span></label>
               <input
                 id="name_en"
                 type="text"
-                placeholder="e.g. Wax Polish"
+                placeholder="e.g. Nano Waxing"
                 value={form.name_en}
                 onChange={(e) => setField('name_en', e.target.value)}
                 disabled={saving}
               />
             </div>
 
-            <div className="sf-field">
-              <label htmlFor="name_ar">Add-on name (Arabic)</label>
-              <input
-                id="name_ar"
-                type="text"
-                dir="rtl"
-                placeholder="تلميع الشمع"
-                value={form.name_ar}
-                onChange={(e) => setField('name_ar', e.target.value)}
-                disabled={saving}
-              />
-              <span className="sf-hint">Falls back to the English name if left empty.</span>
-            </div>
-          </div>
-        </section>
-
-        <section className="sf-card">
-          <header className="sf-card-head">
-            <h2>Pricing &amp; duration</h2>
-            <p>Added on top of the service’s base price and time when the customer selects it.</p>
-          </header>
-
-          <div className="sf-grid sf-grid--2">
             <div className="sf-field">
               <label htmlFor="price">Price <span className="sf-req">*</span></label>
               <div className="sf-input-affix">
@@ -273,31 +228,27 @@ function AddonForm() {
                 />
               </div>
             </div>
+          </div>
 
-            <div className="sf-field">
-              <label htmlFor="additional_duration">Extra duration</label>
-              <div className="sf-input-affix">
-                <input
-                  id="additional_duration"
-                  type="number"
-                  min="0"
-                  step="1"
-                  placeholder="0"
-                  value={form.additional_duration}
-                  onChange={(e) => setField('additional_duration', e.target.value)}
-                  disabled={saving}
-                />
-                <span className="sf-affix">min</span>
-              </div>
-              <span className="sf-hint">Leave at 0 if this add-on takes no extra time.</span>
-            </div>
+          <div className="sf-field">
+            <label htmlFor="name_ar">Title (Arabic)</label>
+            <input
+              id="name_ar"
+              type="text"
+              dir="rtl"
+              placeholder="تلميع"
+              value={form.name_ar}
+              onChange={(e) => setField('name_ar', e.target.value)}
+              disabled={saving}
+            />
+            <span className="sf-hint">Falls back to the English title if left empty.</span>
           </div>
         </section>
 
-        <section className="sf-card">
+        {isEdit && <section className="sf-card">
           <header className="sf-card-head">
             <h2>Status</h2>
-            <p>Controls whether customers can select this add-on when booking.</p>
+            <p>Customers only see this after you tick it on a service.</p>
           </header>
 
           <label className="sf-toggle">
@@ -313,7 +264,7 @@ function AddonForm() {
               <em>Inactive add-ons stay on past orders but cannot be selected on new ones.</em>
             </span>
           </label>
-        </section>
+        </section>}
 
         <div className="sf-actions">
           <button

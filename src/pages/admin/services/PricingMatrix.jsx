@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Plus, Pencil, Trash2, Loader2, AlertTriangle, Ruler, Search,
+  Plus, Pencil, Trash2, AlertTriangle, Ruler, Search,
 } from 'lucide-react'
 import ConfirmDialog from '../../../components/ConfirmDialog/ConfirmDialog'
 import {
@@ -13,6 +13,8 @@ import {
 import { sizeCategoryLabel } from '../assets/carTypes'
 import './PricingMatrix.css'
 import TableScroll from '../../../components/DataTable/TableScroll'
+import { TableBlockShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 function toArray(value) {
   return Array.isArray(value) ? value : []
@@ -144,10 +146,7 @@ function PricingMatrix() {
       )}
 
       {loading ? (
-        <div className="dt-empty">
-          <Loader2 size={32} className="spin" />
-          <span>Loading pricing matrix…</span>
-        </div>
+        <TableBlockShimmer columns={5} />
       ) : services.length === 0 ? (
         <div className="dt-empty">
           <Ruler size={32} />

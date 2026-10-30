@@ -41,8 +41,12 @@ import RewardForm from "./pricing/RewardForm";
 import AssetCategories from "./assets/AssetCategories";
 import AssetCategoryForm from "./assets/AssetCategoryForm";
 // import AssetDefinitions from "./assets/AssetDefinitions";
-import SizeCategories from "./assets/SizeCategories";
-import SizeCategoryForm from "./assets/SizeCategoryForm";
+import VehicleSizes from "./assets/VehicleSizes";
+import VehicleSizeForm from "./assets/VehicleSizeForm";
+import VehicleTypes from "./assets/VehicleTypes";
+import VehicleTypeForm from "./assets/VehicleTypeForm";
+import VehicleCatalog from "./assets/VehicleCatalog";
+import PriceSimulator from "./services/PriceSimulator";
 import PromotionsManagement from "./promotions/PromotionsManagement";
 import CreatePromotion from "./promotions/CreatePromotion";
 import EmailSmsTemplates from "./communication/EmailSmsTemplates";
@@ -62,6 +66,8 @@ import RoleForm from "./settings/RoleForm";
 import UserRolesForm from "./settings/UserRolesForm";
 import PermissionForm from "./settings/PermissionForm";
 import ZoneManagement from "./zones/ZoneManagement";
+import MasterCatalog from "./catalog/MasterCatalog";
+import ZoneSettings from "./zones/ZoneSettings";
 import ZoneForm from "./zones/ZoneForm";
 import AccountSettings from "./account/AccountSettings";
 import "./AdminDashboard.css";
@@ -72,12 +78,6 @@ function AdminDashboard() {
       <SocketProvider>
       <PermissionsProvider>
       <Routes>
-      {/* Chat runs outside the admin shell: it is a messaging client, and the
-          nav rail plus topbar would eat the width the conversation needs. It
-          still sits inside the providers, so sockets and permissions work the
-          same as everywhere else, and it carries its own way back. */}
-      <Route path="/communication/chat" element={<ChatMonitor />} />
-
       <Route path="*" element={
       <Layout>
         <Routes>
@@ -153,12 +153,18 @@ function AdminDashboard() {
         <Route path="/assets/add" element={<AssetCategoryForm />} />
         <Route path="/assets/:categoryId/edit" element={<AssetCategoryForm />} />
         {/* <Route path="/assets/definitions" element={<AssetDefinitions />} /> */}
-        <Route path="/assets/sizes" element={<SizeCategories />} />
-        <Route path="/assets/sizes/add" element={<SizeCategoryForm />} />
-        <Route path="/assets/sizes/:sizeId/edit" element={<SizeCategoryForm />} />
+        <Route path="/assets/vehicle-sizes" element={<VehicleSizes />} />
+        <Route path="/assets/vehicle-sizes/add" element={<VehicleSizeForm />} />
+        <Route path="/assets/vehicle-sizes/:sizeId/edit" element={<VehicleSizeForm />} />
+        <Route path="/assets/vehicle-types" element={<VehicleTypes />} />
+        <Route path="/assets/vehicle-types/add" element={<VehicleTypeForm />} />
+        <Route path="/assets/vehicle-types/:typeId/edit" element={<VehicleTypeForm />} />
+        <Route path="/assets/vehicles" element={<VehicleCatalog />} />
+        <Route path="/price-simulator" element={<PriceSimulator />} />
         <Route path="/promotions" element={<PromotionsManagement />} />
         <Route path="/promotions/create" element={<CreatePromotion />} />
         <Route path="/promotions/edit/:id" element={<CreatePromotion />} />
+        <Route path="/communication/chat" element={<ChatMonitor />} />
         <Route path="/communication" element={<EmailSmsTemplates />} />
         <Route
           path="/communication/push-notifications"
@@ -190,6 +196,8 @@ function AdminDashboard() {
         <Route path="/settings/roles/users/:userId" element={<UserRolesForm />} />
         <Route path="/settings/permissions/new" element={<PermissionForm />} />
         <Route path="/zones" element={<ZoneManagement />} />
+        <Route path="/master-catalog" element={<MasterCatalog />} />
+        <Route path="/zone-settings" element={<ZoneSettings />} />
         <Route path="/zones/add" element={<ZoneForm />} />
         <Route path="/zones/:zoneId/edit" element={<ZoneForm />} />
         <Route path="/account" element={<AccountSettings />} />

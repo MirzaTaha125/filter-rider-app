@@ -10,10 +10,14 @@ import {
 } from '../../../api'
 import '../adminForm.css'
 import './CreatePromotion.css'
+import { PageShimmer } from '../../../components/Shimmer/Shimmer'
+import ArabicField from '../../../components/ArabicField/ArabicField'
+
 
 const EMPTY_FORM = {
   code: '',
   title: '',
+  titleAr: '',
   discountType: 'PERCENTAGE',
   discountValue: '',
   maxDiscount: '',
@@ -26,8 +30,11 @@ const EMPTY_FORM = {
   validTo: '',
   showOnHome: true,
   bannerBadge: '',
+  bannerBadgeAr: '',
   bannerTitle: '',
+  bannerTitleAr: '',
   bannerSubtitle: '',
+  bannerSubtitleAr: '',
   bannerImageUrl: '',
   bannerSortOrder: '0',
 }
@@ -75,6 +82,7 @@ function CreatePromotion() {
         setForm({
           code: promo.code ?? '',
           title: promo.title ?? '',
+          titleAr: promo.title_ar ?? '',
           discountType: promo.discount_type ?? 'PERCENTAGE',
           discountValue: promo.discount_value != null ? String(Number(promo.discount_value)) : '',
           maxDiscount: promo.max_discount != null ? String(Number(promo.max_discount)) : '',
@@ -87,8 +95,11 @@ function CreatePromotion() {
           validTo: toDateInput(promo.valid_to),
           showOnHome: Boolean(promo.show_on_home),
           bannerBadge: promo.banner_badge ?? '',
+          bannerBadgeAr: promo.banner_badge_ar ?? '',
           bannerTitle: promo.banner_title ?? '',
+          bannerTitleAr: promo.banner_title_ar ?? '',
           bannerSubtitle: promo.banner_subtitle ?? '',
+          bannerSubtitleAr: promo.banner_subtitle_ar ?? '',
           bannerImageUrl: promo.banner_image_url ?? '',
           bannerSortOrder: String(promo.banner_sort_order ?? 0),
         })
@@ -174,6 +185,7 @@ function CreatePromotion() {
     const payload = {
       code,
       title: form.title.trim() || code,
+      titleAr: form.titleAr.trim(),
       discountType: form.discountType,
       discountValue: form.discountValue,
       maxDiscount: form.maxDiscount || undefined,
@@ -188,8 +200,11 @@ function CreatePromotion() {
       isActive: action === 'activate',
       showOnHome: form.showOnHome,
       bannerBadge: form.bannerBadge.trim(),
+      bannerBadgeAr: form.bannerBadgeAr.trim(),
       bannerTitle: form.bannerTitle.trim(),
+      bannerTitleAr: form.bannerTitleAr.trim(),
       bannerSubtitle: form.bannerSubtitle.trim(),
+      bannerSubtitleAr: form.bannerSubtitleAr.trim(),
       bannerImageUrl: form.bannerImageUrl.trim(),
       bannerSortOrder: form.bannerSortOrder,
     }
@@ -228,7 +243,7 @@ function CreatePromotion() {
     return (
       <div className="promotion-form-page">
         <PageHeader title={title} />
-        <div className="sf-state"><Loader2 size={32} className="spin" /><span>Loading…</span></div>
+        <PageShimmer />
       </div>
     )
   }
@@ -296,6 +311,15 @@ function CreatePromotion() {
               />
               <span className="sf-hint">Falls back to the code if left empty.</span>
             </div>
+
+            <ArabicField
+              id="titleAr"
+              label="Title"
+              placeholder="مثال: خصم 20٪ على أول حجز"
+              value={form.titleAr}
+              onChange={(value) => setField('titleAr', value)}
+              disabled={Boolean(saving)}
+            />
           </div>
 
           <div className="sf-field">
@@ -550,6 +574,15 @@ function CreatePromotion() {
               />
             </div>
 
+            <ArabicField
+              id="bannerBadgeAr"
+              label="Badge text"
+              placeholder="مثال: خصم 20٪"
+              value={form.bannerBadgeAr}
+              onChange={(value) => setField('bannerBadgeAr', value)}
+              disabled={Boolean(saving)}
+            />
+
             <div className="sf-field">
               <label htmlFor="bannerSortOrder">Sort order</label>
               <input
@@ -577,6 +610,15 @@ function CreatePromotion() {
             />
           </div>
 
+          <ArabicField
+            id="bannerTitleAr"
+            label="Banner title"
+            placeholder="مثال: خصم 20٪ على أول حجز"
+            value={form.bannerTitleAr}
+            onChange={(value) => setField('bannerTitleAr', value)}
+            disabled={Boolean(saving)}
+          />
+
           <div className="sf-field">
             <label htmlFor="bannerSubtitle">Banner subtitle</label>
             <input
@@ -588,6 +630,15 @@ function CreatePromotion() {
               disabled={Boolean(saving)}
             />
           </div>
+
+          <ArabicField
+            id="bannerSubtitleAr"
+            label="Banner subtitle"
+            placeholder="مثال: العملاء الجدد يحصلون على خصم 20٪"
+            value={form.bannerSubtitleAr}
+            onChange={(value) => setField('bannerSubtitleAr', value)}
+            disabled={Boolean(saving)}
+          />
 
           <div className="sf-field">
             <label htmlFor="bannerImageUrl">Banner image</label>

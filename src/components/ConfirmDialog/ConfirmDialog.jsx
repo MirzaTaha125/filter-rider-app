@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { AlertTriangle } from 'lucide-react'
 import './ConfirmDialog.css'
 
 /**
@@ -25,20 +24,19 @@ function ConfirmDialog({
   if (!open) return null
 
   return (
-    <div className="cd-overlay" onClick={onCancel} role="presentation">
+    <div className="confirm-overlay" onClick={onCancel} role="presentation">
       <div
-        className="cd-dialog"
+        className="confirm-dialog"
         onClick={(e) => e.stopPropagation()}
         role="alertdialog"
         aria-modal="true"
         aria-label={title}
       >
-        <div className="cd-icon"><AlertTriangle size={22} /></div>
-        <h2 className="cd-title">{title}</h2>
-        {message && <p className="cd-message">{message}</p>}
-        <div className="cd-actions">
-          <button className="cd-btn cd-btn--secondary" onClick={onCancel}>{cancelLabel}</button>
-          <button className="cd-btn cd-btn--danger" onClick={onConfirm} autoFocus>{confirmLabel}</button>
+        <h2 className="confirm-title">{title}</h2>
+        {message && <p className="confirm-message">{message}</p>}
+        <div className="confirm-actions">
+          <button type="button" className="confirm-btn confirm-btn--secondary" onClick={onCancel}>{cancelLabel}</button>
+          <button type="button" className="confirm-btn confirm-btn--primary" onClick={onConfirm} autoFocus>{confirmLabel}</button>
         </div>
       </div>
     </div>

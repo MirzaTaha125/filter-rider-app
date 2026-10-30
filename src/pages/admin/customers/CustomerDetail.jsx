@@ -13,6 +13,11 @@ import WalletTopupDialog from '../../../components/WalletTopupDialog/WalletTopup
 import { normalizeStatus, orderStatusTone } from '../orders/orderStatus'
 import './CustomerDetail.css'
 import TableScroll from '../../../components/DataTable/TableScroll'
+import FilterOrdersSection from './FilterOrdersSection'
+import Pager from '../../../components/DataTable/Pager'
+import { usePager } from '../../../components/DataTable/usePagedRows'
+import { DetailShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 const ADDRESS_ICONS = { HOME: Home, OFFICE: Briefcase, OTHER: MapPin }
 
@@ -103,12 +108,12 @@ function CustomerDetail() {
     }
   }
 
+  // Order table pages; set up before the early returns below (rules of hooks).
+  const orderPager = usePager({ defaultLimit: 10, resetKey: undefined })
+
   if (loading) {
     return (
-      <div className="cd-state">
-        <Loader2 size={34} className="spin" />
-        <span>Loading customer…</span>
-      </div>
+      <DetailShimmer />
     )
   }
 
@@ -142,6 +147,7 @@ function CustomerDetail() {
     amount: (o) => Number(o.amount ?? 0),
     status: (o) => o.status,
   })
+  const { pageRows, pagerProps } = orderPager.paginate(sortedOrders)
 
   return (
     <div className="customer-detail-page">
@@ -268,7 +274,7 @@ function CustomerDetail() {
                   {orders.length === 0 ? (
                     <tr><td colSpan="7" className="dt-state">This customer has not ordered yet.</td></tr>
                   ) : (
-                    sortedOrders.map((order) => {
+                    pageRows.map((order) => {
                       const status = normalizeStatus(order.status)
                       return (
                         <tr
@@ -300,7 +306,10 @@ function CustomerDetail() {
                 </tbody>
               </table>
             </TableScroll>
+            <Pager {...pagerProps} unit="orders" />
           </section>
+
+          <FilterOrdersSection customerId={customer.id} />
         </div>
       </div>
 

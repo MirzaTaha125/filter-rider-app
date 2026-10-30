@@ -62,14 +62,14 @@
 
 .logo-text {
   font-size: 1.25rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
   font-family: var(--font-sans);
 }
 
 .welcome-heading {
   font-size: 2.5rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   margin: 0 0 0.5rem 0;
   line-height: 1.2;
@@ -199,7 +199,7 @@
   border: none;
   border-radius: 8px;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s, transform 0.1s;
 }

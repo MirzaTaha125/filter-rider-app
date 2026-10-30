@@ -7,6 +7,10 @@ import {
   deleteContentPage,
 } from '../../../api/communication.js'
 import './ContentManagement.css'
+import Pager from '../../../components/DataTable/Pager'
+import { usePagedRows } from '../../../components/DataTable/usePagedRows'
+import { ListRowsShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 const PAGE_KEYS = [
   'TERMS_OF_SERVICE',
@@ -36,6 +40,10 @@ const EMPTY_CREATE = { key: 'TERMS_OF_SERVICE', title: '', versionLabel: '', sta
 
 function ContentManagement() {
   const [contentItems, setContentItems] = useState([])
+  const { pageRows, pagerProps } = usePagedRows(contentItems, {
+    defaultLimit: 20,
+    resetKey: undefined,
+  })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -189,12 +197,12 @@ function ContentManagement() {
       )}
 
       {loading ? (
-        <div className="content-loading">Loading content pages...</div>
+        <ListRowsShimmer rows={6} />
       ) : contentItems.length === 0 ? (
         <div className="content-empty">No content pages found. Create one to get started.</div>
       ) : (
         <div className="content-list">
-          {contentItems.map((item) => (
+          {pageRows.map((item) => (
             <div key={item.id} className="content-item-card">
               <div className="content-item-header">
                 <h3 className="content-item-title">{item.title || KEY_LABELS[item.key] || item.key}</h3>
@@ -221,6 +229,11 @@ function ContentManagement() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {pageRows.length > 0 && (
+        <div className="dt-pager-wrap">
+          <Pager {...pagerProps} unit="pages" />
         </div>
       )}
 

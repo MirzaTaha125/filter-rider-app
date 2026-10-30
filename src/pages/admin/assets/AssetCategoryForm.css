@@ -89,10 +89,110 @@
 .acf-preview-text strong {
   color: var(--text-main);
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .acf-preview-text span {
   color: var(--text-muted);
   font-size: 0.82rem;
 }
+
+/* ---------- Details | Price range side by side ---------- */
+.acf-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+.acf-pair > .sf-card {
+  height: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .acf-pair { grid-template-columns: 1fr; }
+}
+
+/* ---------- Price source ---------- */
+.acf-sources {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.acf-source {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  color: var(--text-main);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.acf-source:hover:not(:disabled):not(.is-selected) { border-color: var(--text-muted); }
+
+.acf-source.is-selected {
+  border-color: var(--primary-color);
+  background: var(--primary-soft);
+}
+
+.acf-source:disabled { cursor: not-allowed; opacity: 0.6; }
+
+.acf-source-dot {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  border-radius: 50%;
+  border: 2px solid var(--border-base);
+  background: var(--bg-input);
+}
+
+.acf-source.is-selected .acf-source-dot {
+  border-color: var(--primary-color);
+  box-shadow: inset 0 0 0 3px var(--bg-input);
+  background: var(--primary-color);
+}
+
+.acf-source-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.acf-source-copy strong { font-size: 0.875rem; }
+
+.acf-source-copy em {
+  font-style: normal;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.acf-auto-range {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md);
+  background: var(--border-light);
+}
+
+.acf-auto-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.acf-auto-range strong {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+

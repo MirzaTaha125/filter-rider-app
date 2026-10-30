@@ -20,6 +20,8 @@ function toBody(payload) {
     is_active: payload.isActive ?? true,
   };
   if (payload.description != null) body.description = payload.description || null;
+  if (payload.nameAr != null) body.name_ar = payload.nameAr || null;
+  if (payload.descriptionAr != null) body.description_ar = payload.descriptionAr || null;
   if (payload.trigger === 'ORDERS_COMPLETED' && payload.threshold) {
     body.threshold = Number(payload.threshold);
   }
@@ -43,6 +45,8 @@ export async function updateRewardRule(id, payload) {
   const body = {};
   if (payload.name != null) body.name = payload.name;
   if (payload.description !== undefined) body.description = payload.description || null;
+  if (payload.nameAr !== undefined) body.name_ar = payload.nameAr || null;
+  if (payload.descriptionAr !== undefined) body.description_ar = payload.descriptionAr || null;
   if (payload.audience != null) body.audience = payload.audience;
   if (payload.trigger != null) body.trigger = payload.trigger;
   if (payload.rewardAmount != null) body.reward_amount = Number(payload.rewardAmount);

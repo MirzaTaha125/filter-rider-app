@@ -1,22 +1,23 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   Full-screen support inbox.
-
-   This page renders outside the admin shell, so it owns the viewport: a fixed
-   two-pane frame, each pane scrolling inside itself. The proportions follow the
-   messaging convention (a narrow list, a wide thread); the palette is the
-   panel's own, so it reads as part of the product rather than a clone.
+   Support inbox inside the admin shell. The sidebar and top bar stay visible.
+   The two panes fill the content area and scroll on their own.
    ═══════════════════════════════════════════════════════════════════════════ */
+
+.layout-main:has(.chat-shell) {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
 
 .chat-shell {
   background: var(--bg-admin);
   display: grid;
-  grid-template-columns: minmax(300px, 400px) 1fr;
-  height: 100vh;
-  height: 100dvh;
-  inset: 0;
-  overflow: hidden;
-  position: fixed;
+  grid-template-columns: minmax(280px, 380px) 1fr;
+  flex: 1;
+  min-height: 0;
   width: 100%;
+  overflow: hidden;
 }
 
 /* ── Conversation list ────────────────────────────────────────────────────── */
@@ -61,7 +62,7 @@
 .cm-title {
   color: var(--text-main);
   font-size: 1.15rem;
-  font-weight: 700;
+  font-weight: 600;
   margin: 0;
 }
 
@@ -76,16 +77,18 @@
 .cm-search {
   align-items: center;
   background: var(--bg-input);
-  border: 1px solid transparent;
-  border-radius: 999px;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-search);
   color: var(--text-muted);
   display: flex;
   gap: 0.55rem;
-  padding: 0.5rem 0.85rem;
+  padding: 0 1rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .cm-search:focus-within {
   border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--primary-soft);
 }
 
 .cm-search input {
@@ -94,37 +97,18 @@
   color: var(--text-main);
   flex: 1;
   font-family: inherit;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   min-width: 0;
   outline: none;
+  padding: 0.7rem 0;
 }
 
-.cm-filters {
-  display: flex;
-  gap: 0.4rem;
-}
-
-.cm-chip {
-  background: var(--border-light);
-  border: 1px solid transparent;
-  border-radius: 999px;
+.cm-search input::placeholder {
   color: var(--text-muted);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 0.74rem;
-  font-weight: 600;
-  padding: 4px 13px;
-  transition: background 0.15s, color 0.15s;
+  opacity: 0.85;
 }
 
-.cm-chip:hover {
-  background: var(--action-btn-bg-hover);
-}
-
-.cm-chip.is-active {
-  background: var(--primary-soft);
-  color: var(--primary-hover);
-}
+/* Filters: src/styles/listTabs.css */
 
 .cm-alert {
   align-items: center;
@@ -180,7 +164,48 @@
    stays readable and the unread pill keeps its own meaning. */
 .cm-room.is-active {
   background: var(--primary-soft);
-  box-shadow: inset 3px 0 0 var(--primary-color);
+  border-bottom-color: transparent;
+  border-radius: 14px;
+  box-shadow: none;
+  margin: 6px 10px;
+  width: calc(100% - 20px);
+}
+
+.cm-room-shimmer {
+  cursor: default;
+  pointer-events: none;
+}
+
+.cm-room-shimmer:hover {
+  background: none;
+}
+
+.cm-shimmer-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cm-shimmer-order {
+  height: 14px;
+  width: 58%;
+}
+
+.cm-shimmer-time {
+  width: 64px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.cm-shimmer-people {
+  height: 12px;
+  width: 72%;
+}
+
+.cm-shimmer-preview {
+  height: 12px;
+  width: 46%;
 }
 
 .cm-room-avatar {
@@ -191,7 +216,7 @@
   display: flex;
   flex-shrink: 0;
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 600;
   height: 44px;
   justify-content: center;
   width: 44px;
@@ -215,7 +240,7 @@
 .cm-room-order {
   color: var(--text-main);
   font-size: 0.86rem;
-  font-weight: 700;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -253,7 +278,7 @@
 
 .cm-room-who {
   font-style: normal;
-  font-weight: 600;
+  font-weight: 500;
   margin-right: 0.25rem;
 }
 
@@ -268,7 +293,7 @@
   color: #1a1a1a;
   flex-shrink: 0;
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 600;
   min-width: 20px;
   padding: 2px 6px;
   text-align: center;
@@ -294,6 +319,32 @@
   padding: 0.7rem 1.1rem;
 }
 
+.cm-head-shimmer-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cm-head-shimmer-title {
+  height: 15px;
+  width: 168px;
+}
+
+.cm-head-shimmer-sub {
+  height: 11px;
+  width: 230px;
+  margin-top: 0.35rem;
+}
+
+.cm-head-shimmer-open {
+  height: 32px;
+  width: 112px;
+  margin-left: auto;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
 .cm-thread-back {
   align-items: center;
   background: none;
@@ -314,7 +365,7 @@
   display: flex;
   flex-shrink: 0;
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 600;
   height: 40px;
   justify-content: center;
   width: 40px;
@@ -327,7 +378,7 @@
 .cm-thread-id h2 {
   color: var(--text-main);
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: 600;
   margin: 0;
 }
 
@@ -354,7 +405,7 @@
   color: var(--text-muted);
   display: inline-flex;
   font-size: 0.66rem;
-  font-weight: 700;
+  font-weight: 600;
   gap: 0.3rem;
   letter-spacing: 0.03em;
   padding: 4px 9px;
@@ -372,7 +423,7 @@
   display: inline-flex;
   font-family: inherit;
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 500;
   gap: 0.35rem;
   padding: 0.45rem 0.8rem;
   white-space: nowrap;

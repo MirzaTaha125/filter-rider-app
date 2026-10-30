@@ -1,11 +1,14 @@
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+
 /**
- * Shared list footer: "Showing x – y of n" plus page buttons.
+ * Shared list footer: "Showing x–y of n", page buttons, and "Rows per page".
  *
  * Page numbers collapse to first, last, current ±1 with ellipsis for the gaps,
  * so the control stays the same width whether there are 3 pages or 300.
  *
- * Pass `centered` + `onLimitChange` for a three-column footer: count on the
- * left, pager in the middle, rows-per-page on the right.
+ * Three columns: count on the left, pager in the middle, rows-per-page on the
+ * right (shown when `onLimitChange` is passed). Pass `centered={false}` for
+ * the older two-column footer.
  */
 const DEFAULT_LIMIT_OPTIONS = [10, 20, 50, 100]
 
@@ -18,12 +21,15 @@ function Pager({
   limitOptions = DEFAULT_LIMIT_OPTIONS,
   unit = 'items',
   disabled = false,
-  centered = false,
+  centered = true,
 }) {
   const totalPages = Math.max(1, Math.ceil(total / limit) || 1)
   const from = total ? (page - 1) * limit + 1 : 0
   const to = Math.min(page * limit, total)
   const showPager = total > 0 && (totalPages > 1 || centered)
+  const options = limitOptions.includes(limit)
+    ? limitOptions
+    : [...limitOptions, limit].sort((a, b) => a - b)
 
   const buttons = (() => {
     const set = new Set(
@@ -39,23 +45,28 @@ function Pager({
   })()
 
   const pager = showPager ? (
-    <div className="dt-pager">
+    <nav className="dt-pager" aria-label="Pagination">
       <button
-        className="dt-page"
+        type="button"
+        className="dt-page dt-page--arrow"
         onClick={() => onChange(page - 1)}
         disabled={disabled || page === 1}
+        aria-label="Previous page"
+        title="Previous page"
       >
-        Prev
+        <ChevronLeft size={16} />
       </button>
       {buttons.map((p, i) => (
         p === '…'
           ? <span key={`gap-${i}`} className="dt-page-gap">…</span>
           : (
             <button
+              type="button"
               key={p}
               className={`dt-page ${p === page ? 'is-current' : ''}`}
-              onClick={() => onChange(p)}
+              onClick={() => p !== page && onChange(p)}
               disabled={disabled}
+              aria-label={`Page ${p}`}
               aria-current={p === page ? 'page' : undefined}
             >
               {p}
@@ -63,18 +74,21 @@ function Pager({
           )
       ))}
       <button
-        className="dt-page"
+        type="button"
+        className="dt-page dt-page--arrow"
         onClick={() => onChange(page + 1)}
         disabled={disabled || page === totalPages}
+        aria-label="Next page"
+        title="Next page"
       >
-        Next
+        <ChevronRight size={16} />
       </button>
-    </div>
+    </nav>
   ) : centered ? <div className="dt-pager" /> : null
 
   const limitControl = onLimitChange ? (
     <label className="dt-foot-limit">
-      <span>Rows</span>
+      <span>Rows per page</span>
       <select
         value={limit}
         disabled={disabled}
@@ -84,7 +98,7 @@ function Pager({
           if (page !== 1) onChange(1)
         }}
       >
-        {limitOptions.map((n) => (
+        {options.map((n) => (
           <option key={n} value={n}>{n}</option>
         ))}
       </select>
@@ -95,7 +109,7 @@ function Pager({
     <footer className={`dt-foot${centered ? ' dt-foot--centered' : ''}`}>
       <span className="dt-foot-info">
         {total > 0
-          ? `Showing ${from} – ${to} of ${total.toLocaleString()}`
+          ? `Showing ${from}–${to} of ${total.toLocaleString()}`
           : `No ${unit}`}
       </span>
       {pager}

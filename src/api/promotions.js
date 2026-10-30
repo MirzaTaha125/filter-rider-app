@@ -16,6 +16,7 @@ export async function createPromotion(payload) {
   const body = {
     code: payload.code,
     title: payload.title,
+    title_ar: payload.titleAr,
     discount_type: payload.discountType,
     discount_value: Number(payload.discountValue),
     status: payload.status ?? 'DRAFT',
@@ -32,6 +33,9 @@ export async function createPromotion(payload) {
   if (payload.bannerBadge != null)      body.banner_badge      = payload.bannerBadge || null;
   if (payload.bannerTitle != null)      body.banner_title      = payload.bannerTitle || null;
   if (payload.bannerSubtitle != null)   body.banner_subtitle   = payload.bannerSubtitle || null;
+  if (payload.bannerBadgeAr != null)    body.banner_badge_ar   = payload.bannerBadgeAr || null;
+  if (payload.bannerTitleAr != null)    body.banner_title_ar   = payload.bannerTitleAr || null;
+  if (payload.bannerSubtitleAr != null) body.banner_subtitle_ar = payload.bannerSubtitleAr || null;
   if (payload.bannerImageUrl != null)   body.banner_image_url  = payload.bannerImageUrl || null;
   if (payload.showOnHome != null)       body.show_on_home      = Boolean(payload.showOnHome);
   if (payload.bannerSortOrder != null && payload.bannerSortOrder !== '') {
@@ -49,6 +53,7 @@ export async function updatePromotion(id, payload) {
   const body = {};
   if (payload.code != null)             body.code              = payload.code;
   if (payload.title != null)            body.title             = payload.title;
+  if (payload.titleAr != null)          body.title_ar          = payload.titleAr || null;
   if (payload.discountType != null)     body.discount_type     = payload.discountType;
   if (payload.discountValue != null)    body.discount_value    = Number(payload.discountValue);
   if (payload.maxDiscount != null)      body.max_discount      = Number(payload.maxDiscount);
@@ -64,6 +69,9 @@ export async function updatePromotion(id, payload) {
   if (payload.bannerBadge != null)      body.banner_badge      = payload.bannerBadge || null;
   if (payload.bannerTitle != null)      body.banner_title      = payload.bannerTitle || null;
   if (payload.bannerSubtitle != null)   body.banner_subtitle   = payload.bannerSubtitle || null;
+  if (payload.bannerBadgeAr != null)    body.banner_badge_ar   = payload.bannerBadgeAr || null;
+  if (payload.bannerTitleAr != null)    body.banner_title_ar   = payload.bannerTitleAr || null;
+  if (payload.bannerSubtitleAr != null) body.banner_subtitle_ar = payload.bannerSubtitleAr || null;
   if (payload.bannerImageUrl != null)   body.banner_image_url  = payload.bannerImageUrl || null;
   if (payload.showOnHome != null)       body.show_on_home      = Boolean(payload.showOnHome);
   if (payload.bannerSortOrder != null && payload.bannerSortOrder !== '') {

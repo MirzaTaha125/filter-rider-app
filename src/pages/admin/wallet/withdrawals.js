@@ -16,9 +16,38 @@ export const WITHDRAWAL_STATUS_TABS = ['PENDING', 'APPROVED', 'REJECTED']
 /** Statuses an admin can still act on. */
 export const ACTIONABLE_STATUSES = ['PENDING']
 
+export function ownerType(item) {
+  const raw = (item?.owner_type || item?.ownerType || '').toString().toUpperCase()
+  if (raw === 'CUSTOMER') return 'CUSTOMER'
+  if (raw === 'PROVIDER') return 'PROVIDER'
+  if (item?.customer && !item?.provider) return 'CUSTOMER'
+  return 'PROVIDER'
+}
+
+function personName(user) {
+  return user?.full_name || user?.email || user?.phone || ''
+}
+
+export function ownerName(item) {
+  const named = (item?.owner_name || '').toString().trim()
+  if (named) return named
+  if (ownerType(item) === 'CUSTOMER') {
+    return personName(item?.customer?.user) || 'Unknown customer'
+  }
+  return (
+    personName(item?.provider?.user) ||
+    item?.provider?.profile?.full_name ||
+    'Unknown provider'
+  )
+}
+
+/** @deprecated use ownerName */
 export function providerName(item) {
-  const user = item?.provider?.user
-  return user?.full_name || user?.email || user?.phone || 'Unknown provider'
+  return ownerName(item)
+}
+
+export function ownerRoleLabel(item) {
+  return ownerType(item) === 'CUSTOMER' ? 'Customer' : 'Provider'
 }
 
 export function bankLabel(item) {

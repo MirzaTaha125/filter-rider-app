@@ -48,5 +48,12 @@ export function toCategory(item) {
     color: item.icon_color || item.color || DEFAULT_COLOR,
     icon: ICON_MAP[iconName] || DEFAULT_ICON,
     isActive: item.is_active,
+    imageUrl: item.image_url ?? null,
+    displayOrder: item.display_order ?? 0,
+    priceSource: item.price_source || 'AUTO',
+    priceFrom: item.price_from ?? null,
+    priceTo: item.price_to ?? null,
+    servicesCount: item.services_count ?? null,
+    activeServicesCount: item.active_services_count ?? null,
   }
 }

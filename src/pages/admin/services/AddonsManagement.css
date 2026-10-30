@@ -56,7 +56,7 @@
 .am-section-title {
   margin: 0;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -67,7 +67,7 @@
 }
 
 .am-cell-name {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .am-cell-ar {

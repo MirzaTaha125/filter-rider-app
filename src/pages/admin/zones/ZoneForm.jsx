@@ -7,10 +7,14 @@ import {
 } from '../../../api'
 import { useGoogleMapsApiKey } from '../../../contexts/AppSettingsContext'
 import { isGoogleMapsKeyValid } from '../../../utils/googleMapsKey'
+import { CityPicker, AreaPicker } from './ZonePlacePickers'
 import '../adminForm.css'
 import './ZoneForm.css'
+import { PageShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 const DEFAULT_CENTER = { lat: 24.7136, lng: 46.6753 } // Riyadh
+const DEFAULT_RADIUS_KM = '3'
 
 const MARKER_HTML = `
   <div style="width:30px;height:30px;background:#FCC245;border:3px solid white;border-radius:50%;
@@ -20,13 +24,43 @@ const MARKER_HTML = `
     </svg>
   </div>`
 
+const AREA_PIN_HTML = `
+  <div style="width:14px;height:14px;background:#FCC245;border:2px solid #1a1a1a;border-radius:50%;
+    box-shadow:0 1px 4px rgba(0,0,0,0.35)"></div>`
+
+/** Average of the area centres: the zone's centre point. */
+function centreOf(areas) {
+  if (!areas.length) return null
+  const lat = areas.reduce((sum, a) => sum + Number(a.lat), 0) / areas.length
+  const lng = areas.reduce((sum, a) => sum + Number(a.lng), 0) / areas.length
+  return { lat, lng }
+}
+
+function parseRadius(value) {
+  const n = Number(value)
+  return value !== '' && Number.isFinite(n) && n >= 0.1 && n <= 100 ? n : null
+}
+
+function clearOverlays(list) {
+  list.forEach(o => {
+    if (typeof o.setMap === 'function') o.setMap(null)
+    else o.map = null
+  })
+}
+
 function ZoneForm() {
   const { zoneId } = useParams()
   const navigate = useNavigate()
   const isEdit = Boolean(zoneId)
 
   const [form, setForm] = useState({ name: '', city: '', isActive: true })
+  // Google city ({ place_id, name, lat, lng }). `form.city` keeps the name of
+  // older zones that were saved before cities came from Google.
+  const [city, setCity] = useState(null)
+  const [areas, setAreas] = useState([])
+  const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM)
   const [center, setCenter] = useState(DEFAULT_CENTER)
+  const [mapReady, setMapReady] = useState(false)
   const [providerCount, setProviderCount] = useState(null)
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
@@ -36,6 +70,8 @@ function ZoneForm() {
   const mapNodeRef = useRef(null)
   const mapRef = useRef(null)
   const markerRef = useRef(null)
+  const overlaysRef = useRef([])
+  const libsRef = useRef(null)
   const centerRef = useRef(center)
   centerRef.current = center
 
@@ -66,9 +102,20 @@ function ZoneForm() {
         isActive: zone.is_active !== false,
       })
       setProviderCount(zone.service_providers_count ?? 0)
-      if (zone.center_lat != null && zone.center_lng != null) {
-        setCenter({ lat: Number(zone.center_lat), lng: Number(zone.center_lng) })
+      const savedCentre = zone.center_lat != null && zone.center_lng != null
+        ? { lat: Number(zone.center_lat), lng: Number(zone.center_lng) }
+        : null
+      if (savedCentre) setCenter(savedCentre)
+      if (zone.city_place_id) {
+        setCity({
+          place_id: zone.city_place_id,
+          name: zone.city ?? '',
+          lat: savedCentre?.lat ?? DEFAULT_CENTER.lat,
+          lng: savedCentre?.lng ?? DEFAULT_CENTER.lng,
+        })
       }
+      setAreas(Array.isArray(zone.areas_json) ? zone.areas_json : [])
+      if (zone.radius_km != null) setRadiusKm(String(Number(zone.radius_km)))
     } catch (err) {
       setLoadError(err.message || 'Failed to load zone')
     } finally {
@@ -105,6 +152,7 @@ function ZoneForm() {
           mapTypeControl: false,
         })
         mapRef.current = map
+        libsRef.current = { maps, markerLib }
 
         const el = document.createElement('div')
         el.innerHTML = MARKER_HTML
@@ -114,8 +162,7 @@ function ZoneForm() {
           content: el,
           gmpDraggable: true,
         })
-        // Dragging the pin is the only way to set a precise centre — geocoding
-        // the city alone only ever lands on the city centre.
+        // Without areas (older zones), dragging the pin sets the centre.
         marker.addListener('dragend', (e) => {
           const pos = e.latLng ?? marker.position
           if (!pos) return
@@ -126,6 +173,7 @@ function ZoneForm() {
           setCenter(next)
         })
         markerRef.current = marker
+        setMapReady(true)
       } catch (err) {
         console.error('Zone map failed to initialise:', err)
       }
@@ -150,38 +198,70 @@ function ZoneForm() {
       alive = false
       if (poll) clearInterval(poll)
       if (markerRef.current) { markerRef.current.map = null; markerRef.current = null }
+      clearOverlays(overlaysRef.current)
+      overlaysRef.current = []
+      libsRef.current = null
       mapRef.current = null
+      setMapReady(false)
     }
   }, [loading, mapsUsable, mapsKey])
 
-  // Keep the map in sync when the centre changes from geocoding or load.
+  // With areas picked, the centre is their average; otherwise the city centre.
   useEffect(() => {
-    if (mapRef.current) mapRef.current.setCenter(center)
-    if (markerRef.current) markerRef.current.position = center
-  }, [center])
+    const c = centreOf(areas)
+    if (c) setCenter(c)
+    else if (city) setCenter({ lat: city.lat, lng: city.lng })
+  }, [areas, city])
 
-  // Geocode the typed city, debounced.
+  // The centre pin is only shown (and draggable) when no areas are picked.
   useEffect(() => {
-    const city = form.city.trim()
-    if (!city || !mapsUsable) return
+    if (!mapReady) return
+    if (markerRef.current) {
+      markerRef.current.position = center
+      markerRef.current.map = areas.length ? null : mapRef.current
+    }
+    if (mapRef.current && !areas.length) mapRef.current.setCenter(center)
+  }, [center, areas.length, mapReady])
 
-    const timer = setTimeout(async () => {
-      const g = window.google
-      if (!g?.maps?.importLibrary) return
-      try {
-        const { Geocoder } = await g.maps.importLibrary('geocoding')
-        new Geocoder().geocode({ address: city }, (results, status) => {
-          if (status !== 'OK' || !results?.[0]) return
-          const loc = results[0].geometry.location
-          setCenter({ lat: loc.lat(), lng: loc.lng() })
+  // Draw each area with its radius and fit the map to all of them.
+  const radiusValue = parseRadius(radiusKm)
+  useEffect(() => {
+    const map = mapRef.current
+    const libs = libsRef.current
+    if (!mapReady || !map || !libs) return
+
+    clearOverlays(overlaysRef.current)
+    overlaysRef.current = []
+    if (!areas.length) return
+
+    const bounds = new window.google.maps.LatLngBounds()
+    for (const area of areas) {
+      const position = { lat: Number(area.lat), lng: Number(area.lng) }
+      const el = document.createElement('div')
+      el.innerHTML = AREA_PIN_HTML
+      overlaysRef.current.push(new libs.markerLib.AdvancedMarkerElement({
+        map, position, content: el, title: area.name,
+      }))
+      if (radiusValue) {
+        const circle = new libs.maps.Circle({
+          map,
+          center: position,
+          radius: radiusValue * 1000,
+          strokeColor: '#E0A21B',
+          strokeOpacity: 0.9,
+          strokeWeight: 2,
+          fillColor: '#FCC245',
+          fillOpacity: 0.18,
+          clickable: false,
         })
-      } catch {
-        /* geocoding unavailable */
+        overlaysRef.current.push(circle)
+        bounds.union(circle.getBounds())
+      } else {
+        bounds.extend(position)
       }
-    }, 500)
-
-    return () => clearTimeout(timer)
-  }, [form.city, mapsUsable])
+    }
+    map.fitBounds(bounds, 32)
+  }, [areas, radiusValue, mapReady])
 
   /* ---------------- Form ---------------- */
 
@@ -192,17 +272,29 @@ function ZoneForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    const cityName = (city?.name || form.city).trim()
     if (!form.name.trim()) { setFormError('Zone name is required.'); return }
-    if (!form.city.trim()) { setFormError('City is required.'); return }
+    if (!cityName) { setFormError('Select a city.'); return }
+    // New zones need areas; older zones (no Google city yet) can still be saved as they were.
+    if (!areas.length && (!isEdit || city?.place_id)) {
+      setFormError('Select at least one area.')
+      return
+    }
+    if (areas.length && radiusValue === null) {
+      setFormError('Radius must be between 0.1 and 100 km.')
+      return
+    }
 
     setSaving(true)
     setFormError('')
     const payload = {
       name: form.name.trim(),
-      city: form.city.trim(),
+      city: cityName,
       lat: center.lat,
       lng: center.lng,
       isActive: form.isActive,
+      ...(city?.place_id && { cityPlaceId: city.place_id }),
+      ...(areas.length > 0 && { areas, radiusKm: radiusValue }),
     }
 
     try {
@@ -224,7 +316,7 @@ function ZoneForm() {
     return (
       <div className="zone-form-page">
         <PageHeader title={title} />
-        <div className="sf-state"><Loader2 size={32} className="spin" /><span>Loading…</span></div>
+        <PageShimmer />
       </div>
     )
   }
@@ -249,7 +341,7 @@ function ZoneForm() {
     <div className="zone-form-page">
       <PageHeader
         title={title}
-        subtitle={isEdit ? form.name : 'Define a service area and its centre point'}
+        subtitle={isEdit ? form.name : 'Pick a city, its areas and a radius'}
       />
 
       <form className="sf-form" onSubmit={handleSubmit}>
@@ -263,7 +355,7 @@ function ZoneForm() {
         <section className="sf-card">
           <header className="sf-card-head">
             <h2>Zone details</h2>
-            <p>Typing a city moves the map; drag the pin to fine-tune the centre.</p>
+            <p>Cities and areas come from Google. Each area is covered up to the radius you set.</p>
           </header>
 
           <div className="sf-grid sf-grid--2">
@@ -280,20 +372,57 @@ function ZoneForm() {
             </div>
 
             <div className="sf-field">
-              <label htmlFor="city">City <span className="sf-req">*</span></label>
-              <input
-                id="city"
-                type="text"
-                placeholder="e.g. Riyadh"
-                value={form.city}
-                onChange={(e) => setField('city', e.target.value)}
+              <label>City <span className="sf-req">*</span></label>
+              <CityPicker
+                value={city}
+                fallbackName={form.city}
+                onChange={(next) => {
+                  if (next.place_id !== city?.place_id) setAreas([])
+                  setCity(next)
+                  setFormError('')
+                }}
                 disabled={saving}
               />
+              {isEdit && !city && form.city && (
+                <span className="sf-hint">
+                  Saved before cities came from Google. Pick the city again to choose areas.
+                </span>
+              )}
             </div>
           </div>
 
           <div className="sf-field">
-            <label>Centre point</label>
+            <label>Areas <span className="sf-req">*</span></label>
+            <AreaPicker
+              cityPlaceId={city?.place_id}
+              selected={areas}
+              onChange={(next) => { setAreas(next); setFormError('') }}
+              disabled={saving}
+            />
+          </div>
+
+          <div className="sf-grid sf-grid--2">
+            <div className="sf-field">
+              <label htmlFor="radius">Radius around each area (km) <span className="sf-req">*</span></label>
+              <input
+                id="radius"
+                type="number"
+                min="0.1"
+                max="100"
+                step="0.5"
+                inputMode="decimal"
+                value={radiusKm}
+                onChange={(e) => { setRadiusKm(e.target.value); setFormError('') }}
+                disabled={saving}
+              />
+              {radiusKm !== '' && radiusValue === null && (
+                <span className="sf-hint sf-hint--warn">Use a value between 0.1 and 100 km.</span>
+              )}
+            </div>
+          </div>
+
+          <div className="sf-field">
+            <label>Coverage on the map</label>
             {mapsUsable ? (
               <div className="zf-map-wrap">
                 <div ref={mapNodeRef} className="zf-map" />
@@ -309,7 +438,10 @@ function ZoneForm() {
             )}
             <span className="zf-coords">
               <MapPin size={13} />
-              {center.lat.toFixed(6)}, {center.lng.toFixed(6)}
+              Centre {center.lat.toFixed(6)}, {center.lng.toFixed(6)}
+              {areas.length > 0
+                ? ` · ${areas.length} area${areas.length === 1 ? '' : 's'}${radiusValue ? ` · ${radiusValue} km each` : ''}`
+                : ' · drag the pin to adjust'}
             </span>
           </div>
 

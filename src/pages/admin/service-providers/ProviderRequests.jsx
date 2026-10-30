@@ -10,19 +10,18 @@ import { mapProviderToRequest } from '../../../utils/spDocuments'
 import { initials, formatDate } from './providers.js'
 import SortableTh from '../../../components/DataTable/SortableTh'
 import { useTableSort } from '../../../components/DataTable/useTableSort'
+import { TableBlockShimmer } from '../../../components/Shimmer/Shimmer'
 import './ProviderRequests.css'
 import TableScroll from '../../../components/DataTable/TableScroll'
+import { fetchAllPages } from '../../../utils/fetchAllPages'
+import Pager from '../../../components/DataTable/Pager'
+import { usePagedRows } from '../../../components/DataTable/usePagedRows'
 
 const REQUEST_STATUSES = [
   { value: 'PENDING', label: 'Pending' },
   { value: 'ACTIVE', label: 'Approved' },
   { value: 'REJECTED', label: 'Rejected' },
 ]
-
-function toArray(value) {
-  if (Array.isArray(value)) return value
-  return value?.items ?? value?.requests ?? value?.data ?? []
-}
 
 function statusTone(status) {
   switch (String(status ?? '').toUpperCase()) {
@@ -52,12 +51,13 @@ function ProviderRequests() {
     setLoading(true)
     setError('')
     try {
-      const response = await getProviderRequests({
+      const all = await fetchAllPages(({ page, limit }) => getProviderRequests({
         status,
         search: search.trim() || undefined,
-        limit: 100,
-      })
-      setRequests(toArray(response).map(mapProviderToRequest))
+        page,
+        limit,
+      }))
+      setRequests(all.map(mapProviderToRequest))
     } catch (err) {
       setError(err.message || 'Failed to load requests')
       setRequests([])
@@ -113,6 +113,10 @@ function ProviderRequests() {
     submitted: (r) => new Date(r.submittedDate ?? 0).getTime(),
     status: (r) => r.status,
   })
+  const { pageRows, pagerProps } = usePagedRows(sortedRequests, {
+    defaultLimit: 20,
+    resetKey: `${status}|${search.trim()}`,
+  })
 
   return (
     <div className="pr-panel">
@@ -160,10 +164,7 @@ function ProviderRequests() {
       )}
 
       {loading ? (
-        <div className="dt-empty">
-          <Loader2 size={30} className="spin" />
-          <span>Loading requests…</span>
-        </div>
+        <TableBlockShimmer columns={6} />
       ) : requests.length === 0 ? (
         <div className="dt-empty">
           <Inbox size={30} />
@@ -185,7 +186,7 @@ function ProviderRequests() {
                 </tr>
               </thead>
               <tbody>
-                {sortedRequests.map(request => {
+                {pageRows.map(request => {
                   const pending = String(request.status).toUpperCase() === 'PENDING'
                   return (
                     <tr key={request.id}>
@@ -242,6 +243,7 @@ function ProviderRequests() {
               </tbody>
             </table>
           </TableScroll>
+          <Pager {...pagerProps} unit="requests" />
         </div>
       )}
 

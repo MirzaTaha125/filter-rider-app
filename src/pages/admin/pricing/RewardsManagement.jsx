@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Plus, Pencil, Trash2, Gift, Loader2, AlertTriangle, Search, Users, UserCheck,
+  Plus, Pencil, Trash2, Gift, AlertTriangle, Search, Users, UserCheck,
 } from 'lucide-react'
 import ConfirmDialog from '../../../components/ConfirmDialog/ConfirmDialog'
 import {
@@ -9,7 +9,10 @@ import {
   updateRewardRuleStatus,
   deleteRewardRule,
 } from '../../../api'
+import { ListCardsShimmer } from '../../../components/Shimmer/Shimmer'
 import './RewardsManagement.css'
+import Pager from '../../../components/DataTable/Pager'
+import { usePagedRows } from '../../../components/DataTable/usePagedRows'
 
 const AUDIENCE_FILTERS = ['ALL', 'CUSTOMER', 'PROVIDER']
 
@@ -117,6 +120,10 @@ function RewardsManagement() {
       (rule.description || '').toLowerCase().includes(term)
     return matchesAudience && matchesTerm
   })
+  const { pageRows, pagerProps } = usePagedRows(visible, {
+    defaultLimit: 20,
+    resetKey: `${audienceFilter}|${term}`,
+  })
 
   const activeCount = rules.filter(r => r.is_active).length
 
@@ -172,10 +179,7 @@ function RewardsManagement() {
       )}
 
       {loading ? (
-        <div className="rw-state">
-          <Loader2 size={32} className="spin" />
-          <span>Loading rewards…</span>
-        </div>
+        <ListCardsShimmer />
       ) : rules.length === 0 ? (
         <div className="rw-state">
           <Gift size={32} />
@@ -193,7 +197,7 @@ function RewardsManagement() {
         </div>
       ) : (
         <div className="rw-grid">
-          {visible.map(rule => {
+          {pageRows.map(rule => {
             const toggling = togglingIds.has(rule.id)
             const granted = rule.grant_count ?? 0
             const AudienceIcon = rule.audience === 'PROVIDER' ? UserCheck : Users
@@ -265,6 +269,11 @@ function RewardsManagement() {
               </article>
             )
           })}
+        </div>
+      )}
+      {pageRows.length > 0 && (
+        <div className="dt-pager-wrap">
+          <Pager {...pagerProps} unit="rewards" />
         </div>
       )}
 

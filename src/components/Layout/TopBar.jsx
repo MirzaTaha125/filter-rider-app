@@ -80,12 +80,19 @@ function TopBar({ onMenuClick }) {
         </div>
 
         <div className="topbar-right">
-          <button 
-            className="topbar-icon-btn theme-toggle-btn" 
-            onClick={toggleTheme} 
+          <button
+            type="button"
+            className={`theme-switch ${theme === "dark" ? "is-dark" : "is-light"}`}
+            onClick={toggleTheme}
+            role="switch"
+            aria-checked={theme === "dark"}
             aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
           >
-            {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
+            <span className="theme-switch-track" aria-hidden="true">
+              <Sun size={13} className="theme-switch-icon theme-switch-icon--sun" />
+              <Moon size={13} className="theme-switch-icon theme-switch-icon--moon" />
+              <span className="theme-switch-thumb" />
+            </span>
           </button>
           <div className="topbar-divider"></div>
           <div className="profile-section" ref={dropdownRef}>

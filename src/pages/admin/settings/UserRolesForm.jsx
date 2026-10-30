@@ -6,6 +6,8 @@ import { getUser, getRoles, assignRole, removeRole } from '../../../api'
 import '../adminForm.css'
 import './SettingsForm.css'
 import TableScroll from '../../../components/DataTable/TableScroll'
+import { PageShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 function UserRolesForm() {
   const { userId } = useParams()
@@ -94,7 +96,7 @@ function UserRolesForm() {
     return (
       <div className="settings-form-page">
         <PageHeader title="User Roles" onBack={() => navigate(BACK_TO)} />
-        <div className="sf-state"><Loader2 size={32} className="spin" /><span>Loading…</span></div>
+        <PageShimmer />
       </div>
     )
   }

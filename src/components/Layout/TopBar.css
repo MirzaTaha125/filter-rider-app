@@ -51,7 +51,7 @@
 
 .page-title {
   font-size: 1.35rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--topbar-text);
   margin: 0;
   line-height: 1.2;
@@ -92,14 +92,94 @@
   color: var(--primary-color);
 }
 
-.theme-toggle-btn {
-  background: var(--primary-color);
-  color: var(--secondary-color);
+.theme-switch {
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 999px;
 }
 
-.theme-toggle-btn:hover {
+.theme-switch:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 3px;
+}
+
+.theme-switch-track {
+  position: relative;
+  display: block;
+  width: 52px;
+  height: 28px;
+  border-radius: 999px;
+  background: #e8eaef;
+  border: 1px solid var(--border-base);
+  transition: background 0.22s ease, border-color 0.22s ease;
+  overflow: hidden;
+}
+
+.theme-switch.is-dark .theme-switch-track {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.theme-switch-icon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  pointer-events: none;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.theme-switch-icon--sun {
+  left: 7px;
+  color: #f59e0b;
+  opacity: 1;
+}
+
+.theme-switch-icon--moon {
+  right: 7px;
+  color: #94a3b8;
+  opacity: 0.55;
+}
+
+.theme-switch.is-dark .theme-switch-icon--sun {
+  opacity: 0.55;
+  color: #1a1a1a;
+}
+
+.theme-switch.is-dark .theme-switch-icon--moon {
+  opacity: 1;
+  color: #1a1a1a;
+}
+
+.theme-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.2), 0 1px 1px rgba(15, 23, 42, 0.08);
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 2;
+}
+
+.theme-switch.is-dark .theme-switch-thumb {
+  transform: translateX(24px);
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+}
+
+.theme-switch:hover .theme-switch-track {
+  border-color: var(--primary-hover);
+}
+
+.theme-switch.is-dark:hover .theme-switch-track {
   background: var(--primary-hover);
-  color: var(--secondary-color);
+  border-color: var(--primary-hover);
 }
 
 .topbar-divider {
@@ -159,7 +239,7 @@
   justify-content: center;
   border: 2px solid var(--primary-color);
   color: var(--secondary-color);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .profile-info {
@@ -170,7 +250,7 @@
 
 .profile-name {
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--topbar-text);
   line-height: 1.2;
 }

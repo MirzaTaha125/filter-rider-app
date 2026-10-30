@@ -48,7 +48,7 @@
 .dd-row dd {
   margin: 0;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
   text-align: right;
 }
@@ -65,7 +65,7 @@
   align-items: center;
   gap: 0.35rem;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -179,7 +179,7 @@
   border-radius: 999px;
   color: var(--primary-hover);
   font-size: 0.6rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.04em;
   padding: 2px 7px;
   text-transform: uppercase;
@@ -191,7 +191,7 @@
   align-items: center;
   gap: 0.3rem;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
 }
 
@@ -214,7 +214,7 @@
   display: inline-block;
   margin-top: 0.4rem;
   font-size: 0.62rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--warning);
@@ -310,7 +310,7 @@
   padding: 0.3rem 0.75rem;
   border-radius: 999px;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -376,7 +376,7 @@
 
 .dd-party-role {
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -384,7 +384,7 @@
 
 .dd-party-info strong {
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
   overflow-wrap: anywhere;
 }

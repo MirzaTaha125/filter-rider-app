@@ -33,7 +33,8 @@ describe('getPageTitleFor', () => {
     expect(getPageTitleFor('/admin/analytics/customers')).toBe('Customer orders')
     expect(getPageTitleFor('/admin/analytics/zones')).toBe('Zone orders')
     expect(getPageTitleFor('/admin/analytics/services')).toBe('Service orders')
-    expect(getPageTitleFor('/admin/assets/sizes')).toBe('Size Categories')
+    expect(getPageTitleFor('/admin/assets/vehicle-sizes')).toBe('Vehicle Size Master')
+    expect(getPageTitleFor('/admin/assets/vehicle-types')).toBe('Vehicle Type Size Mapping')
     expect(getPageTitleFor('/admin/communication/content')).toBe('Content Management')
   })
 

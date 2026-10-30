@@ -41,7 +41,7 @@
 
 .session-modal-title {
     font-size: 1.5rem;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--text-main);
     margin: 0;
 }
@@ -71,7 +71,7 @@
     border: none;
     padding: 12px 24px;
     border-radius: 8px;
-    font-weight: 600;
+    font-weight: 500;
     font-size: 1rem;
     cursor: pointer;
     transition: all 0.2s ease;

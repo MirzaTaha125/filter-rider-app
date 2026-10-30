@@ -9,36 +9,7 @@
   border-top: none;
 }
 
-.an-tabs {
-  border-bottom: 1px solid var(--border-base);
-  display: flex;
-  gap: 0.25rem;
-  overflow-x: auto;
-  padding: 0 0.4rem;
-}
-
-.an-tab {
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
-  padding: 0.7rem 0.9rem;
-  transition: color 0.15s;
-  white-space: nowrap;
-}
-
-.an-tab:hover {
-  color: var(--text-main);
-}
-
-.an-tab.is-active {
-  border-bottom-color: var(--primary-color);
-  color: var(--text-main);
-}
+/* Tabs: src/styles/listTabs.css */
 
 .an-section-head {
   padding: 1.1rem 1.25rem 0.85rem;
@@ -47,7 +18,7 @@
 .an-section-head h2 {
   color: var(--text-main);
   font-size: 1.05rem;
-  font-weight: 700;
+  font-weight: 600;
   margin: 0;
 }
 

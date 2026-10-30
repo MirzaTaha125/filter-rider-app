@@ -7,7 +7,8 @@ import PageHeader from '../../../components/PageHeader/PageHeader'
 import { getPaymentApproval, approvePayment, rejectPayment } from '../../../api'
 import {
   ACTIONABLE_STATUSES,
-  providerName,
+  ownerName,
+  ownerRoleLabel,
   bankLabel,
   accountLabel,
   formatMoney,
@@ -17,6 +18,8 @@ import {
 import '../adminForm.css'
 import './PaymentApprovalDetail.css'
 import TableScroll from '../../../components/DataTable/TableScroll'
+import { DetailShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 function PaymentApprovalDetail() {
   const { approvalId } = useParams()
@@ -79,7 +82,7 @@ function PaymentApprovalDetail() {
     return (
       <div className="approval-detail-page">
         <PageHeader title="Payment Approval" />
-        <div className="sf-state"><Loader2 size={32} className="spin" /><span>Loading…</span></div>
+        <DetailShimmer />
       </div>
     )
   }
@@ -101,7 +104,7 @@ function PaymentApprovalDetail() {
   }
 
   const rows = [
-    { icon: <User size={16} />, label: 'Provider', value: providerName(item) },
+    { icon: <User size={16} />, label: ownerRoleLabel(item), value: ownerName(item) },
     { icon: <Hash size={16} />, label: 'Request no.', value: item.request_no ?? '—' },
     { icon: <Building2 size={16} />, label: 'Bank', value: bankLabel(item) },
     { icon: <CreditCard size={16} />, label: 'Account', value: accountLabel(item) },
@@ -118,7 +121,7 @@ function PaymentApprovalDetail() {
     <div className="approval-detail-page">
       <PageHeader
         title="Payment Approval"
-        subtitle={`${providerName(item)} · ${item.request_no ?? ''}`.trim()}
+        subtitle={`${ownerRoleLabel(item)} · ${ownerName(item)} · ${item.request_no ?? ''}`.trim()}
       />
 
       {actionError && (
@@ -133,7 +136,9 @@ function PaymentApprovalDetail() {
           <section className="sf-card">
             <header className="sf-card-head">
               <h2>Request</h2>
-              <p>Withdrawal submitted by the provider from their wallet balance.</p>
+              <p>
+                {`Withdrawal submitted by the ${ownerRoleLabel(item).toLowerCase()} from their wallet balance.`}
+              </p>
             </header>
 
             <div className="pa-amount">
@@ -155,7 +160,7 @@ function PaymentApprovalDetail() {
 
             {item.note && (
               <div className="pa-note">
-                <span className="pa-note-label">Provider’s note</span>
+                <span className="pa-note-label">{ownerRoleLabel(item)}’s note</span>
                 <p>{item.note}</p>
               </div>
             )}
@@ -206,7 +211,7 @@ function PaymentApprovalDetail() {
             <header className="sf-card-head">
               <h2>Decision</h2>
               <p>{canAct
-                ? 'Approving releases the funds; rejecting returns them to the provider’s balance.'
+                ? `Approving releases the funds; rejecting returns them to the ${ownerRoleLabel(item).toLowerCase()}’s balance.`
                 : 'This request has already been reviewed.'}</p>
             </header>
 
@@ -237,8 +242,8 @@ function PaymentApprovalDetail() {
                   <div className="pa-confirm">
                     <p>
                       {confirming === 'approve'
-                        ? <>Approve <strong><span className="riyal-symbol">&#x20C1;</span>{formatMoney(item.amount)}</strong> to {providerName(item)}?</>
-                        : <>Reject this withdrawal? The provider will be notified.</>}
+                        ? <>Approve <strong><span className="riyal-symbol">&#x20C1;</span>{formatMoney(item.amount)}</strong> to {ownerName(item)}?</>
+                        : <>Reject this withdrawal? The {ownerRoleLabel(item).toLowerCase()} will be notified.</>}
                     </p>
                     <div className="pa-confirm-actions">
                       <button

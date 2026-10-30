@@ -69,7 +69,7 @@
   background: var(--primary-soft);
   color: var(--text-main);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .pr-contact { line-height: 1.35; }
@@ -117,7 +117,7 @@
 .pr-decision h3 {
   margin: 0;
   font-size: 1.05rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
 }
 

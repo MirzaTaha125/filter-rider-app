@@ -84,7 +84,7 @@
 .sf-card-head h2 {
   margin: 0;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -113,26 +113,41 @@
 
 .sf-field label {
   font-size: 0.825rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
+}
+
+/* "(Arabic)" / "(optional)" next to a label */
+.sf-optional {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.sf-field [dir="rtl"] {
+  text-align: right;
 }
 
 .sf-req {
   color: var(--danger);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .sf-field input,
-.sf-field select {
+.sf-field select,
+.sf-field textarea {
   width: 100%;
-  padding: 0.7rem 0.85rem;
+  padding: 0.7rem 1rem;
   border: 1px solid var(--border-base);
-  border-radius: var(--radius-sm);
-  background: var(--bg-input);
+  border-radius: var(--radius-search);
+  background-color: var(--bg-input);
   color: var(--text-main);
   font-size: 0.9rem;
   font-family: inherit;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sf-field select {
+  padding-right: 2.4rem;
 }
 
 .sf-field input::placeholder {
@@ -141,10 +156,11 @@
 }
 
 .sf-field input:focus,
-.sf-field select:focus {
+.sf-field select:focus,
+.sf-field textarea:focus {
   outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px var(--primary-soft);
+  border-color: var(--border-base);
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.06);
 }
 
 .sf-field input:disabled,
@@ -167,15 +183,15 @@
   display: flex;
   align-items: stretch;
   border: 1px solid var(--border-base);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-search);
   background: var(--bg-input);
   overflow: hidden;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .sf-input-affix:focus-within {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px var(--primary-soft);
+  border-color: var(--border-base);
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.06);
 }
 
 .sf-input-affix input {
@@ -197,7 +213,7 @@
   background: var(--border-light);
   color: var(--text-muted);
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
 }
 
@@ -259,7 +275,7 @@
 
 .sf-toggle-copy strong {
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -287,9 +303,9 @@
   justify-content: center;
   gap: 0.5rem;
   padding: 0.7rem 1.5rem;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-btn);
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
   border: 1px solid transparent;

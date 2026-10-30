@@ -53,7 +53,7 @@
 .spd-card-title {
   color: var(--text-main);
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 600;
   margin: 0 0 0.85rem;
 }
 
@@ -127,7 +127,7 @@
   color: var(--text-muted);
   display: block;
   font-size: 0.68rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -220,11 +220,7 @@
   max-width: 56ch;
 }
 
-.spd-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
+/* Order filters: src/styles/listTabs.css */
 
 .spd-wallet-actions {
   align-items: center;
@@ -236,31 +232,11 @@
 .spd-wallet-notice {
   color: var(--success, #16a34a);
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 500;
   margin: 0 0 0.5rem;
 }
 
-.spd-chip {
-  background: var(--border-light);
-  border: 1px solid transparent;
-  border-radius: 999px;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 0.74rem;
-  font-weight: 600;
-  padding: 4px 12px;
-  transition: background 0.15s, color 0.15s;
-}
-
-.spd-chip:hover {
-  background: var(--action-btn-bg-hover);
-}
-
-.spd-chip.is-active {
-  background: var(--primary-soft);
-  color: var(--primary-hover);
-}
+/* Order filter chips: src/styles/listTabs.css */
 
 /* ── Wallet breakdown ─────────────────────────────────────────────────────── */
 
@@ -323,7 +299,7 @@
   display: flex;
   flex-shrink: 0;
   font-size: 1.15rem;
-  font-weight: 700;
+  font-weight: 600;
   height: 60px;
   justify-content: center;
   /* Must be relative so .spd-presence anchors to the avatar, not the page.
@@ -351,7 +327,7 @@
   flex-wrap: wrap;
   margin: 0;
   font-size: 1.2rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
 }
 
@@ -366,7 +342,7 @@
   background: rgba(22, 163, 74, 0.14);
   color: var(--success);
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -382,54 +358,7 @@
 
 
 
-/* ---------- Tabs ---------- */
-.spd-tabs {
-  display: flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-  border-bottom: 1px solid var(--border-base);
-}
-
-
-
-.spd-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.7rem 1rem;
-  margin-bottom: -1px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  font-size: 0.875rem;
-  font-weight: 600;
-  font-family: inherit;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-
-
-
-.spd-tab:hover { color: var(--text-main); }
-
-
-
-.spd-tab.is-active {
-  color: var(--text-main);
-  border-bottom-color: var(--primary-color);
-}
-
-
-
-.spd-tab-count {
-  padding: 0.05rem 0.4rem;
-  border-radius: 999px;
-  background: var(--primary-soft);
-  color: var(--text-main);
-  font-size: 0.68rem;
-  font-weight: 700;
-}
+/* Tabs: src/styles/listTabs.css */
 
 
 
@@ -469,7 +398,7 @@
   display: flex;
   flex-shrink: 0;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   height: 40px;
   justify-content: center;
   overflow: hidden;
@@ -504,7 +433,7 @@
   cursor: pointer;
   font-family: inherit;
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 600;
   padding: 0;
   text-align: left;
 }
@@ -560,7 +489,7 @@ button.spd-review-name:hover {
   display: inline-flex;
   font-family: inherit;
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
   gap: 0.15rem;
   padding: 0;
 }
@@ -649,7 +578,7 @@ button.spd-review-name:hover {
 
 .spd-service-name strong {
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -668,7 +597,7 @@ button.spd-review-name:hover {
   gap: 1rem;
   flex-shrink: 0;
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-muted);
 }
 
@@ -714,7 +643,7 @@ button.spd-review-name:hover {
 .spd-doc-label {
   flex: 1;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -727,7 +656,7 @@ button.spd-review-name:hover {
   border: 1px solid var(--border-base);
   color: var(--text-main);
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
   text-decoration: none;
   transition: background 0.15s ease;
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Plus, Pencil, Trash2, MapPin, Loader2, AlertTriangle, Search,
+  Plus, Pencil, Trash2, MapPin, AlertTriangle, Search,
 } from 'lucide-react'
 import ConfirmDialog from '../../../components/ConfirmDialog/ConfirmDialog'
 import { getRegionalPricing, deleteRegionalPricing } from '../../../api/pricing.js'
@@ -10,6 +10,10 @@ import './RegionalPricing.css'
 import SortableTh from '../../../components/DataTable/SortableTh'
 import { useTableSort } from '../../../components/DataTable/useTableSort'
 import TableScroll from '../../../components/DataTable/TableScroll'
+import Pager from '../../../components/DataTable/Pager'
+import { usePagedRows } from '../../../components/DataTable/usePagedRows'
+import { TableBlockShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 function toZoneList(data) {
   if (Array.isArray(data)) return data
@@ -95,6 +99,10 @@ function RegionalPricing() {
     commission: (r) => Number(r.commission_percent ?? 0),
     status: (r) => (r.is_active !== false ? 'Active' : 'Inactive'),
   })
+  const { pageRows, pagerProps } = usePagedRows(sortedRegions, {
+    defaultLimit: 20,
+    resetKey: term,
+  })
 
   return (
     <div className="regional-pricing">
@@ -137,10 +145,7 @@ function RegionalPricing() {
       )}
 
       {loading ? (
-        <div className="dt-empty">
-          <Loader2 size={32} className="spin" />
-          <span>Loading regional pricing…</span>
-        </div>
+        <TableBlockShimmer columns={5} />
       ) : zones.length === 0 ? (
         <div className="dt-empty">
           <MapPin size={32} />
@@ -180,7 +185,7 @@ function RegionalPricing() {
                 </tr>
               </thead>
               <tbody>
-                {sortedRegions.map(region => (
+                {pageRows.map(region => (
                   <tr key={region.id}>
                     <td>
                       <span className="rp-cell-name">
@@ -223,6 +228,7 @@ function RegionalPricing() {
               </tbody>
             </table>
           </TableScroll>
+          <Pager {...pagerProps} unit="regions" />
 
           {unpricedZones > 0 && (
             <p className="rp-footnote">
