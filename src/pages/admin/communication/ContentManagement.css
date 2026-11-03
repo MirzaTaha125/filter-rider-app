@@ -38,7 +38,7 @@
   border: none;
   border-radius: 8px;
   color: var(--bg-card);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -132,7 +132,7 @@
 
 .content-item-title {
   font-size: 1.125rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   margin: 0;
   letter-spacing: -0.01em;
@@ -148,7 +148,7 @@
 
 .page-status-badge {
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 600;
   padding: 0.2rem 0.5rem;
   border-radius: 20px;
   text-transform: uppercase;
@@ -231,7 +231,7 @@
   border-radius: 10px;
   background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
   color: var(--bg-card);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.875rem;
   cursor: pointer;
   display: flex;
@@ -365,7 +365,7 @@
 
 .editor-title {
   font-size: 1.125rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
   margin: 0;
 }
@@ -376,7 +376,7 @@
   color: var(--primary-color);
   border-radius: 6px;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 500;
   margin-left: 0.5rem;
 }
 
@@ -482,7 +482,7 @@
   border-radius: 6px;
   background: var(--bg-card);
   color: var(--text-main);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -499,7 +499,7 @@
   border-radius: 6px;
   background: var(--primary-color);
   color: var(--bg-card);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -528,7 +528,7 @@
 
 .modal-title {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   margin: 0;
 }
@@ -572,7 +572,7 @@
   border-radius: 8px;
   background: var(--bg-card);
   color: var(--text-main);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -592,7 +592,7 @@
   border-radius: 8px;
   background: var(--primary-color);
   color: var(--bg-card);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -619,7 +619,7 @@
 
 .form-group label {
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
 }
 

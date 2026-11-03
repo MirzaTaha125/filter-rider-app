@@ -25,7 +25,7 @@
 
 .tl-stat-label {
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -33,7 +33,7 @@
 
 .tl-stat-value {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   font-variant-numeric: tabular-nums;
 }
@@ -127,14 +127,14 @@
 
 .tl-combo-list strong {
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .tl-combo-list em {
   color: var(--text-muted);
   font-size: 0.72rem;
   font-style: normal;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .tl-combo-empty {
@@ -175,7 +175,7 @@
 
 .tl-ref strong,
 .tl-party strong {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .tl-ref em,
@@ -193,7 +193,7 @@
   display: inline-flex;
   flex-direction: column;
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 500;
   gap: 0.15rem;
   letter-spacing: 0.02em;
   max-width: 28ch;
@@ -202,7 +202,7 @@
 }
 
 .tl-type strong {
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .tl-type em {
@@ -223,7 +223,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.15rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .tl-amount svg { flex-shrink: 0; }
@@ -231,7 +231,7 @@
 .tl-amount.is-credit { color: var(--success); }
 .tl-amount.is-debit { color: var(--danger); }
 
-.tl-net { font-weight: 600; }
+.tl-net { font-weight: 500; }
 
 /* ---------- Load more ---------- */
 .tl-more {

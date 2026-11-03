@@ -23,7 +23,7 @@ function StatTile({ label, value, money, delta, deltaLabel, hint, tone, onClick,
         {clickable && <ArrowUpRight size={14} className="stat-tile-go" />}
       </span>
       <span className={`stat-tile-value ${tone ? `is-${tone}` : ''}`}>
-        {empty ? '—' : (
+        {empty ? <span className="shimmer shimmer-value" /> : (
           <>
             {money && <span className="riyal-symbol">&#x20C1;</span>}
             {compact(value)}

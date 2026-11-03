@@ -1,0 +1,137 @@
+/* Field wrapper and hint styles come from .sf-* in pages/admin/adminForm.css. */
+
+.iu-input {
+  display: none;
+}
+
+.iu-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 100%;
+  min-height: 150px;
+  padding: 1.25rem;
+  border: 2px dashed var(--border-base);
+  border-radius: var(--radius-btn);
+  background: var(--bg-input);
+  color: var(--text-muted);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.iu-drop:hover:not(:disabled) {
+  border-color: var(--primary-color);
+  background: var(--primary-soft);
+  color: var(--text-main);
+}
+
+.iu-drop:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.iu-drop strong {
+  font-size: 0.875rem;
+  color: var(--text-main);
+}
+
+.iu-drop span {
+  font-size: 0.75rem;
+}
+
+.iu-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.65rem;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.iu-preview {
+  position: relative;
+  width: 180px;
+  max-width: 100%;
+  height: 120px;
+  border: 1px solid var(--border-base);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+
+.iu-preview .shimmer-image {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.iu-preview .shimmer-image.is-loaded {
+  min-height: 0;
+}
+
+.iu-preview .shimmer-image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.iu-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+}
+
+.iu-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.iu-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-btn);
+  background: var(--bg-input);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.iu-btn:hover:not(:disabled) { border-color: var(--text-muted); }
+
+.iu-btn--danger:hover:not(:disabled) {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.iu-btn:disabled { cursor: not-allowed; opacity: 0.6; }
+
+.iu-error {
+  color: var(--danger);
+  font-weight: 500;
+}
+
+.iu-field--compact .iu-drop {
+  width: 220px;
+  min-height: 96px;
+  padding: 0.85rem;
+}
+
+.iu-field--compact .iu-preview {
+  width: 72px;
+  height: 72px;
+}

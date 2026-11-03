@@ -16,6 +16,8 @@ import {
 } from './disputes.js'
 import '../adminForm.css'
 import './DisputeDetail.css'
+import { DetailShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 const SENDER_ICONS = { CUSTOMER: User, PROVIDER: Package, ADMIN: Shield }
 const SENDER_LABELS = { CUSTOMER: 'Customer', PROVIDER: 'Service provider', ADMIN: 'Admin' }
@@ -106,7 +108,7 @@ function DisputeDetail() {
     return (
       <div className="dispute-detail-page">
         <PageHeader title="Dispute" />
-        <div className="sf-state"><Loader2 size={32} className="spin" /><span>Loading…</span></div>
+        <DetailShimmer />
       </div>
     )
   }

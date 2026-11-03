@@ -1,13 +1,22 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  Plus, Pencil, Trash2, Calendar, Tag, Loader2, AlertTriangle, Search,
+  Plus, Pencil, Trash2, Calendar, Tag, AlertTriangle, Search, Store,
 } from 'lucide-react'
 import ConfirmDialog from '../../../components/ConfirmDialog/ConfirmDialog'
-import { getPromotions, updatePromotionStatus, deletePromotion } from '../../../api'
+import {
+  getPromotions, updatePromotionStatus, deletePromotion, setErpPromotionActive,
+} from '../../../api'
+import WorkshopOffersTab from './WorkshopOffersTab'
 import './PromotionsManagement.css'
+import { ListCardsShimmer } from '../../../components/Shimmer/Shimmer'
+import Pager from '../../../components/DataTable/Pager'
+import { usePagedRows } from '../../../components/DataTable/usePagedRows'
 
 const STATUS_FILTERS = ['ALL', 'DRAFT', 'ACTIVE', 'INACTIVE', 'EXPIRED']
+
+// ?tab=workshop-offers opens the second tab (kept in the URL so reload / back work).
+const WORKSHOP_TAB = 'workshop-offers'
 
 function toArray(value) {
   return Array.isArray(value) ? value : []
@@ -17,6 +26,16 @@ function discountLabel(promo) {
   const value = Number(promo.discount_value ?? 0)
   if (promo.discount_type === 'PERCENTAGE') return `${value}% off`
   return { fixed: value }
+}
+
+function isLightHex(hex) {
+  const h = String(hex || '').replace('#', '')
+  if (h.length !== 6) return true
+  const r = parseInt(h.slice(0, 2), 16)
+  const g = parseInt(h.slice(2, 4), 16)
+  const b = parseInt(h.slice(4, 6), 16)
+  if ([r, g, b].some(Number.isNaN)) return true
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62
 }
 
 function expiryLabel(promo) {
@@ -32,6 +51,11 @@ function expiryLabel(promo) {
 
 function PromotionsManagement() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tab = searchParams.get('tab') === WORKSHOP_TAB ? WORKSHOP_TAB : 'promotions'
+  const switchTab = (next) => {
+    setSearchParams(next === WORKSHOP_TAB ? { tab: WORKSHOP_TAB } : {}, { replace: true })
+  }
 
   const [promotions, setPromotions] = useState([])
   const [loading, setLoading] = useState(true)
@@ -40,6 +64,7 @@ function PromotionsManagement() {
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [togglingIds, setTogglingIds] = useState(new Set())
   const [confirm, setConfirm] = useState(null)
+  const [offerCount, setOfferCount] = useState(null)
 
   const load = useCallback(async () => {
     setError('')
@@ -58,12 +83,18 @@ function PromotionsManagement() {
   const togglePromotion = async (promo) => {
     if (togglingIds.has(promo.id)) return
     const nextActive = !promo.is_active
-    const nextStatus = nextActive ? 'ACTIVE' : 'DRAFT'
+    // ERP promotions are switched through the ERP link (the ERP shows the same
+    // state); they go INACTIVE rather than DRAFT when switched off.
+    const nextStatus = nextActive ? 'ACTIVE' : promo.managed_by_erp ? 'INACTIVE' : 'DRAFT'
 
     setTogglingIds(prev => new Set(prev).add(promo.id))
     setError('')
     try {
-      await updatePromotionStatus(promo.id, nextStatus, nextActive)
+      if (promo.managed_by_erp) {
+        await setErpPromotionActive(promo.id, nextActive)
+      } else {
+        await updatePromotionStatus(promo.id, nextStatus, nextActive)
+      }
       setPromotions(prev => prev.map(p =>
         p.id === promo.id ? { ...p, is_active: nextActive, status: nextStatus } : p,
       ))
@@ -106,8 +137,14 @@ function PromotionsManagement() {
     const matchesTerm =
       !term ||
       (promo.code || '').toLowerCase().includes(term) ||
-      (promo.title || '').toLowerCase().includes(term)
+      (promo.title || '').toLowerCase().includes(term) ||
+      (promo.banner_title || '').toLowerCase().includes(term) ||
+      (promo.banner_subtitle || '').toLowerCase().includes(term)
     return matchesStatus && matchesTerm
+  })
+  const { pageRows, pagerProps } = usePagedRows(visible, {
+    defaultLimit: 20,
+    resetKey: `${statusFilter}|${term}`,
   })
 
   const activeCount = promotions.filter(p => p.is_active).length
@@ -118,169 +155,247 @@ function PromotionsManagement() {
         <div>
           <p className="pm2-subtitle">Discount codes and promotional campaigns.</p>
         </div>
-        <button
-          className="pm2-btn pm2-btn--primary"
-          onClick={() => navigate('/admin/promotions/create')}
-        >
-          <Plus size={18} />
-          Create Coupon
-        </button>
+        {tab === 'promotions' && (
+          <button
+            className="pm2-btn pm2-btn--primary"
+            onClick={() => navigate('/admin/promotions/create')}
+          >
+            <Plus size={18} />
+            Create Coupon
+          </button>
+        )}
       </header>
 
-      <div className="pm2-toolbar">
-        <div className="pm2-search">
-          <Search size={16} />
-          <input
-            type="search"
-            placeholder="Search by code or title…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <select
-          className="pm2-filter"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+      <nav className="pm2-tabs" role="tablist">
+        <button
+          role="tab"
+          aria-selected={tab === 'promotions'}
+          className={`pm2-tab ${tab === 'promotions' ? 'is-active' : ''}`}
+          onClick={() => switchTab('promotions')}
         >
-          {STATUS_FILTERS.map(s => (
-            <option key={s} value={s}>
-              {s === 'ALL' ? 'All statuses' : s.charAt(0) + s.slice(1).toLowerCase()}
-            </option>
-          ))}
-        </select>
-        <span className="pm2-count">
-          {loading ? '—' : `${visible.length} of ${promotions.length} · ${activeCount} active`}
-        </span>
-      </div>
+          <Tag size={16} />
+          Rider promotions
+          {!loading && <span className="tab-count">{promotions.length}</span>}
+        </button>
+        <button
+          role="tab"
+          aria-selected={tab === WORKSHOP_TAB}
+          className={`pm2-tab ${tab === WORKSHOP_TAB ? 'is-active' : ''}`}
+          onClick={() => switchTab(WORKSHOP_TAB)}
+        >
+          <Store size={16} />
+          Workshop offers
+          {offerCount != null && <span className="tab-count">{offerCount}</span>}
+        </button>
+      </nav>
 
-      {error && (
-        <div className="pm2-alert">
-          <AlertTriangle size={16} />
-          <span>{error}</span>
-          <button onClick={() => setError('')} aria-label="Dismiss">×</button>
+      {tab === WORKSHOP_TAB ? <WorkshopOffersTab onCount={setOfferCount} /> : (<>
+        <div className="pm2-toolbar">
+          <div className="pm2-search">
+            <Search size={16} />
+            <input
+              type="search"
+              placeholder="Search by code or title…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <select
+            className="pm2-filter"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            {STATUS_FILTERS.map(s => (
+              <option key={s} value={s}>
+                {s === 'ALL' ? 'All statuses' : s.charAt(0) + s.slice(1).toLowerCase()}
+              </option>
+            ))}
+          </select>
+          <span className="pm2-count">
+            {loading ? '—' : `${visible.length} of ${promotions.length} · ${activeCount} active`}
+          </span>
         </div>
-      )}
 
-      {loading ? (
-        <div className="pm2-state">
-          <Loader2 size={32} className="spin" />
-          <span>Loading promotions…</span>
-        </div>
-      ) : promotions.length === 0 ? (
-        <div className="pm2-state">
-          <Tag size={32} />
-          <h2>No promotions yet</h2>
-          <p>Create a coupon to start running discounts.</p>
-          <button className="pm2-btn pm2-btn--primary" onClick={() => navigate('/admin/promotions/create')}>
-            <Plus size={16} /> Create Coupon
-          </button>
-        </div>
-      ) : visible.length === 0 ? (
-        <div className="pm2-state">
-          <Search size={32} />
-          <h2>No matches</h2>
-          <p>No promotions match the current search or filter.</p>
-        </div>
-      ) : (
-        <div className="pm2-grid">
-          {visible.map(promo => {
-            const toggling = togglingIds.has(promo.id)
-            const expiry = expiryLabel(promo)
-            const discount = discountLabel(promo)
-            const used = promo.usage_count ?? 0
-            const limit = promo.total_usage_limit ?? null
-            const pct = limit ? Math.min((used / limit) * 100, 100) : 0
-            // Published from the ERP marketing portal: read-only here, the ERP sync owns it.
-            const erp = Boolean(promo.managed_by_erp)
-            const erpHint = 'Managed in the ERP marketing portal — change it there'
+        {error && (
+          <div className="pm2-alert">
+            <AlertTriangle size={16} />
+            <span>{error}</span>
+            <button onClick={() => setError('')} aria-label="Dismiss">×</button>
+          </div>
+        )}
 
-            return (
-              <article key={promo.id} className={`pm2-card ${promo.is_active ? '' : 'is-inactive'}`}>
-                <header className="pm2-card-top">
-                  <span className="pm2-card-icon"><Tag size={18} /></span>
-                  <div className="pm2-card-id">
-                    <strong className="pm2-code">{promo.code}</strong>
-                    <span className="pm2-discount">
-                      {typeof discount === 'string'
-                        ? discount
-                        : <><span className="riyal-symbol">&#x20C1;</span>{discount.fixed} off</>}
-                    </span>
-                  </div>
-                  <span className={`pm2-badge pm2-badge--${(promo.status || 'draft').toLowerCase()}`}>
-                    {promo.status ?? (promo.is_active ? 'ACTIVE' : 'DRAFT')}
-                  </span>
-                </header>
+        {loading ? (
+          <ListCardsShimmer />
+        ) : promotions.length === 0 ? (
+          <div className="pm2-state">
+            <Tag size={32} />
+            <h2>No promotions yet</h2>
+            <p>Create a coupon to start running discounts.</p>
+            <button className="pm2-btn pm2-btn--primary" onClick={() => navigate('/admin/promotions/create')}>
+              <Plus size={16} /> Create Coupon
+            </button>
+          </div>
+        ) : visible.length === 0 ? (
+          <div className="pm2-state">
+            <Search size={32} />
+            <h2>No matches</h2>
+            <p>No promotions match the current search or filter.</p>
+          </div>
+        ) : (
+          <div className="pm2-grid">
+            {pageRows.map(promo => {
+              const toggling = togglingIds.has(promo.id)
+              const expiry = expiryLabel(promo)
+              const discount = discountLabel(promo)
+              const used = promo.usage_count ?? 0
+              const limit = promo.total_usage_limit ?? null
+              const pct = limit ? Math.min((used / limit) * 100, 100) : 0
+              // Published from the ERP marketing portal: edit/delete happen there; the
+              // on/off switch works here too and the ERP shows the same state.
+              const erp = Boolean(promo.managed_by_erp)
+              const erpHint = 'Managed in the ERP marketing portal — edit it there'
+              const erpToggleHint = 'Managed by the ERP — switching it here also switches it in the ERP'
 
-                {erp && (
-                  <p className="pm2-erp-badge" title={erpHint}>Managed by ERP</p>
-                )}
-
-                {promo.title && <p className="pm2-card-title">{promo.title}</p>}
-
-                {limit !== null && (
-                  <div className="pm2-usage">
-                    <div className="pm2-usage-head">
-                      <span>Usage</span>
-                      <span>{used} / {limit}</span>
+              return (
+                <article key={promo.id} className={`pm2-card ${promo.is_active ? '' : 'is-inactive'}`}>
+                  <header className="pm2-card-top">
+                    <span className="pm2-card-icon"><Tag size={18} /></span>
+                    <div className="pm2-card-id">
+                      <strong className="pm2-code">{promo.code}</strong>
+                      <span className="pm2-discount">
+                        {typeof discount === 'string'
+                          ? discount
+                          : <><span className="riyal-symbol">&#x20C1;</span>{discount.fixed} off</>}
+                      </span>
                     </div>
-                    <div className="pm2-usage-bar">
-                      <div className="pm2-usage-fill" style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-                )}
-
-                {limit === null && used > 0 && (
-                  <p className="pm2-usage-plain">Redeemed {used} time{used === 1 ? '' : 's'} · no limit</p>
-                )}
-
-                <p className={`pm2-expiry pm2-expiry--${expiry.tone}`}>
-                  <Calendar size={14} />
-                  {expiry.text}
-                </p>
-
-                <footer className="pm2-card-actions">
-                  <label
-                    className="pm2-toggle"
-                    title={erp ? erpHint : promo.is_active ? 'Deactivate' : 'Activate'}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={promo.is_active ?? false}
-                      onChange={() => togglePromotion(promo)}
-                      disabled={toggling || erp}
-                    />
-                    <span className="pm2-toggle-track"><span className="pm2-toggle-thumb" /></span>
-                    <span className="pm2-toggle-text">
-                      {toggling ? 'Saving…' : promo.is_active ? 'Active' : 'Inactive'}
+                    <span className={`pm2-badge pm2-badge--${(promo.status || 'draft').toLowerCase()}`}>
+                      {promo.status ?? (promo.is_active ? 'ACTIVE' : 'DRAFT')}
                     </span>
-                  </label>
+                  </header>
 
-                  <div className="pm2-row-actions">
-                    <button
-                      className="pm2-icon-btn"
-                      onClick={() => navigate(`/admin/promotions/edit/${promo.id}`)}
-                      title={erp ? erpHint : `Edit ${promo.code}`}
-                      aria-label={`Edit ${promo.code}`}
-                      disabled={erp}
+                  {erp && (
+                    <p className="pm2-erp-badge" title={erpHint}>Managed by ERP</p>
+                  )}
+
+                  {(promo.show_on_home || promo.banner_title || promo.banner_subtitle || promo.banner_image_url) && (
+                    <div
+                      className="pm2-home-banner"
+                      style={{
+                        background: promo.banner_bg_color || '#FFF6D9',
+                        color: promo.banner_text_color ||
+                          (isLightHex(promo.banner_bg_color || '#FFF6D9')
+                            ? '#1b1b1e'
+                            : '#ffffff'),
+                      }}
                     >
-                      <Pencil size={15} />
-                    </button>
-                    <button
-                      className="pm2-icon-btn pm2-icon-btn--danger"
-                      onClick={() => askDelete(promo)}
-                      title={erp ? erpHint : `Delete ${promo.code}`}
-                      aria-label={`Delete ${promo.code}`}
-                      disabled={erp}
+                      <div className="pm2-home-banner-copy">
+                        {promo.banner_title && (
+                          <strong>{promo.banner_title}</strong>
+                        )}
+                        {promo.banner_subtitle && (
+                          <p>{promo.banner_subtitle}</p>
+                        )}
+                        {!promo.banner_title && !promo.banner_subtitle && promo.title && (
+                          <strong>{promo.title}</strong>
+                        )}
+                        <span
+                          className="pm2-home-banner-cta"
+                          style={{
+                            background: promo.banner_primary_color || '#FCC247',
+                            color: promo.banner_cta_text_color ||
+                              (isLightHex(promo.banner_primary_color || '#FCC247')
+                                ? '#1b1b1e'
+                                : '#ffffff'),
+                          }}
+                        >
+                          Book Now
+                        </span>
+                      </div>
+                      {promo.banner_image_url && (
+                        <img
+                          className="pm2-home-banner-img"
+                          src={promo.banner_image_url}
+                          alt=""
+                          loading="lazy"
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {promo.title && promo.title !== promo.banner_title && (
+                    <p className="pm2-card-title">{promo.title}</p>
+                  )}
+
+                  {limit !== null && (
+                    <div className="pm2-usage">
+                      <div className="pm2-usage-head">
+                        <span>Usage</span>
+                        <span>{used} / {limit}</span>
+                      </div>
+                      <div className="pm2-usage-bar">
+                        <div className="pm2-usage-fill" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  )}
+
+                  {limit === null && used > 0 && (
+                    <p className="pm2-usage-plain">Redeemed {used} time{used === 1 ? '' : 's'} · no limit</p>
+                  )}
+
+                  <p className={`pm2-expiry pm2-expiry--${expiry.tone}`}>
+                    <Calendar size={14} />
+                    {expiry.text}
+                  </p>
+
+                  <footer className="pm2-card-actions">
+                    <label
+                      className="pm2-toggle"
+                      title={erp ? erpToggleHint : promo.is_active ? 'Deactivate' : 'Activate'}
                     >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </footer>
-              </article>
-            )
-          })}
-        </div>
-      )}
+                      <input
+                        type="checkbox"
+                        checked={promo.is_active ?? false}
+                        onChange={() => togglePromotion(promo)}
+                        disabled={toggling}
+                      />
+                      <span className="pm2-toggle-track"><span className="pm2-toggle-thumb" /></span>
+                      <span className="pm2-toggle-text">
+                        {toggling ? 'Saving…' : promo.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </label>
+
+                    <div className="pm2-row-actions">
+                      <button
+                        className="pm2-icon-btn"
+                        onClick={() => navigate(`/admin/promotions/edit/${promo.id}`)}
+                        title={erp ? erpHint : `Edit ${promo.code}`}
+                        aria-label={`Edit ${promo.code}`}
+                        disabled={erp}
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      <button
+                        className="pm2-icon-btn pm2-icon-btn--danger"
+                        onClick={() => askDelete(promo)}
+                        title={erp ? erpHint : `Delete ${promo.code}`}
+                        aria-label={`Delete ${promo.code}`}
+                        disabled={erp}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </footer>
+                </article>
+              )
+            })}
+          </div>
+        )}
+        {pageRows.length > 0 && (
+          <div className="dt-pager-wrap">
+            <Pager {...pagerProps} unit="promotions" />
+          </div>
+        )}
+      </>)}
 
       <ConfirmDialog
         open={Boolean(confirm)}

@@ -15,8 +15,10 @@ import SortableTh from '../../../components/DataTable/SortableTh'
 import { useTableSort } from '../../../components/DataTable/useTableSort'
 import TableScroll from '../../../components/DataTable/TableScroll'
 import { usePermissions } from '../../../contexts/PermissionsContext'
+import Pager from '../../../components/DataTable/Pager'
+import { TableBlockShimmer } from '../../../components/Shimmer/Shimmer'
 
-const PAGE_SIZE = 20
+
 const STATUS_TABS = ['ALL', 'PENDING', 'ACTIVE', 'WAIVED', 'PAID']
 
 function statusTone(status) {
@@ -45,47 +47,53 @@ function Penalties() {
   const sort = useTableSort()
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20)
   const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState('')
+  const [tabCounts, setTabCounts] = useState({})
   const [actionLoading, setActionLoading] = useState(null)
 
   useEffect(() => {
-    const t = setTimeout(() => setSearchApplied(search.trim()), 300)
+    const t = setTimeout(() => {
+      setSearchApplied(search.trim())
+      setPage(1)
+    }, 300)
     return () => clearTimeout(t)
   }, [search])
 
-  const load = useCallback(async (nextPage, replace) => {
-    replace ? setLoading(true) : setLoadingMore(true)
+  const load = useCallback(async (pageNo) => {
+    setLoading(true)
     setError('')
     try {
       const data = await getPenalties({
         status: status === 'ALL' ? undefined : status,
         search: searchApplied || undefined,
-        page: nextPage,
-        limit: PAGE_SIZE,
+        page: pageNo,
+        limit,
       })
       const { items: rows, total: count } = unwrapList(data)
-      setItems(prev => (replace ? rows : [...prev, ...rows]))
+      setItems(rows)
       setTotal(count)
-      setPage(nextPage)
     } catch (err) {
       setError(err.message || 'Failed to load penalties')
-      if (replace) setItems([])
+      setItems([])
     } finally {
-      replace ? setLoading(false) : setLoadingMore(false)
+      setLoading(false)
     }
-  }, [status, searchApplied])
+  }, [status, searchApplied, limit])
 
-  useEffect(() => { load(1, true) }, [load])
+  useEffect(() => { load(page) }, [load, page])
 
-  const hasMore = items.length < total
+  useEffect(() => {
+    if (loading) return
+    setTabCounts((prev) => (prev[status] === total ? prev : { ...prev, [status]: total }))
+  }, [loading, status, total])
 
   const handleApprove = async (id) => {
     setActionLoading(id)
     try {
       await approvePenalty(id)
-      await load(1, true)
+      await load(page)
     } catch (e) {
       alert(e.message || 'Failed to approve')
     } finally {
@@ -99,7 +107,7 @@ function Penalties() {
     setActionLoading(id)
     try {
       await waivePenalty(id, notes)
-      await load(1, true)
+      await load(page)
     } catch (e) {
       alert(e.message || 'Failed to waive')
     } finally {
@@ -150,9 +158,10 @@ function Penalties() {
             key={tab}
             type="button"
             className={`pv-tab ${status === tab ? 'is-active' : ''}`}
-            onClick={() => setStatus(tab)}
+            onClick={() => { setStatus(tab); setPage(1) }}
           >
             {tab}
+            {tabCounts[tab] != null && <span className="tab-count">{tabCounts[tab]}</span>}
           </button>
         ))}
       </div>
@@ -175,10 +184,7 @@ function Penalties() {
       )}
 
       {loading ? (
-        <div className="dt-empty">
-          <Loader2 size={32} className="spin" />
-          <span>Loading penalties…</span>
-        </div>
+        <TableBlockShimmer columns={8} />
       ) : sortedItems.length === 0 ? (
         <div className="dt-empty">
           <ScrollText size={32} />
@@ -286,22 +292,16 @@ function Penalties() {
                 </tbody>
               </table>
             </TableScroll>
+            <Pager
+              page={page}
+              total={total}
+              limit={limit}
+              onChange={setPage}
+              onLimitChange={(n) => { setLimit(n); setPage(1) }}
+              unit="penalties"
+              disabled={loading}
+            />
           </div>
-
-          {hasMore && (
-            <div className="pv-more">
-              <button
-                type="button"
-                className="dt-btn"
-                disabled={loadingMore}
-                onClick={() => load(page + 1, false)}
-              >
-                {loadingMore
-                  ? <><Loader2 size={16} className="spin" /> Loading…</>
-                  : `Load more (${items.length} of ${total})`}
-              </button>
-            </div>
-          )}
         </>
       )}
     </div>

@@ -12,6 +12,8 @@ import { mapProviderToRequest } from '../../../utils/spDocuments'
 import { initials, formatDate } from './providers.js'
 import '../adminForm.css'
 import './ProviderRequestDetail.css'
+import { DetailShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 const DOCUMENTS = [
   { key: 'governmentId', label: 'Government ID', icon: FileText },
@@ -87,7 +89,7 @@ function ProviderRequestDetail() {
     return (
       <div className="prd-page">
         <PageHeader title="Provider Request" />
-        <div className="sf-state"><Loader2 size={32} className="spin" /><span>Loading…</span></div>
+        <DetailShimmer />
       </div>
     )
   }

@@ -12,6 +12,8 @@ import {
 } from './surgeRules.js'
 import '../adminForm.css'
 import './SurgeConfigure.css'
+import { PageShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 function SurgeConfigure() {
   const navigate = useNavigate()
@@ -118,7 +120,7 @@ function SurgeConfigure() {
     return (
       <div className="surge-configure-page">
         <PageHeader title="Configure Surge Rules" />
-        <div className="sf-state"><Loader2 size={32} className="spin" /><span>Loading…</span></div>
+        <PageShimmer />
       </div>
     )
   }

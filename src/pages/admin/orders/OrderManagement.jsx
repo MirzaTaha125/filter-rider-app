@@ -15,6 +15,9 @@ import { getPaymentState, formatMoney, paymentMethodLabel } from './paymentStatu
 import { normalizeStatus, orderStatusTone } from './orderStatus'
 import './OrderManagement.css'
 import TableScroll from '../../../components/DataTable/TableScroll'
+import Pager from '../../../components/DataTable/Pager'
+import { TableShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 
 function OrderManagement() {
@@ -53,7 +56,7 @@ function OrderManagement() {
   // for, debounced so every keystroke is not a request.
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
-  const LIMIT = 10
+  const [limit, setLimit] = useState(10)
 
   const { ordersSocket } = useSocket()
 
@@ -74,7 +77,7 @@ function OrderManagement() {
 
   useEffect(() => {
     fetchOrders()
-  }, [page, filters.status, filters.serviceId, dateFilters.from, dateFilters.to, search])
+  }, [page, limit, filters.status, filters.serviceId, dateFilters.from, dateFilters.to, search])
 
   // Real-time order updates via orders namespace.
   // Socket payloads are often bare Prisma rows (no nested `service`/`customer`),
@@ -147,7 +150,7 @@ function OrderManagement() {
         to: dateFilters.to,
         search,
         page,
-        limit: LIMIT,
+        limit,
       })
       const list = Array.isArray(raw) ? raw : (raw?.orders ?? raw?.items ?? raw?.data ?? [])
       const orderList = Array.isArray(list) ? list : []
@@ -245,23 +248,7 @@ function OrderManagement() {
     navigate(`/admin/orders/${order.id}`)
   }
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / LIMIT))
-  const from = totalCount ? (page - 1) * LIMIT + 1 : 0
-  const to = Math.min(page * LIMIT, totalCount)
-
-  // 1, last, current ±1, with ellipsis for the gaps.
-  const pageButtons = (() => {
-    const set = new Set(
-      [1, totalPages, page, page - 1, page + 1].filter(p => p >= 1 && p <= totalPages),
-    )
-    const sorted = [...set].sort((a, b) => a - b)
-    const out = []
-    sorted.forEach((p, i) => {
-      if (i > 0 && p - sorted[i - 1] > 1) out.push('…')
-      out.push(p)
-    })
-    return out
-  })()
+  const totalPages = Math.max(1, Math.ceil(totalCount / limit))
 
   const activeFilterCount = [
     filters.status !== 'Any Status',
@@ -441,7 +428,7 @@ function OrderManagement() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="8" className="dt-state">Loading orders…</td></tr>
+                <TableShimmer columns={8} />
               ) : error ? (
                 <tr><td colSpan="8" className="dt-state dt-state--error">{error}</td></tr>
               ) : orders.length === 0 ? (
@@ -509,46 +496,15 @@ function OrderManagement() {
           </table>
         </TableScroll>
 
-        <footer className="dt-foot">
-          <span className="dt-foot-info">
-            {totalCount > 0
-              ? <>Showing {from} – {to} of {totalCount.toLocaleString()}</>
-              : 'No orders'}
-          </span>
-
-          {totalCount > 0 && (
-            <div className="dt-pager">
-              <button
-                className="dt-page"
-                onClick={() => setPage(p => p - 1)}
-                disabled={page === 1}
-              >
-                Prev
-              </button>
-              {pageButtons.map((p, i) => (
-                p === '…'
-                  ? <span key={`gap-${i}`} className="dt-page-gap">…</span>
-                  : (
-                    <button
-                      key={p}
-                      className={`dt-page ${p === page ? 'is-current' : ''}`}
-                      onClick={() => setPage(p)}
-                      aria-current={p === page ? 'page' : undefined}
-                    >
-                      {p}
-                    </button>
-                  )
-              ))}
-              <button
-                className="dt-page"
-                onClick={() => setPage(p => p + 1)}
-                disabled={page === totalPages}
-              >
-                Next
-              </button>
-            </div>
-          )}
-        </footer>
+        <Pager
+          page={page}
+          total={totalCount}
+          limit={limit}
+          onChange={setPage}
+          onLimitChange={(n) => { setLimit(n); setPage(1) }}
+          unit="orders"
+          disabled={loading}
+        />
       </div>
     </div>
   )

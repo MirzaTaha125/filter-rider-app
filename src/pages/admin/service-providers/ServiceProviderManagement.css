@@ -18,7 +18,7 @@
   background: var(--border-light);
   color: var(--text-muted);
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .spm-live-dot {
@@ -69,7 +69,7 @@
 
 .spm-stat-label {
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -77,51 +77,12 @@
 
 .spm-stat-value {
   font-size: 1.35rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- Tabs ---------- */
-.spm-tabs {
-  display: flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-  border-bottom: 1px solid var(--border-base);
-}
-
-.spm-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.7rem 1.1rem;
-  margin-bottom: -1px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  font-size: 0.9rem;
-  font-weight: 600;
-  font-family: inherit;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-
-.spm-tab:hover { color: var(--text-main); }
-
-.spm-tab.is-active {
-  color: var(--text-main);
-  border-bottom-color: var(--primary-color);
-}
-
-.spm-tab-count {
-  padding: 0.05rem 0.45rem;
-  border-radius: 999px;
-  background: var(--warning);
-  color: #1a1a1a;
-  font-size: 0.68rem;
-  font-weight: 700;
-}
+/* Tabs: src/styles/listTabs.css */
 
 .spm-count {
   margin-left: auto;
@@ -168,7 +129,7 @@
   background: var(--primary-soft);
   color: var(--text-main);
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .spm-avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -183,7 +144,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .spm-verified { color: var(--success); }
@@ -211,7 +172,7 @@
 
 .spm-rating svg { color: var(--warning); }
 
-.spm-earnings { font-weight: 700; }
+.spm-earnings { font-weight: 600; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 768px) {

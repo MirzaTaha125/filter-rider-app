@@ -60,7 +60,7 @@
 
 .zf-readonly-label {
   font-size: 0.825rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -68,7 +68,7 @@
   grid-row: span 2;
   align-self: center;
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   font-variant-numeric: tabular-nums;
 }
@@ -80,4 +80,222 @@
 
 @media (max-width: 820px) {
   .zf-map { height: 280px; }
+}
+
+/* ---------- City picker (Google) ---------- */
+.zf-combo {
+  position: relative;
+}
+
+.zf-combo-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-main);
+  font-size: 0.9rem;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.zf-combo-trigger.is-empty span { color: var(--text-muted); }
+
+.zf-combo-trigger:focus-visible {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.zf-combo-trigger:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.zf-combo-panel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-md);
+  background: var(--bg-card, var(--bg-input));
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.zf-combo-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.75rem;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-muted);
+}
+
+.sf-field .zf-combo-search input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.6rem 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.zf-combo-list,
+.zf-area-list {
+  margin: 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.zf-combo-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.85rem;
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.zf-combo-option:hover:not(:disabled) { background: var(--border-light); }
+
+.zf-combo-option span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.zf-combo-option em {
+  font-style: normal;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zf-combo-note {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.zf-combo-note--error { color: var(--danger); }
+
+.zf-combo-note--section {
+  margin-top: 0.25rem;
+  border-top: 1px solid var(--border-light);
+  font-weight: 500;
+}
+
+/* ---------- Area multi-select ---------- */
+.zf-areas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.zf-areas-box {
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  overflow: hidden;
+}
+
+.zf-areas-empty {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border: 1px dashed var(--border-base);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.zf-area-option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.875rem;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.zf-area-option:hover { background: var(--border-light); }
+
+.sf-field .zf-area-option input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  flex-shrink: 0;
+  accent-color: var(--primary-color);
+  box-shadow: none;
+}
+
+.zf-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.zf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.35rem 0.25rem 0.65rem;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--text-main);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.zf-chip button {
+  display: inline-flex;
+  padding: 2px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.zf-chip button:hover { background: rgba(0, 0, 0, 0.08); }
+
+.zf-link-btn {
+  padding: 0.2rem 0.3rem;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.zf-link-btn:hover { color: var(--text-main); }
+
+.zf-add {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-main);
 }

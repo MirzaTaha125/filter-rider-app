@@ -35,6 +35,7 @@ export async function updateServiceAddon(id, payload) {
   if (payload.price !== undefined) body.price = String(payload.price);
   if (payload.duration !== undefined) body.additional_duration = Number(payload.duration);
   if (payload.isActive !== undefined) body.is_active = payload.isActive;
+  if (payload.serviceId !== undefined) body.service_id = payload.serviceId;
   const data = await apiRequest(`/admin/service-addons/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(body),

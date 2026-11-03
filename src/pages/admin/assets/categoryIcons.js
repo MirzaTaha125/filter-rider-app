@@ -19,6 +19,11 @@ export const AVAILABLE_COLORS = [
 
 export const DEFAULT_COLOR = '#3b82f6'
 
+export function isIconUrl(value = '') {
+  const v = String(value).trim().toLowerCase()
+  return v.startsWith('http://') || v.startsWith('https://')
+}
+
 /** Older rows have no icon stored, so one is guessed from the name. */
 export function inferIconName(name = '', nameAr = '') {
   const value = `${name} ${nameAr}`.toLowerCase()
@@ -44,9 +49,32 @@ export function toCategory(item) {
     id: item.id,
     name,
     nameAr,
+    descriptionEn: item.description_en ?? item.descriptionEn ?? '',
+    descriptionAr: item.description_ar ?? item.descriptionAr ?? '',
+    avgRating: item.avg_rating ?? '0.0',
+    ratingCount: item.rating_count ?? 0,
     iconName,
+    iconUrl: isIconUrl(iconName) ? iconName : null,
     color: item.icon_color || item.color || DEFAULT_COLOR,
     icon: ICON_MAP[iconName] || DEFAULT_ICON,
     isActive: item.is_active,
+    imageUrl: item.image_url ?? null,
+    displayOrder: item.display_order ?? 0,
+    priceSource: item.price_source || 'AUTO',
+    priceFrom: item.price_from ?? null,
+    priceTo: item.price_to ?? null,
+    priceBySize: Array.isArray(item.price_by_size)
+      ? item.price_by_size.map((row) => ({
+          id: row.vehicle_size_id,
+          name: row.name,
+          nameAr: row.name_ar,
+          code: row.code,
+          displayOrder: row.display_order,
+          priceFrom: row.price_from,
+          priceTo: row.price_to,
+        }))
+      : [],
+    servicesCount: item.services_count ?? null,
+    activeServicesCount: item.active_services_count ?? null,
   }
 }

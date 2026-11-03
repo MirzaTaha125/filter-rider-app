@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  X, Loader2, AlertTriangle, Package, Layers, Calendar, Clock, MapPin,
+  X, AlertTriangle, Package, Layers, Calendar, Clock, MapPin,
   User, Wrench, ExternalLink,
 } from 'lucide-react'
 import { getAdminOrderDetails } from '../../api'
 import { normalizeStatus, orderStatusTone } from '../../pages/admin/orders/orderStatus'
 import { getPaymentState, formatMoney } from '../../pages/admin/orders/paymentStatus'
+import { ListRowsShimmer } from '../Shimmer/Shimmer'
 import './OrderPeekModal.css'
 
 function partyName(party) {
@@ -82,7 +83,7 @@ function OrderPeekModal({ orderId, onClose }) {
           <div>
             <h2>
               {loading
-                ? 'Loading order…'
+                ? <span className="shimmer shimmer-line shimmer-line--title" />
                 : `Order ${order?.order_no ?? orderId.slice(0, 8)}`}
             </h2>
             {order && (
@@ -100,7 +101,7 @@ function OrderPeekModal({ orderId, onClose }) {
 
         <div className="opk-body">
           {loading ? (
-            <div className="opk-state"><Loader2 size={26} className="spin" /><span>Loading…</span></div>
+            <ListRowsShimmer rows={5} />
           ) : error ? (
             <div className="opk-state">
               <AlertTriangle size={26} />

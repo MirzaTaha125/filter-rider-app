@@ -18,6 +18,7 @@ import {
   countOrderStatuses, countProviderPresence, normalizeStatus, isOpen,
 } from '../orders/orderStatus'
 import StatTile from '../../../components/StatTile/StatTile'
+import { ChartShimmer, ListRowsShimmer } from '../../../components/Shimmer/Shimmer'
 import { providerMarkerIcon } from '../../../components/map/providerPin'
 import { orderMarkerIcon, ORDER_PIN_COLOR, ORDER_PIN_SRC } from '../../../components/map/orderPin'
 import { isGoogleMapsKeyValid } from '../../../utils/googleMapsKey'
@@ -38,7 +39,19 @@ const PRESENCE_COLORS = { ONLINE: '#10b981', BUSY: '#FCC245', OFFLINE: '#6b7280'
  * Single ratio against a limit — a meter, drawn as a ring. The unfilled track
  * is a lighter step of the same hue so the state reads across the whole arc.
  */
-function Ring({ label, value, pct, sub }) {
+function Ring({ label, value, pct, sub, loading }) {
+  if (loading) {
+    return (
+      <div className="dash-ring" aria-busy="true" aria-label="Loading">
+        <span className="shimmer dash-shimmer-ring" />
+        <span className="dash-ring-text">
+          <span className="shimmer dash-shimmer-ring-label" />
+          <span className="shimmer dash-shimmer-ring-value" />
+          <span className="shimmer dash-shimmer-ring-sub" />
+        </span>
+      </div>
+    )
+  }
   const safe = Math.max(0, Math.min(100, Number(pct) || 0))
   return (
     <div className="dash-ring">
@@ -930,11 +943,14 @@ function Dashboard() {
             <section className="dash-accent">
               <h2>Live right now</h2>
               <p className="dash-accent-label">Orders in flight</p>
-              <div className="dash-hero">{statsLoading ? '—' : (orderStats.active ?? 0)}</div>
+              <div className="dash-hero">{statsLoading ? <span className="shimmer shimmer-hero" /> : (orderStats.active ?? 0)}</div>
               <p className="dash-accent-foot">
                 {orderStats.pending ?? 0} waiting to be broadcast
               </p>
               <div className="dash-spark">
+                {statsLoading ? (
+                  <span className="shimmer shimmer--light dash-shimmer-spark" />
+                ) : (
                 <ResponsiveContainer width="100%" height={64}>
                   <LineChart data={sparkline} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
                     <Line
@@ -948,6 +964,7 @@ function Dashboard() {
                     />
                   </LineChart>
                 </ResponsiveContainer>
+                )}
               </div>
             </section>
           )}
@@ -960,6 +977,7 @@ function Dashboard() {
                   value={`${onlinePct}%`}
                   pct={onlinePct}
                   sub={`${spStats.online ?? 0} of ${totalSPs}`}
+                  loading={statsLoading}
                 />
               )}
               {canOrders && (
@@ -968,6 +986,7 @@ function Dashboard() {
                   value={`${completionPct}%`}
                   pct={completionPct}
                   sub={`${orderStats.completed ?? 0} of ${orderStats.total ?? 0}`}
+                  loading={statsLoading}
                 />
               )}
             </section>
@@ -993,7 +1012,7 @@ function Dashboard() {
 
               <p className="dash-mapinfo-count">
                 {statsLoading
-                  ? 'Loading…'
+                  ? <span className="shimmer shimmer-line shimmer-line--short" />
                   : `${mapProviders.length} provider${mapProviders.length === 1 ? '' : 's'} · ${mapOrders.length} active order${mapOrders.length === 1 ? '' : 's'} plotted`}
               </p>
             </section>
@@ -1009,7 +1028,7 @@ function Dashboard() {
             <div>
               <h2>Order value</h2>
               <p>
-                {statsLoading ? '—' : (
+                {statsLoading ? <span className="shimmer shimmer-line shimmer-line--short" /> : (
                   <>
                     <span className="riyal-symbol">&#x20C1;</span>
                     {fmtMoney(periodTotal)} from {periodOrders.toLocaleString()} order{periodOrders === 1 ? '' : 's'}
@@ -1020,7 +1039,9 @@ function Dashboard() {
           </header>
 
           <div className="dash-chart">
-            {!revenueHasData ? (
+            {statsLoading ? (
+              <ChartShimmer />
+            ) : !revenueHasData ? (
               <div className="dash-empty">
                 <TrendingUp size={26} />
                 <span>No order value in this period yet.</span>
@@ -1075,7 +1096,7 @@ function Dashboard() {
 
           <div className="dash-list">
             {statsLoading ? (
-              <div className="dash-empty"><span>Loading…</span></div>
+              <ListRowsShimmer rows={4} />
             ) : needsAttention.length === 0 ? (
               <div className="dash-empty">
                 <CheckCircle2 size={26} />

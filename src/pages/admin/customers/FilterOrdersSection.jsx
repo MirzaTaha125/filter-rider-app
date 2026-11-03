@@ -1,10 +1,12 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
-import { ChevronDown, ChevronRight, Loader2, RefreshCw, Store } from 'lucide-react'
+import { ChevronDown, ChevronRight, RefreshCw, Store } from 'lucide-react'
 import { getCustomerFilterOrders, refreshCustomerFilterOrders } from '../../../api'
 import TableScroll from '../../../components/DataTable/TableScroll'
+import Pager from '../../../components/DataTable/Pager'
 import './FilterOrdersSection.css'
+import { TableShimmer } from '../../../components/Shimmer/Shimmer'
 
-const PAGE_SIZE = 20
+
 
 function money(value) {
   return Number(value ?? 0).toLocaleString('en-US', {
@@ -66,55 +68,41 @@ function refreshNotice(refresh) {
 function FilterOrdersSection({ customerId }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [expanded, setExpanded] = useState(() => new Set())
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (pageNo) => {
     setLoading(true)
     setError('')
     try {
-      setData(await getCustomerFilterOrders(customerId, { limit: PAGE_SIZE }))
+      setData(await getCustomerFilterOrders(customerId, { limit, offset: (pageNo - 1) * limit }))
     } catch (err) {
       setError(err.message || 'Failed to load Filter orders')
     } finally {
       setLoading(false)
     }
-  }, [customerId])
+  }, [customerId, limit])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { load(page) }, [load, page])
 
   const refresh = async () => {
     setRefreshing(true)
     setError('')
     setNotice('')
     try {
-      const result = await refreshCustomerFilterOrders(customerId, { limit: PAGE_SIZE })
+      const result = await refreshCustomerFilterOrders(customerId, { limit })
       setData(result)
+      setPage(1)
       setExpanded(new Set())
       setNotice(refreshNotice(result.refresh))
     } catch (err) {
       setError(err.message || 'Failed to refresh from Filter')
     } finally {
       setRefreshing(false)
-    }
-  }
-
-  const loadMore = async () => {
-    if (!data) return
-    setLoadingMore(true)
-    try {
-      const next = await getCustomerFilterOrders(customerId, {
-        limit: PAGE_SIZE,
-        offset: data.items.length,
-      })
-      setData({ ...next, items: [...data.items, ...(next.items ?? [])] })
-    } catch (err) {
-      setError(err.message || 'Failed to load more orders')
-    } finally {
-      setLoadingMore(false)
     }
   }
 
@@ -191,11 +179,7 @@ function FilterOrdersSection({ customerId }) {
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td colSpan="8" className="dt-state">
-                  <Loader2 size={18} className="spin" /> Loading Filter orders…
-                </td>
-              </tr>
+              <TableShimmer columns={8} />
             ) : items.length === 0 ? (
               <tr>
                 <td colSpan="8" className="dt-state">
@@ -279,12 +263,16 @@ function FilterOrdersSection({ customerId }) {
         </table>
       </TableScroll>
 
-      {!loading && items.length < total && (
-        <div className="fo-more">
-          <button type="button" className="dt-btn" onClick={loadMore} disabled={loadingMore}>
-            {loadingMore ? <><Loader2 size={15} className="spin" /> Loading…</> : `Show more (${total - items.length} left)`}
-          </button>
-        </div>
+      {total > 0 && (
+        <Pager
+          page={page}
+          total={total}
+          limit={limit}
+          onChange={setPage}
+          onLimitChange={(n) => { setLimit(n); setPage(1) }}
+          unit="orders"
+          disabled={loading}
+        />
       )}
     </section>
   )

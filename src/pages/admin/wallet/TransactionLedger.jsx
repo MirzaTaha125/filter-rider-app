@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  Loader2, AlertTriangle, Search, ChevronRight, Building2, Users, Landmark,
+  AlertTriangle, Search, ChevronRight, Building2, Users, Landmark,
 } from 'lucide-react'
 import {
   getWalletLedger,
@@ -12,13 +12,14 @@ import {
 import { formatMoney, unwrapList } from './walletFormat.js'
 import { LEDGER_TYPES, typeLabel } from './ledger.js'
 import LedgerTable from './LedgerTable'
+import { TableBlockShimmer } from '../../../components/Shimmer/Shimmer'
+import Pager from '../../../components/DataTable/Pager'
 import SortableTh from '../../../components/DataTable/SortableTh'
 import { useTableSort } from '../../../components/DataTable/useTableSort'
 import TableScroll from '../../../components/DataTable/TableScroll'
 import './TransactionLedger.css'
 import './PaymentApproval.css'
 
-const PAGE_SIZE = 20
 const TABS = [
   { id: 'providers', label: 'Service Providers', icon: Building2 },
   { id: 'customers', label: 'Customers', icon: Users },
@@ -29,10 +30,15 @@ function TransactionLedger() {
   const [searchParams, setSearchParams] = useSearchParams()
   const tabParam = searchParams.get('tab')
   const tab = TABS.some((t) => t.id === tabParam) ? tabParam : 'providers'
+  const [tabCounts, setTabCounts] = useState({})
 
   const setTab = (id) => {
     setSearchParams(id === 'providers' ? {} : { tab: id })
   }
+
+  const rememberCount = useCallback((id, n) => {
+    setTabCounts((prev) => (prev[id] === n ? prev : { ...prev, [id]: n }))
+  }, [])
 
   return (
     <div className="transaction-ledger">
@@ -58,14 +64,15 @@ function TransactionLedger() {
             >
               <Icon size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
               {t.label}
+              {tabCounts[t.id] != null && <span className="tab-count">{tabCounts[t.id]}</span>}
             </button>
           )
         })}
       </div>
 
-      {tab === 'providers' && <ProvidersTab />}
-      {tab === 'customers' && <CustomersTab />}
-      {tab === 'platform' && <PlatformTab />}
+      {tab === 'providers' && <ProvidersTab onTotal={rememberCount} />}
+      {tab === 'customers' && <CustomersTab onTotal={rememberCount} />}
+      {tab === 'platform' && <PlatformTab onTotal={rememberCount} />}
     </div>
   )
 }
@@ -79,41 +86,46 @@ function useDebounced(value, ms = 300) {
   return debounced
 }
 
-function ProvidersTab() {
+function ProvidersTab({ onTotal }) {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const applied = useDebounced(search.trim())
   const [items, setItems] = useState([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
+  const [pageFor, setPageFor] = useState(applied)
+  if (pageFor !== applied) {
+    setPageFor(applied)
+    setPage(1)
+  }
   const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
+  const [limit, setLimit] = useState(20)
   const [error, setError] = useState('')
   const sort = useTableSort()
 
-  const load = useCallback(async (nextPage, replace) => {
-    replace ? setLoading(true) : setLoadingMore(true)
+  const load = useCallback(async (pageNo) => {
+    setLoading(true)
     setError('')
     try {
       const data = await getProviders({
-        page: nextPage,
-        limit: PAGE_SIZE,
+        page: pageNo,
+        limit,
         search: applied || undefined,
       })
       const rows = Array.isArray(data) ? data : (data?.items ?? [])
       const count = data?.meta?.total ?? data?.total ?? rows.length
-      setItems((prev) => (replace ? rows : [...prev, ...rows]))
+      setItems(rows)
       setTotal(count)
-      setPage(nextPage)
+      onTotal?.('providers', count)
     } catch (err) {
       setError(err.message || 'Failed to load service providers')
-      if (replace) setItems([])
+      setItems([])
     } finally {
-      replace ? setLoading(false) : setLoadingMore(false)
+      setLoading(false)
     }
-  }, [applied])
+  }, [applied, limit, onTotal])
 
-  useEffect(() => { load(1, true) }, [load])
+  useEffect(() => { load(page) }, [load, page])
 
   const sorted = sort.apply(items, {
     name: (p) => p.full_name || p.name,
@@ -175,55 +187,64 @@ function ProvidersTab() {
                 </tbody>
               </table>
             </TableScroll>
+            <Pager
+              page={page}
+              total={total}
+              limit={limit}
+              onChange={setPage}
+              onLimitChange={(n) => { setLimit(n); setPage(1) }}
+              unit="providers"
+              disabled={loading}
+            />
           </div>
-          <LoadMore
-            hasMore={items.length < total}
-            loading={loadingMore}
-            onClick={() => load(page + 1, false)}
-          />
         </>
       )}
     </>
   )
 }
 
-function CustomersTab() {
+function CustomersTab({ onTotal }) {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const applied = useDebounced(search.trim())
   const [items, setItems] = useState([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
+  const [pageFor, setPageFor] = useState(applied)
+  if (pageFor !== applied) {
+    setPageFor(applied)
+    setPage(1)
+  }
   const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
+  const [limit, setLimit] = useState(20)
   const [error, setError] = useState('')
   const sort = useTableSort()
 
-  const load = useCallback(async (nextPage, replace) => {
-    replace ? setLoading(true) : setLoadingMore(true)
+  const load = useCallback(async (pageNo) => {
+    setLoading(true)
     setError('')
     try {
       const data = await getCustomers({
-        page: nextPage,
-        limit: PAGE_SIZE,
+        page: pageNo,
+        limit,
         search: applied || undefined,
       })
       const rows = Array.isArray(data)
         ? data
         : (data?.customers ?? data?.items ?? [])
       const count = data?.total ?? data?.meta?.total ?? rows.length
-      setItems((prev) => (replace ? rows : [...prev, ...rows]))
+      setItems(rows)
       setTotal(count)
-      setPage(nextPage)
+      onTotal?.('customers', count)
     } catch (err) {
       setError(err.message || 'Failed to load customers')
-      if (replace) setItems([])
+      setItems([])
     } finally {
-      replace ? setLoading(false) : setLoadingMore(false)
+      setLoading(false)
     }
-  }, [applied])
+  }, [applied, limit, onTotal])
 
-  useEffect(() => { load(1, true) }, [load])
+  useEffect(() => { load(page) }, [load, page])
 
   const sorted = sort.apply(items, {
     name: (c) => c.name || c.full_name,
@@ -279,19 +300,23 @@ function CustomersTab() {
                 </tbody>
               </table>
             </TableScroll>
+            <Pager
+              page={page}
+              total={total}
+              limit={limit}
+              onChange={setPage}
+              onLimitChange={(n) => { setLimit(n); setPage(1) }}
+              unit="customers"
+              disabled={loading}
+            />
           </div>
-          <LoadMore
-            hasMore={items.length < total}
-            loading={loadingMore}
-            onClick={() => load(page + 1, false)}
-          />
         </>
       )}
     </>
   )
 }
 
-function PlatformTab() {
+function PlatformTab({ onTotal }) {
   const [summary, setSummary] = useState(null)
   const [summaryLoading, setSummaryLoading] = useState(true)
   const [summaryError, setSummaryError] = useState('')
@@ -301,7 +326,7 @@ function PlatformTab() {
   const [totalVolume, setTotalVolume] = useState(null)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
+  const [limit, setLimit] = useState(20)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -312,30 +337,30 @@ function PlatformTab() {
       .finally(() => setSummaryLoading(false))
   }, [])
 
-  const load = useCallback(async (nextPage, replace) => {
-    replace ? setLoading(true) : setLoadingMore(true)
+  const load = useCallback(async (pageNo) => {
+    setLoading(true)
     setError('')
     try {
       const data = await getWalletLedger({
         ownerType: 'PLATFORM',
         type: type || undefined,
-        page: nextPage,
-        limit: PAGE_SIZE,
+        page: pageNo,
+        limit,
       })
       const { items: rows, total: count } = unwrapList(data)
-      setItems((prev) => (replace ? rows : [...prev, ...rows]))
+      setItems(rows)
       setTotal(count)
+      onTotal?.('platform', count)
       setTotalVolume(data?.total_volume ?? null)
-      setPage(nextPage)
     } catch (err) {
       setError(err.message || 'Failed to load platform ledger')
-      if (replace) setItems([])
+      setItems([])
     } finally {
-      replace ? setLoading(false) : setLoadingMore(false)
+      setLoading(false)
     }
-  }, [type])
+  }, [type, limit, onTotal])
 
-  useEffect(() => { load(1, true) }, [load])
+  useEffect(() => { load(page) }, [load, page])
 
   const platformTypes = LEDGER_TYPES.filter((t) =>
     ['COMMISSION_DEDUCT', 'COMMISSION_RELEASE', 'PENALTY', 'REVERSAL', 'ADJUSTMENT'].includes(t),
@@ -348,7 +373,7 @@ function PlatformTab() {
           <span className="tl-stat-label">Platform balance</span>
           <span className="tl-stat-value">
             {summaryLoading
-              ? <Loader2 size={18} className="spin" />
+              ? <span className="shimmer shimmer-value" />
               : <><span className="riyal-symbol">&#x20C1;</span>{formatMoney(summary?.available_balance)}</>}
           </span>
         </div>
@@ -383,7 +408,7 @@ function PlatformTab() {
           <div className="dt-field">
             <select
               value={type}
-              onChange={(e) => setType(e.target.value)}
+              onChange={(e) => { setType(e.target.value); setPage(1) }}
               aria-label="Transaction type"
             >
               <option value="">All platform types</option>
@@ -392,12 +417,9 @@ function PlatformTab() {
               ))}
             </select>
           </div>
-          {!loading && (
+          {!loading && totalVolume != null && (
             <span className="tl-count">
-              Showing {items.length.toLocaleString()} of {total.toLocaleString()}
-              {totalVolume != null && (
-                <> · Net volume <span className="riyal-symbol">&#x20C1;</span>{formatMoney(totalVolume)}</>
-              )}
+              Net volume <span className="riyal-symbol">&#x20C1;</span>{formatMoney(totalVolume)}
             </span>
           )}
         </div>
@@ -410,10 +432,15 @@ function PlatformTab() {
         hideAccount
         emptyTitle="No platform transactions"
         emptyHint="Commission credits appear here after orders complete; penalty residuals after penalties are applied."
-        hasMore={items.length < total}
-        loadingMore={loadingMore}
-        onLoadMore={() => load(page + 1, false)}
-        moreLabel={`Load more (${items.length} of ${total})`}
+        pager={{
+          page,
+          total,
+          limit,
+          onChange: setPage,
+          onLimitChange: (n) => { setLimit(n); setPage(1) },
+          unit: 'transactions',
+          disabled: loading,
+        }}
       />
     </>
   )
@@ -446,12 +473,7 @@ function Alert({ error }) {
 }
 
 function Loading() {
-  return (
-    <div className="dt-empty">
-      <Loader2 size={32} className="spin" />
-      <span>Loading…</span>
-    </div>
-  )
+  return <TableBlockShimmer columns={6} />
 }
 
 function Empty({ text }) {
@@ -462,17 +484,5 @@ function Empty({ text }) {
   )
 }
 
-function LoadMore({ hasMore, loading, onClick }) {
-  if (!hasMore) return null
-  return (
-    <div className="tl-more">
-      <button type="button" className="dt-btn" onClick={onClick} disabled={loading}>
-        {loading
-          ? <><Loader2 size={16} className="spin" /> Loading…</>
-          : 'Load more'}
-      </button>
-    </div>
-  )
-}
 
 export default TransactionLedger

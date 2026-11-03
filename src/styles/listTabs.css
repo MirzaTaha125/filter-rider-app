@@ -1,0 +1,130 @@
+/* List tabs match the provider history bar: white track, yellow active pill. */
+.pv-tabs,
+.spm-tabs,
+.pm2-tabs,
+.an-tabs,
+.mc-tabs,
+.spd-tabs,
+.od-tabs,
+.ss-tabs,
+.spd-filters,
+.cm-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 0 1rem;
+  padding: 6px;
+  background: var(--bg-card);
+  border: none;
+  border-bottom: none;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  scrollbar-width: none;
+}
+
+.pv-tabs::-webkit-scrollbar,
+.spm-tabs::-webkit-scrollbar,
+.pm2-tabs::-webkit-scrollbar,
+.an-tabs::-webkit-scrollbar,
+.mc-tabs::-webkit-scrollbar,
+.spd-tabs::-webkit-scrollbar,
+.od-tabs::-webkit-scrollbar,
+.ss-tabs::-webkit-scrollbar,
+.spd-filters::-webkit-scrollbar,
+.cm-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.pv-tab,
+.spm-tab,
+.pm2-tab,
+.an-tab,
+.mc-tab,
+.spd-tab,
+.od-tab,
+.ss-tab,
+.spd-chip,
+.cm-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 16px;
+  min-height: 38px;
+  border: none;
+  border-bottom: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #7a7a7a;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.pv-tab:hover,
+.spm-tab:hover,
+.pm2-tab:hover,
+.an-tab:hover,
+.mc-tab:hover,
+.spd-tab:hover,
+.od-tab:hover,
+.ss-tab:hover,
+.spd-chip:hover,
+.cm-chip:hover {
+  background: transparent;
+  color: var(--secondary-color);
+}
+
+.pv-tab.is-active,
+.spm-tab.is-active,
+.pm2-tab.is-active,
+.an-tab.is-active,
+.mc-tab.is-active,
+.spd-tab.is-active,
+.od-tab.is-active,
+.ss-tab.is-active,
+.spd-chip.is-active,
+.cm-chip.is-active {
+  background: var(--primary-color);
+  color: #1a1a1a;
+  border: none;
+  border-bottom: none;
+}
+
+.spm-tab-count,
+.spd-tab-count,
+.ss-tab-count,
+.tab-count,
+.ss-tab.is-active .ss-tab-count {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.spm-tab-count::before,
+.spd-tab-count::before,
+.ss-tab-count::before,
+.tab-count::before {
+  content: " (";
+}
+
+.spm-tab-count::after,
+.spd-tab-count::after,
+.ss-tab-count::after,
+.tab-count::after {
+  content: ")";
+}

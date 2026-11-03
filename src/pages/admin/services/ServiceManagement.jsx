@@ -2,17 +2,22 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSocket } from '../../../contexts/SocketContext'
 import {
-  Plus, Pencil, Settings, Trash2, Wrench, AlertTriangle, Loader2, Search,
+  Plus, Wrench, AlertTriangle, Search, CheckCircle2, ImageOff,
 } from 'lucide-react'
+import MasterCatalogPicker, { FromMasterCatalogButton } from '../catalog/MasterCatalogPicker'
 import ConfirmDialog from '../../../components/ConfirmDialog/ConfirmDialog'
 import {
   getServices,
   getServiceCategories,
   getServiceAddons,
-  deleteService,
+  getServiceSizePrices,
+  updateService,
 } from '../../../api'
-import { resolveServiceIcon } from './serviceIcons'
 import './ServiceManagement.css'
+import Pager from '../../../components/DataTable/Pager'
+import { usePagedRows } from '../../../components/DataTable/usePagedRows'
+import { ServiceCardsShimmer, ShimmerImage } from '../../../components/Shimmer/Shimmer'
+
 
 const CATALOG_EVENTS = [
   'catalog.service.created', 'catalog.service.updated', 'catalog.service.toggled',
@@ -30,11 +35,15 @@ function ServiceManagement() {
   const [services, setServices] = useState([])
   const [categories, setCategories] = useState({})
   const [addonCounts, setAddonCounts] = useState({})
+  const [sizePrices, setSizePrices] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [confirm, setConfirm] = useState(null)
+  const [busyId, setBusyId] = useState(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [notice, setNotice] = useState('')
 
   const loadData = useCallback(async () => {
     setError('')
@@ -52,14 +61,27 @@ function ServiceManagement() {
 
       // Add-on counts come from a separate endpoint — fetch them in parallel and
       // fold them in once available so the cards render without waiting.
-      const results = await Promise.allSettled(
-        serviceList.map(s => getServiceAddons(s.id, true)),
-      )
+      const [addonResults, sizeResults] = await Promise.all([
+        Promise.allSettled(serviceList.map(s => getServiceAddons(s.id, true))),
+        Promise.allSettled(serviceList.map(s => getServiceSizePrices(s.id))),
+      ])
       setAddonCounts(
         Object.fromEntries(
           serviceList.map((s, i) => [
             s.id,
-            results[i].status === 'fulfilled' ? toArray(results[i].value).length : 0,
+            addonResults[i].status === 'fulfilled'
+              ? toArray(addonResults[i].value).filter(addon => addon.is_active !== false).length
+              : 0,
+          ]),
+        ),
+      )
+      setSizePrices(
+        Object.fromEntries(
+          serviceList.map((s, i) => [
+            s.id,
+            sizeResults[i].status === 'fulfilled'
+              ? toArray(sizeResults[i].value).filter(row => row.price != null && row.price !== '' && row.price_active !== false)
+              : [],
           ]),
         ),
       )
@@ -80,22 +102,23 @@ function ServiceManagement() {
     return () => CATALOG_EVENTS.forEach(ev => catalogSocket.off(ev, handler))
   }, [catalogSocket, loadData])
 
-  const askDelete = (service) => {
-    setConfirm({
-      service,
-      message: `Delete "${service.name_en}"? This cannot be undone, and it will fail if the service is already used by orders.`,
-    })
+  const setActive = async (service, isActive) => {
+    setBusyId(service.id)
+    setError('')
+    try {
+      await updateService(service.id, { isActive })
+      setServices(list => list.map(s => (s.id === service.id ? { ...s, is_active: isActive } : s)))
+    } catch (err) {
+      setError(err.message || 'Failed to change the service status')
+    } finally {
+      setBusyId(null)
+    }
   }
 
-  const handleDelete = async (service) => {
-    const previous = services
-    setServices(list => list.filter(s => s.id !== service.id))
-    try {
-      await deleteService(service.id)
-    } catch (err) {
-      setServices(previous)
-      setError(err.message || 'Failed to delete service')
-    }
+  // Deactivating stops new bookings, so it asks first; activating doesn't.
+  const handleStatusClick = (service) => {
+    if (service.is_active) setConfirm({ service })
+    else setActive(service, true)
   }
 
   const visibleServices = services.filter(service => {
@@ -107,9 +130,27 @@ function ServiceManagement() {
       (service.name_ar || '').toLowerCase().includes(term)
     return matchesCategory && matchesSearch
   })
+  const { pageRows, pagerProps } = usePagedRows(visibleServices, {
+    defaultLimit: 20,
+    resetKey: `${categoryFilter}|${search.trim()}`,
+  })
 
   const formatPrice = (value) =>
     Number(value ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+  const sizeRowDisplay = (row) => {
+    const list = Number(row.price ?? 0)
+    const discounted =
+      row.discounted_price == null || row.discounted_price === ''
+        ? null
+        : Number(row.discounted_price)
+    const onSale =
+      discounted != null && Number.isFinite(discounted) && discounted > 0 && discounted < list
+    return {
+      pay: onSale ? discounted : list,
+      compareAt: onSale ? list : null,
+    }
+  }
 
   return (
     <div className="service-management">
@@ -117,11 +158,21 @@ function ServiceManagement() {
         <div>
           <p className="sm-subtitle">Manage the service catalog, pricing, and configuration.</p>
         </div>
-        <button className="sm-btn sm-btn--primary" onClick={() => navigate('/admin/services/add')}>
-          <Plus size={18} />
-          Add Service
-        </button>
+        <div className="mcp-head-actions">
+          <FromMasterCatalogButton label="Add Service from Master Catalog" onClick={() => setPickerOpen(true)} />
+          <button className="sm-btn sm-btn--primary" onClick={() => navigate('/admin/services/add')}>
+            <Plus size={18} />
+            Add Service
+          </button>
+        </div>
       </header>
+
+      {notice && (
+        <div className="mcp-notice" role="status">
+          <CheckCircle2 size={16} />
+          <span>{notice}</span>
+        </div>
+      )}
 
       <div className="sm-toolbar">
         <div className="sm-search">
@@ -156,10 +207,7 @@ function ServiceManagement() {
       )}
 
       {loading ? (
-        <div className="sm-state">
-          <Loader2 size={32} className="spin" />
-          <span>Loading services…</span>
-        </div>
+        <ServiceCardsShimmer />
       ) : visibleServices.length === 0 ? (
         <div className="sm-state">
           <Wrench size={32} />
@@ -177,34 +225,62 @@ function ServiceManagement() {
         </div>
       ) : (
         <div className="sm-grid">
-          {visibleServices.map(service => {
+          {pageRows.map(service => {
             const accent = service.icon_color || 'var(--primary-color)'
-            const Icon = resolveServiceIcon(service.icon)
             return (
               <article key={service.id} className="sm-card" style={{ '--accent': accent }}>
-                <div className="sm-card-top">
-                  <span className="sm-card-icon"><Icon size={20} /></span>
-                  <span className={`sm-badge ${service.is_active ? 'is-active' : 'is-inactive'}`}>
-                    {service.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-
+                {service.image_url ? (
+                  <div className="sm-card-cover">
+                    <ShimmerImage src={service.image_url} alt="" />
+                  </div>
+                ) : (
+                  <div className="sm-card-cover sm-card-cover--empty">
+                    <ImageOff size={22} />
+                    <span>No image</span>
+                  </div>
+                )}
                 <div className="sm-card-body">
-                  <h2 className="sm-card-title">{service.name_en}</h2>
-                  {service.name_ar && <p className="sm-card-subtitle" dir="rtl">{service.name_ar}</p>}
-                  <span className="sm-card-category">
-                    {categories[service.category_id] || 'Uncategorised'}
-                  </span>
+                  <div className="sm-card-names">
+                    <h2 className="sm-card-title">{service.name_en}</h2>
+                    <span className={`sm-badge ${service.is_active ? 'is-active' : 'is-inactive'}`}>
+                      {service.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  <div className="sm-card-meta">
+                    <span className="sm-card-category">
+                      {categories[service.category_id] || 'Uncategorised'}
+                    </span>
+                    <span className="sm-card-duration">{service.duration_min ?? 0} min</span>
+                  </div>
 
                   <dl className="sm-stats">
-                    <div>
-                      <dt>Base price</dt>
-                      <dd><span className="riyal-symbol">&#x20C1;</span>{formatPrice(service.base_price)}</dd>
-                    </div>
-                    <div>
-                      <dt>Duration</dt>
-                      <dd>{service.duration_min ?? 0} min</dd>
-                    </div>
+                    {(sizePrices[service.id] ?? []).length === 0 ? (
+                      <div>
+                        <dt>Price</dt>
+                        <dd>—</dd>
+                      </div>
+                    ) : (
+                      sizePrices[service.id].map(row => {
+                        const { pay, compareAt } = sizeRowDisplay(row)
+                        return (
+                          <div key={row.vehicle_size_id}>
+                            <dt>{row.name}</dt>
+                            <dd className="sm-price-dd">
+                              {compareAt != null && (
+                                <span className="sm-price-was">
+                                  <span className="riyal-symbol">&#x20C1;</span>
+                                  {formatPrice(compareAt)}
+                                </span>
+                              )}
+                              <span className="sm-price-now">
+                                <span className="riyal-symbol">&#x20C1;</span>
+                                {formatPrice(pay)}
+                              </span>
+                            </dd>
+                          </div>
+                        )
+                      })
+                    )}
                     <div>
                       <dt>Add-ons</dt>
                       <dd>{addonCounts[service.id] ?? '—'}</dd>
@@ -214,24 +290,18 @@ function ServiceManagement() {
 
                 <footer className="sm-card-actions">
                   <button
-                    className="sm-btn sm-btn--ghost"
+                    className="sm-btn sm-btn--primary"
                     onClick={() => navigate(`/admin/services/${service.id}/edit`)}
                   >
-                    <Pencil size={15} /> Edit
+                    Edit
                   </button>
                   <button
-                    className="sm-btn sm-btn--ghost"
-                    onClick={() => navigate(`/admin/services/${service.id}/settings`)}
+                    className={`sm-btn sm-btn--secondary sm-btn--status ${service.is_active ? 'is-deactivate' : 'is-activate'}`}
+                    onClick={() => handleStatusClick(service)}
+                    disabled={busyId === service.id}
+                    aria-label={`${service.is_active ? 'Deactivate' : 'Activate'} ${service.name_en}`}
                   >
-                    <Settings size={15} /> Settings
-                  </button>
-                  <button
-                    className="sm-btn sm-btn--icon-danger"
-                    onClick={() => askDelete(service)}
-                    title={`Delete ${service.name_en}`}
-                    aria-label={`Delete ${service.name_en}`}
-                  >
-                    <Trash2 size={15} />
+                    {service.is_active ? 'Deactivate' : 'Activate'}
                   </button>
                 </footer>
               </article>
@@ -239,19 +309,41 @@ function ServiceManagement() {
           })}
         </div>
       )}
+      {pageRows.length > 0 && (
+        <div className="dt-pager-wrap">
+          <Pager {...pagerProps} unit="services" />
+        </div>
+      )}
 
       <ConfirmDialog
         open={Boolean(confirm)}
-        title="Delete service"
-        message={confirm?.message}
-        confirmLabel="Delete service"
+        title="Deactivate service"
+        message={confirm ? `Deactivate "${confirm.service.name_en}"? Customers won't be able to book it until you activate it again. Past orders are not affected.` : ''}
+        confirmLabel="Deactivate"
         onCancel={() => setConfirm(null)}
         onConfirm={() => {
           const service = confirm?.service
           setConfirm(null)
-          if (service) handleDelete(service)
+          if (service) setActive(service, false)
         }}
       />
+
+      {pickerOpen && (
+        <MasterCatalogPicker
+          mode="service"
+          riderCategories={Object.entries(categories).map(([id, name]) => ({ id, name }))}
+          onClose={() => setPickerOpen(false)}
+          onAdded={(res) => {
+            const name = res?.service?.name_en ?? 'Service'
+            setNotice(
+              res?.created === false
+                ? `${name} was already added.`
+                : `${name} added${res?.category_created ? ` with the new category ${res?.category?.title_en}` : ''}.`,
+            )
+            loadData()
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Plus, Pencil, Trash2, Loader2, AlertTriangle, PackagePlus, Search,
+  Plus, Pencil, Trash2, AlertTriangle, PackagePlus, Search,
 } from 'lucide-react'
 import ConfirmDialog from '../../../components/ConfirmDialog/ConfirmDialog'
 import {
@@ -11,6 +11,10 @@ import {
 } from '../../../api'
 import './AddonsManagement.css'
 import TableScroll from '../../../components/DataTable/TableScroll'
+import Pager from '../../../components/DataTable/Pager'
+import { usePagedRows } from '../../../components/DataTable/usePagedRows'
+import { TableBlockShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 function toArray(value) {
   return Array.isArray(value) ? value : []
@@ -54,20 +58,22 @@ function AddonsManagement() {
 
   useEffect(() => { loadData() }, [loadData])
 
-  const askDelete = (addon, service) => {
+  const askDelete = (addon) => {
     setConfirm({
       addon,
-      serviceId: service.id,
-      message: `Delete "${addon.name_en}" from ${service.name_en}? This cannot be undone.`,
+      message: `Delete "${addon.name_en}"? This cannot be undone.`,
     })
   }
 
-  const handleDelete = async (addon, serviceId) => {
+  const handleDelete = async (addon) => {
     const previous = addonsByService
-    setAddonsByService(prev => ({
-      ...prev,
-      [serviceId]: toArray(prev[serviceId]).filter(a => a.id !== addon.id),
-    }))
+    setAddonsByService(prev => {
+      const next = {}
+      for (const [serviceId, list] of Object.entries(prev)) {
+        next[serviceId] = toArray(list).filter(item => item.id !== addon.id)
+      }
+      return next
+    })
     try {
       await deleteServiceAddon(addon.id)
     } catch (err) {
@@ -82,13 +88,18 @@ function AddonsManagement() {
     (addon.name_en || '').toLowerCase().includes(term) ||
     (addon.name_ar || '').toLowerCase().includes(term)
 
-  // When searching, hide services that have nothing left to show.
-  const visibleServices = services.filter(service => {
-    if (!term) return true
-    return toArray(addonsByService[service.id]).some(matches)
+  const addons = services.flatMap(service =>
+    toArray(addonsByService[service.id]).map(addon => ({
+      ...addon,
+      serviceId: addon.service_id || service.id,
+    })),
+  ).filter(matches)
+  const { pageRows, pagerProps } = usePagedRows(addons, {
+    defaultLimit: 10,
+    resetKey: term,
   })
 
-  const totalAddons = Object.values(addonsByService).reduce((n, list) => n + toArray(list).length, 0)
+  const totalAddons = addons.length
 
   const formatPrice = (value) =>
     Number(value ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -97,7 +108,7 @@ function AddonsManagement() {
     <div className="addons-management">
       <header className="dt-page-head">
         <div>
-          <p className="dt-page-sub">Optional extras customers can add to a service when booking.</p>
+          <p className="dt-page-sub">Title and one price. Tick an add-on on a service to show it there.</p>
         </div>
         <button
           className="dt-btn dt-btn--primary"
@@ -120,7 +131,7 @@ function AddonsManagement() {
           />
         </div>
         <span className="am-count">
-          {loading ? '—' : `${totalAddons} add-on${totalAddons === 1 ? '' : 's'} across ${services.length} service${services.length === 1 ? '' : 's'}`}
+          {loading ? '—' : `${totalAddons} add-on${totalAddons === 1 ? '' : 's'}`}
         </span>
       </div>
 
@@ -132,106 +143,84 @@ function AddonsManagement() {
       )}
 
       {loading ? (
-        <div className="dt-empty">
-          <Loader2 size={32} className="spin" />
-          <span>Loading add-ons…</span>
-        </div>
+        <TableBlockShimmer columns={5} />
       ) : services.length === 0 ? (
         <div className="dt-empty">
           <PackagePlus size={32} />
           <h2>No services yet</h2>
-          <p>Add-ons attach to a service, so create a service first.</p>
+          <p>Create a service first, then add extras you can tick on that service.</p>
           <button className="dt-btn dt-btn--primary" onClick={() => navigate('/admin/services/add')}>
             <Plus size={16} /> Add Service
           </button>
         </div>
-      ) : visibleServices.length === 0 ? (
+      ) : term && addons.length === 0 ? (
         <div className="dt-empty">
           <Search size={32} />
           <h2>No matches</h2>
           <p>No add-ons match “{search.trim()}”.</p>
         </div>
+      ) : addons.length === 0 ? (
+        <div className="dt-empty">
+          <PackagePlus size={32} />
+          <h2>No add-ons yet</h2>
+          <p>Create one here. Open a service and tick it when that service should offer it.</p>
+        </div>
       ) : (
-        <div className="am-sections">
-          {visibleServices.map(service => {
-            const addons = toArray(addonsByService[service.id]).filter(matches)
-            return (
-              <section key={service.id} className="am-section">
-                <header className="am-section-head">
-                  <div>
-                    <h2 className="am-section-title">{service.name_en}</h2>
-                    <p className="am-section-meta">
-                      {addons.length} add-on{addons.length === 1 ? '' : 's'}
-                    </p>
-                  </div>
-                  <button
-                    className="dt-btn dt-btn--ghost"
-                    onClick={() => navigate(`/admin/services/addons/add?serviceId=${service.id}`)}
-                  >
-                    <Plus size={15} /> Add
-                  </button>
-                </header>
-
-                {addons.length === 0 ? (
-                  <p className="dt-empty">No add-ons for this service yet.</p>
-                ) : (
-                  <TableScroll>
-                    <table className="dt-table">
-                      <thead>
-                        <tr>
-                          <th>Name</th>
-                          <th>Arabic</th>
-                          <th>Price</th>
-                          <th>Extra time</th>
-                          <th>Status</th>
-                          <th aria-label="Actions" />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {addons.map(addon => (
-                          <tr key={addon.id}>
-                            <td className="am-cell-name">{addon.name_en}</td>
-                            <td dir="rtl" className="am-cell-ar">{addon.name_ar || '—'}</td>
-                            <td>
-                              <span className="riyal-symbol">&#x20C1;</span>{formatPrice(addon.price)}
-                            </td>
-                            <td>{addon.additional_duration ?? 0} min</td>
-                            <td>
-                              <span className={`dt-status ${addon.is_active ? 'is-active' : 'is-inactive'}`}>
-                                {addon.is_active ? 'Active' : 'Inactive'}
-                              </span>
-                            </td>
-                            <td>
-                              <div className="dt-row-actions">
-                                <button
-                                  className="dt-icon-btn"
-                                  onClick={() => navigate(`/admin/services/addons/${addon.id}/edit`, {
-                                    state: { serviceId: service.id },
-                                  })}
-                                  title={`Edit ${addon.name_en}`}
-                                  aria-label={`Edit ${addon.name_en}`}
-                                >
-                                  <Pencil size={15} />
-                                </button>
-                                <button
-                                  className="dt-icon-btn dt-icon-btn--danger"
-                                  onClick={() => askDelete(addon, service)}
-                                  title={`Delete ${addon.name_en}`}
-                                  aria-label={`Delete ${addon.name_en}`}
-                                >
-                                  <Trash2 size={15} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </TableScroll>
-                )}
-              </section>
-            )
-          })}
+        <section className="am-section">
+          <TableScroll>
+            <table className="dt-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Price</th>
+                  <th>Status</th>
+                  <th aria-label="Actions" />
+                </tr>
+              </thead>
+              <tbody>
+                {pageRows.map(addon => (
+                  <tr key={addon.id}>
+                    <td className="am-cell-name">{addon.name_en}</td>
+                    <td>
+                      <span className="riyal-symbol">&#x20C1;</span>{formatPrice(addon.price)}
+                    </td>
+                    <td>
+                      <span className={`dt-status ${addon.is_active ? 'is-active' : 'is-inactive'}`}>
+                        {addon.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="dt-row-actions">
+                        <button
+                          className="dt-icon-btn"
+                          onClick={() => navigate(`/admin/services/addons/${addon.id}/edit`, {
+                            state: { serviceId: addon.serviceId },
+                          })}
+                          title={`Edit ${addon.name_en}`}
+                          aria-label={`Edit ${addon.name_en}`}
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        <button
+                          className="dt-icon-btn dt-icon-btn--danger"
+                          onClick={() => askDelete(addon)}
+                          title={`Delete ${addon.name_en}`}
+                          aria-label={`Delete ${addon.name_en}`}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableScroll>
+        </section>
+      )}
+      {pageRows.length > 0 && (
+        <div className="dt-pager-wrap">
+          <Pager {...pagerProps} unit="add-ons" />
         </div>
       )}
 
@@ -244,7 +233,7 @@ function AddonsManagement() {
         onConfirm={() => {
           const pending = confirm
           setConfirm(null)
-          if (pending) handleDelete(pending.addon, pending.serviceId)
+          if (pending) handleDelete(pending.addon)
         }}
       />
     </div>

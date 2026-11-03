@@ -14,7 +14,7 @@
 
 .asset-title {
   font-size: 2rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   margin: 0 0 0.5rem 0;
 }
@@ -34,7 +34,7 @@
   border: none;
   border-radius: 10px;
   color: var(--bg-card);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -61,7 +61,7 @@
   border-radius: 8px;
   background: transparent;
   color: var(--text-muted);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -105,7 +105,7 @@
 
 .category-name {
   font-size: 1.125rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   margin: 0 0 0.25rem 0;
 }
@@ -179,7 +179,7 @@
   padding: 1rem;
   text-align: left;
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
 }
@@ -206,7 +206,7 @@
 
 .size-name {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   margin-bottom: 0.5rem;
 }

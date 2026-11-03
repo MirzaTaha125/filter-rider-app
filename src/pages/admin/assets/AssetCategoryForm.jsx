@@ -3,19 +3,40 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Loader2, AlertTriangle } from 'lucide-react'
 import PageHeader from '../../../components/PageHeader/PageHeader'
 import {
-  getServiceCategory,
+  getServiceCategories,
   createServiceCategory,
   updateServiceCategory,
 } from '../../../api'
 import {
-  ICON_MAP, DEFAULT_ICON, AVAILABLE_ICONS, AVAILABLE_COLORS, DEFAULT_COLOR,
-  toCategory,
+  AVAILABLE_ICONS, AVAILABLE_COLORS, DEFAULT_COLOR,
+  toCategory, isIconUrl,
 } from './categoryIcons'
 import '../adminForm.css'
 import './AssetCategoryForm.css'
+import { PageShimmer } from '../../../components/Shimmer/Shimmer'
+import ImageUploadField from '../../../components/ImageUpload/ImageUploadField'
+
 
 const MAX_NAME_LENGTH = 100
 const BACK_TO = '/admin/assets'
+const PRICE_PATTERN = /^\d{1,10}(\.\d{1,2})?$/
+
+const PRICE_SOURCES = [
+  {
+    value: 'AUTO',
+    label: 'Automatic',
+    hint: 'Worked out from the prices of this category’s active services.',
+  },
+  {
+    value: 'MANUAL',
+    label: 'Manual override',
+    hint: 'You type the “price from” and “price to” shown to customers.',
+  },
+]
+
+function money(value) {
+  return Number(value ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
 
 function AssetCategoryForm() {
   const { categoryId } = useParams()
@@ -25,32 +46,57 @@ function AssetCategoryForm() {
   const [form, setForm] = useState({
     name: '',
     nameAr: '',
+    descriptionEn: '',
+    descriptionAr: '',
     iconName: 'Car',
     color: DEFAULT_COLOR,
+    displayOrder: '',
+    priceSource: 'AUTO',
+    priceFrom: '',
+    priceTo: '',
+    imageUrl: null,
   })
+  // The AUTO range as last worked out by the API, shown read-only.
+  const [autoRange, setAutoRange] = useState({ from: null, to: null })
   const [isActive, setIsActive] = useState(true)
-  const [loading, setLoading] = useState(isEdit)
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [loadError, setLoadError] = useState('')
   const [formError, setFormError] = useState('')
 
   const loadData = useCallback(async () => {
-    if (!isEdit) return
     setLoading(true)
     setLoadError('')
     try {
-      const row = await getServiceCategory(categoryId)
+      const list = await getServiceCategories(true)
+      if (!isEdit) {
+        // Default a new category to the end of the list.
+        const max = list.reduce((m, c) => Math.max(m, Number(c.display_order) || 0), 0)
+        setForm(prev => ({ ...prev, displayOrder: String(list.length ? max + 1 : 1) }))
+        return
+      }
+
+      const row = list.find(item => String(item.id) === String(categoryId))
       if (!row) {
         setLoadError('Category not found')
         return
       }
       const category = toCategory(row)
+      const isManual = category.priceSource === 'MANUAL'
       setForm({
         name: category.name ?? '',
         nameAr: category.nameAr ?? '',
+        descriptionEn: category.descriptionEn ?? '',
+        descriptionAr: category.descriptionAr ?? '',
         iconName: category.iconName || 'Car',
         color: category.color || DEFAULT_COLOR,
+        displayOrder: String(category.displayOrder ?? 0),
+        priceSource: category.priceSource,
+        priceFrom: isManual && category.priceFrom != null ? String(Number(category.priceFrom)) : '',
+        priceTo: isManual && category.priceTo != null ? String(Number(category.priceTo)) : '',
+        imageUrl: category.imageUrl,
       })
+      setAutoRange(isManual ? { from: null, to: null } : { from: category.priceFrom, to: category.priceTo })
       setIsActive(category.isActive !== false)
     } catch (err) {
       setLoadError(err.message || 'Failed to load category')
@@ -75,6 +121,19 @@ function AssetCategoryForm() {
     if (form.nameAr.length > MAX_NAME_LENGTH) {
       return `Arabic name must be ${MAX_NAME_LENGTH} characters or fewer.`
     }
+    if (form.displayOrder !== '') {
+      const n = Number(form.displayOrder)
+      if (!Number.isInteger(n) || n < 0) return 'Display order must be a whole number (0 or more).'
+    }
+    if (form.priceSource === 'MANUAL') {
+      const from = form.priceFrom.trim()
+      const to = form.priceTo.trim()
+      if (!from || !to) return 'Enter both “price from” and “price to” for a manual price.'
+      if (!PRICE_PATTERN.test(from) || !PRICE_PATTERN.test(to)) {
+        return 'Prices must be 0 or more with up to 2 decimals.'
+      }
+      if (Number(from) > Number(to)) return '“Price from” cannot be more than “price to”.'
+    }
     return ''
   }
 
@@ -92,8 +151,15 @@ function AssetCategoryForm() {
     const payload = {
       name: form.name.trim(),
       nameAr: form.nameAr.trim() || form.name.trim(),
+      descriptionEn: form.descriptionEn.trim(),
+      descriptionAr: form.descriptionAr.trim(),
       icon: form.iconName,
       color: form.color,
+      imageUrl: form.imageUrl,
+      displayOrder: form.displayOrder === '' ? 0 : Number(form.displayOrder),
+      priceSource: form.priceSource,
+      priceFrom: form.priceSource === 'MANUAL' ? Number(form.priceFrom).toFixed(2) : undefined,
+      priceTo: form.priceSource === 'MANUAL' ? Number(form.priceTo).toFixed(2) : undefined,
     }
 
     try {
@@ -110,13 +176,12 @@ function AssetCategoryForm() {
   }
 
   const title = isEdit ? 'Edit Asset Category' : 'Add Asset Category'
-  const PreviewIcon = ICON_MAP[form.iconName] || DEFAULT_ICON
 
   if (loading) {
     return (
       <div className="asset-form-page">
         <PageHeader title={title} onBack={() => navigate(BACK_TO)} />
-        <div className="sf-state"><Loader2 size={32} className="spin" /><span>Loading…</span></div>
+        <PageShimmer />
       </div>
     )
   }
@@ -145,7 +210,7 @@ function AssetCategoryForm() {
         onBack={() => navigate(BACK_TO)}
       />
 
-      <form className="sf-form" onSubmit={handleSubmit}>
+      <form className="sf-form" onSubmit={handleSubmit} noValidate>
         {formError && (
           <div className="sf-alert">
             <AlertTriangle size={16} />
@@ -153,6 +218,7 @@ function AssetCategoryForm() {
           </div>
         )}
 
+        <div className="acf-pair">
         <section className="sf-card">
           <header className="sf-card-head">
             <h2>Category details</h2>
@@ -189,13 +255,155 @@ function AssetCategoryForm() {
               <span className="sf-hint">Falls back to the English name if left blank.</span>
             </div>
           </div>
+
+          <div className="sf-grid sf-grid--2">
+            <div className="sf-field">
+              <label htmlFor="descriptionEn">Description (English)</label>
+              <textarea
+                id="descriptionEn"
+                rows={3}
+                placeholder="Shown under the category name in the customer app"
+                value={form.descriptionEn}
+                onChange={(e) => setField('descriptionEn', e.target.value)}
+                disabled={saving}
+                maxLength={500}
+              />
+            </div>
+            <div className="sf-field">
+              <label htmlFor="descriptionAr">Description (Arabic)</label>
+              <textarea
+                id="descriptionAr"
+                rows={3}
+                dir="rtl"
+                placeholder="تظهر تحت اسم الفئة في تطبيق العميل"
+                value={form.descriptionAr}
+                onChange={(e) => setField('descriptionAr', e.target.value)}
+                disabled={saving}
+                maxLength={500}
+              />
+            </div>
+          </div>
+
+          <div className="sf-field">
+            <label htmlFor="displayOrder">Display order</label>
+            <input
+              id="displayOrder"
+              type="number"
+              min="0"
+              step="1"
+              inputMode="numeric"
+              placeholder="e.g. 1"
+              value={form.displayOrder}
+              onChange={(e) => setField('displayOrder', e.target.value)}
+              disabled={saving}
+            />
+            <span className="sf-hint">Whole number. Lower numbers are listed first in the app.</span>
+          </div>
         </section>
 
         <section className="sf-card">
           <header className="sf-card-head">
-            <h2>Appearance</h2>
-            <p>Pick the icon and colour used on the category card.</p>
+            <h2>Price range</h2>
+            <p>The “from – to” price customers see on this category.</p>
           </header>
+
+          <div className="sf-field">
+            <label id="priceSourceLabel">Price source</label>
+            <div className="acf-sources" role="radiogroup" aria-labelledby="priceSourceLabel">
+              {PRICE_SOURCES.map(source => {
+                const selected = form.priceSource === source.value
+                return (
+                  <button
+                    key={source.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    className={`acf-source ${selected ? 'is-selected' : ''}`}
+                    onClick={() => setField('priceSource', source.value)}
+                    disabled={saving}
+                  >
+                    <span className="acf-source-dot" />
+                    <span className="acf-source-copy">
+                      <strong>{source.label}</strong>
+                      <em>{source.hint}</em>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {form.priceSource === 'AUTO' ? (
+            <div className="acf-auto-range">
+              <span className="acf-auto-label">Current range</span>
+              <strong>
+                {autoRange.from == null || autoRange.to == null ? (
+                  isEdit ? 'No active services with a price yet' : 'Set once services are added'
+                ) : (
+                  <>
+                    <span className="riyal-symbol">&#x20C1;</span>{money(autoRange.from)}
+                    {' – '}
+                    <span className="riyal-symbol">&#x20C1;</span>{money(autoRange.to)}
+                  </>
+                )}
+              </strong>
+              <span className="sf-hint">Updates by itself when service or size prices change.</span>
+            </div>
+          ) : (
+            <div className="sf-grid sf-grid--2">
+              <div className="sf-field">
+                <label htmlFor="priceFrom">Price from <span className="sf-req">*</span></label>
+                <div className="sf-input-affix">
+                  <span className="sf-affix riyal-symbol">&#x20C1;</span>
+                  <input
+                    id="priceFrom"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    placeholder="25.00"
+                    value={form.priceFrom}
+                    onChange={(e) => setField('priceFrom', e.target.value)}
+                    disabled={saving}
+                  />
+                </div>
+              </div>
+              <div className="sf-field">
+                <label htmlFor="priceTo">Price to <span className="sf-req">*</span></label>
+                <div className="sf-input-affix">
+                  <span className="sf-affix riyal-symbol">&#x20C1;</span>
+                  <input
+                    id="priceTo"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    placeholder="55.00"
+                    value={form.priceTo}
+                    onChange={(e) => setField('priceTo', e.target.value)}
+                    disabled={saving}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+        </div>
+
+        <section className="sf-card">
+          <header className="sf-card-head">
+            <h2>Appearance</h2>
+            <p>Image, icon and colour used for the category.</p>
+          </header>
+
+          <ImageUploadField
+            label="Category image"
+            folder="service-categories"
+            value={form.imageUrl}
+            onChange={(url) => setField('imageUrl', url)}
+            disabled={saving}
+            hint="Shown on the category in the app. A wide photo works best."
+          />
 
           <div className="sf-field">
             <label>Icon</label>
@@ -225,7 +433,18 @@ function AssetCategoryForm() {
                 )
               })}
             </div>
+            <span className="sf-hint">Pick a preset, or upload a custom image below.</span>
           </div>
+
+          <ImageUploadField
+            label="Custom icon"
+            folder="service-categories"
+            compact
+            value={isIconUrl(form.iconName) ? form.iconName : null}
+            onChange={(url) => setField('iconName', url || 'Car')}
+            disabled={saving}
+            hint="Shown as the round icon on the category page. A square image works best."
+          />
 
           <div className="sf-field">
             <label>Colour</label>
@@ -246,21 +465,6 @@ function AssetCategoryForm() {
             </div>
           </div>
 
-          <div className="sf-field">
-            <label>Preview</label>
-            <div className="acf-preview">
-              <div
-                className="acf-preview-icon"
-                style={{ backgroundColor: `${form.color}1a`, color: form.color }}
-              >
-                <PreviewIcon size={30} />
-              </div>
-              <div className="acf-preview-text">
-                <strong>{form.name.trim() || 'Category name'}</strong>
-                <span dir="rtl">{form.nameAr.trim() || 'اسم الفئة'}</span>
-              </div>
-            </div>
-          </div>
         </section>
 
         {isEdit && (

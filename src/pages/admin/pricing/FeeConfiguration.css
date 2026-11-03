@@ -14,7 +14,7 @@
 
 .fee-config-title {
   font-size: 2rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   margin: 0 0 0.5rem 0;
 }
@@ -82,7 +82,7 @@
 
 .config-title {
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   margin: 0 0 0.5rem 0;
 }
@@ -107,7 +107,7 @@
 
 .form-group label {
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -151,7 +151,7 @@
   border: none;
   border-radius: 8px;
   color: var(--bg-card);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;

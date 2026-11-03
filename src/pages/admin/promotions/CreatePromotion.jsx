@@ -6,14 +6,18 @@ import {
 import PageHeader from '../../../components/PageHeader/PageHeader'
 import {
   createPromotion, updatePromotion, getPromotion,
-  getZones, getServices, uploadFile,
+  getZones, getServices, uploadImage,
 } from '../../../api'
 import '../adminForm.css'
 import './CreatePromotion.css'
+import { PageShimmer } from '../../../components/Shimmer/Shimmer'
+import ArabicField from '../../../components/ArabicField/ArabicField'
+
 
 const EMPTY_FORM = {
   code: '',
   title: '',
+  titleAr: '',
   discountType: 'PERCENTAGE',
   discountValue: '',
   maxDiscount: '',
@@ -26,10 +30,77 @@ const EMPTY_FORM = {
   validTo: '',
   showOnHome: true,
   bannerBadge: '',
+  bannerBadgeAr: '',
   bannerTitle: '',
+  bannerTitleAr: '',
   bannerSubtitle: '',
+  bannerSubtitleAr: '',
   bannerImageUrl: '',
+  bannerBgColor: '#FFF6D9',
+  bannerPrimaryColor: '#FCC247',
+  bannerTextColor: '#1B1B1E',
+  bannerCtaTextColor: '#FFFFFF',
   bannerSortOrder: '0',
+}
+
+const BANNER_PRIMARY_PRESETS = ['#FCC247', '#F59E0B', '#111827', '#2563EB', '#059669', '#E11D48', '#7C3AED', '#0F766E']
+const BANNER_BG_PRESETS = [
+  '#FFF6D9', '#F3F4F6', '#E8F8F0', '#E8F1FF', '#FDE8F0', '#FFFFFF',
+  ...BANNER_PRIMARY_PRESETS,
+]
+const BANNER_TEXT_PRESETS = ['#1B1B1E', '#FFFFFF', '#111827', '#6B7280', '#E5E7EB', '#FCC247', '#2563EB']
+
+function isLightHex(hex) {
+  const h = String(hex || '').replace('#', '')
+  if (h.length !== 6) return true
+  const r = parseInt(h.slice(0, 2), 16)
+  const g = parseInt(h.slice(2, 4), 16)
+  const b = parseInt(h.slice(4, 6), 16)
+  if ([r, g, b].some(Number.isNaN)) return true
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62
+}
+
+function BannerColorField({
+  id, label, value, fallback, presets, hint, disabled, onChange,
+}) {
+  const hex = /^#[0-9A-Fa-f]{6}$/.test(value) ? value : fallback
+  return (
+    <div className="sf-field">
+      <label htmlFor={id}>{label}</label>
+      <div className="cp-color-row">
+        <input
+          id={id}
+          type="color"
+          value={hex}
+          onChange={(e) => onChange(e.target.value.toUpperCase())}
+          disabled={disabled}
+          aria-label={label}
+        />
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={fallback}
+          disabled={disabled}
+        />
+      </div>
+      <div className="cp-color-presets">
+        {presets.map((swatch) => (
+          <button
+            key={swatch}
+            type="button"
+            className={`cp-color-swatch ${(value || '').toUpperCase() === swatch.toUpperCase() ? 'is-active' : ''}`}
+            style={{ background: swatch }}
+            onClick={() => onChange(swatch)}
+            disabled={disabled}
+            title={swatch}
+            aria-label={`Use ${swatch}`}
+          />
+        ))}
+      </div>
+      {hint && <span className="sf-hint">{hint}</span>}
+    </div>
+  )
 }
 
 function toArray(value) {
@@ -75,6 +146,7 @@ function CreatePromotion() {
         setForm({
           code: promo.code ?? '',
           title: promo.title ?? '',
+          titleAr: promo.title_ar ?? '',
           discountType: promo.discount_type ?? 'PERCENTAGE',
           discountValue: promo.discount_value != null ? String(Number(promo.discount_value)) : '',
           maxDiscount: promo.max_discount != null ? String(Number(promo.max_discount)) : '',
@@ -87,9 +159,17 @@ function CreatePromotion() {
           validTo: toDateInput(promo.valid_to),
           showOnHome: Boolean(promo.show_on_home),
           bannerBadge: promo.banner_badge ?? '',
+          bannerBadgeAr: promo.banner_badge_ar ?? '',
           bannerTitle: promo.banner_title ?? '',
+          bannerTitleAr: promo.banner_title_ar ?? '',
           bannerSubtitle: promo.banner_subtitle ?? '',
+          bannerSubtitleAr: promo.banner_subtitle_ar ?? '',
           bannerImageUrl: promo.banner_image_url ?? '',
+          bannerBgColor: promo.banner_bg_color || '#FFF6D9',
+          bannerPrimaryColor: promo.banner_primary_color || '#FCC247',
+          bannerTextColor: promo.banner_text_color || '#1B1B1E',
+          bannerCtaTextColor: promo.banner_cta_text_color ||
+            (promo.banner_primary_color && !isLightHex(promo.banner_primary_color) ? '#FFFFFF' : '#1B1B1E'),
           bannerSortOrder: String(promo.banner_sort_order ?? 0),
         })
       }
@@ -174,6 +254,7 @@ function CreatePromotion() {
     const payload = {
       code,
       title: form.title.trim() || code,
+      titleAr: form.titleAr.trim(),
       discountType: form.discountType,
       discountValue: form.discountValue,
       maxDiscount: form.maxDiscount || undefined,
@@ -188,9 +269,16 @@ function CreatePromotion() {
       isActive: action === 'activate',
       showOnHome: form.showOnHome,
       bannerBadge: form.bannerBadge.trim(),
+      bannerBadgeAr: form.bannerBadgeAr.trim(),
       bannerTitle: form.bannerTitle.trim(),
+      bannerTitleAr: form.bannerTitleAr.trim(),
       bannerSubtitle: form.bannerSubtitle.trim(),
+      bannerSubtitleAr: form.bannerSubtitleAr.trim(),
       bannerImageUrl: form.bannerImageUrl.trim(),
+      bannerBgColor: form.bannerBgColor.trim(),
+      bannerPrimaryColor: form.bannerPrimaryColor.trim(),
+      bannerTextColor: form.bannerTextColor.trim(),
+      bannerCtaTextColor: form.bannerCtaTextColor.trim(),
       bannerSortOrder: form.bannerSortOrder,
     }
 
@@ -214,7 +302,7 @@ function CreatePromotion() {
     setUploading(true)
     setFormError('')
     try {
-      setField('bannerImageUrl', await uploadFile(file))
+      setField('bannerImageUrl', await uploadImage(file, 'promotions'))
     } catch (err) {
       setFormError(err.message || 'Failed to upload banner image')
     } finally {
@@ -228,7 +316,7 @@ function CreatePromotion() {
     return (
       <div className="promotion-form-page">
         <PageHeader title={title} />
-        <div className="sf-state"><Loader2 size={32} className="spin" /><span>Loading…</span></div>
+        <PageShimmer />
       </div>
     )
   }
@@ -264,6 +352,192 @@ function CreatePromotion() {
           </div>
         )}
 
+        <div className="cp-section-grid">
+        <section className="sf-card">
+          <header className="sf-card-head">
+            <h2>Home banner</h2>
+            <p>How this promotion appears on the customer app home screen.</p>
+          </header>
+
+          <label className="sf-toggle">
+            <input
+              type="checkbox"
+              checked={form.showOnHome}
+              onChange={(e) => setField('showOnHome', e.target.checked)}
+              disabled={Boolean(saving)}
+            />
+            <span className="sf-toggle-track"><span className="sf-toggle-thumb" /></span>
+            <span className="sf-toggle-copy">
+              <strong>Show on home</strong>
+              <em>Turn off to keep the coupon usable without featuring it on the carousel.</em>
+            </span>
+          </label>
+
+          <div className="sf-grid sf-grid--2">
+            <div className="sf-field">
+              <label htmlFor="bannerBadge">Badge text</label>
+              <input
+                id="bannerBadge"
+                type="text"
+                placeholder="e.g. 20% off"
+                value={form.bannerBadge}
+                onChange={(e) => setField('bannerBadge', e.target.value)}
+                disabled={Boolean(saving)}
+              />
+            </div>
+
+            <ArabicField
+              id="bannerBadgeAr"
+              label="Badge text"
+              placeholder="مثال: خصم 20٪"
+              value={form.bannerBadgeAr}
+              onChange={(value) => setField('bannerBadgeAr', value)}
+              disabled={Boolean(saving)}
+            />
+
+            <div className="sf-field">
+              <label htmlFor="bannerTitle">Banner title</label>
+              <input
+                id="bannerTitle"
+                type="text"
+                placeholder="e.g. 20% Off First Booking"
+                value={form.bannerTitle}
+                onChange={(e) => setField('bannerTitle', e.target.value)}
+                disabled={Boolean(saving)}
+              />
+            </div>
+
+            <ArabicField
+              id="bannerTitleAr"
+              label="Banner title"
+              placeholder="مثال: خصم 20٪ على أول حجز"
+              value={form.bannerTitleAr}
+              onChange={(value) => setField('bannerTitleAr', value)}
+              disabled={Boolean(saving)}
+            />
+
+            <div className="sf-field">
+              <label htmlFor="bannerSubtitle">Banner subtitle</label>
+              <input
+                id="bannerSubtitle"
+                type="text"
+                placeholder="e.g. New customers get 20% off their first service"
+                value={form.bannerSubtitle}
+                onChange={(e) => setField('bannerSubtitle', e.target.value)}
+                disabled={Boolean(saving)}
+              />
+            </div>
+
+            <ArabicField
+              id="bannerSubtitleAr"
+              label="Banner subtitle"
+              placeholder="مثال: العملاء الجدد يحصلون على خصم 20٪"
+              value={form.bannerSubtitleAr}
+              onChange={(value) => setField('bannerSubtitleAr', value)}
+              disabled={Boolean(saving)}
+            />
+
+            <BannerColorField
+              id="bannerBgColor"
+              label="Background color"
+              value={form.bannerBgColor}
+              fallback="#FFF6D9"
+              presets={BANNER_BG_PRESETS}
+              hint="Banner card background. Pick a light or dark color."
+              disabled={Boolean(saving)}
+              onChange={(value) => setField('bannerBgColor', value)}
+            />
+
+            <BannerColorField
+              id="bannerPrimaryColor"
+              label="Primary color"
+              value={form.bannerPrimaryColor}
+              fallback="#FCC247"
+              presets={BANNER_PRIMARY_PRESETS}
+              hint="Used for the Book Now button on the home banner."
+              disabled={Boolean(saving)}
+              onChange={(value) => setField('bannerPrimaryColor', value)}
+            />
+
+            <BannerColorField
+              id="bannerTextColor"
+              label="Banner text color"
+              value={form.bannerTextColor}
+              fallback="#1B1B1E"
+              presets={BANNER_TEXT_PRESETS}
+              hint="Title and subtitle on the home banner."
+              disabled={Boolean(saving)}
+              onChange={(value) => setField('bannerTextColor', value)}
+            />
+
+            <BannerColorField
+              id="bannerCtaTextColor"
+              label="Book Now text color"
+              value={form.bannerCtaTextColor}
+              fallback="#FFFFFF"
+              presets={BANNER_TEXT_PRESETS}
+              hint="Text inside the Book Now button."
+              disabled={Boolean(saving)}
+              onChange={(value) => setField('bannerCtaTextColor', value)}
+            />
+
+            <div className="sf-field">
+              <label htmlFor="bannerSortOrder">Sort order</label>
+              <input
+                id="bannerSortOrder"
+                type="number"
+                min="0"
+                step="1"
+                value={form.bannerSortOrder}
+                onChange={(e) => setField('bannerSortOrder', e.target.value)}
+                disabled={Boolean(saving)}
+              />
+              <span className="sf-hint">Lower numbers appear first.</span>
+            </div>
+
+            <div className="sf-field">
+              <label htmlFor="bannerImageUrl">Banner image</label>
+              <input
+                id="bannerImageUrl"
+                type="url"
+                placeholder="https://…"
+                value={form.bannerImageUrl}
+                onChange={(e) => setField('bannerImageUrl', e.target.value)}
+                disabled={Boolean(saving)}
+              />
+              <div className="cp-upload-row">
+                <label className={`sf-btn sf-btn--secondary cp-upload ${uploading ? 'is-busy' : ''}`}>
+                  {uploading ? <Loader2 size={15} className="spin" /> : <Upload size={15} />}
+                  {uploading ? 'Uploading…' : 'Upload image'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    disabled={uploading || Boolean(saving)}
+                    onChange={handleBannerUpload}
+                  />
+                </label>
+
+                {form.bannerImageUrl && (
+                  <div className="cp-preview">
+                    <img src={form.bannerImageUrl} alt="Banner preview" />
+                    <button
+                      type="button"
+                      className="cp-preview-clear"
+                      onClick={() => setField('bannerImageUrl', '')}
+                      title="Remove image"
+                      aria-label="Remove banner image"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                )}
+              </div>
+              <span className="sf-hint">Optional — the app falls back to a default image.</span>
+            </div>
+          </div>
+        </section>
+
         <section className="sf-card">
           <header className="sf-card-head">
             <h2>Promo code</h2>
@@ -296,6 +570,15 @@ function CreatePromotion() {
               />
               <span className="sf-hint">Falls back to the code if left empty.</span>
             </div>
+
+            <ArabicField
+              id="titleAr"
+              label="Title"
+              placeholder="مثال: خصم 20٪ على أول حجز"
+              value={form.titleAr}
+              onChange={(value) => setField('titleAr', value)}
+              disabled={Boolean(saving)}
+            />
           </div>
 
           <div className="sf-field">
@@ -370,6 +653,7 @@ function CreatePromotion() {
             <p>Leave both empty to make the promotion available everywhere, for every service.</p>
           </header>
 
+          <div className="sf-grid sf-grid--2">
           <div className="sf-field">
             <label>
               Zones
@@ -434,6 +718,7 @@ function CreatePromotion() {
                 })}
               </div>
             )}
+          </div>
           </div>
         </section>
 
@@ -516,120 +801,7 @@ function CreatePromotion() {
             </div>
           </div>
         </section>
-
-        <section className="sf-card">
-          <header className="sf-card-head">
-            <h2>Home banner</h2>
-            <p>How this promotion appears on the customer app home screen.</p>
-          </header>
-
-          <label className="sf-toggle">
-            <input
-              type="checkbox"
-              checked={form.showOnHome}
-              onChange={(e) => setField('showOnHome', e.target.checked)}
-              disabled={Boolean(saving)}
-            />
-            <span className="sf-toggle-track"><span className="sf-toggle-thumb" /></span>
-            <span className="sf-toggle-copy">
-              <strong>Show on home</strong>
-              <em>Turn off to keep the coupon usable without featuring it on the carousel.</em>
-            </span>
-          </label>
-
-          <div className="sf-grid sf-grid--2">
-            <div className="sf-field">
-              <label htmlFor="bannerBadge">Badge text</label>
-              <input
-                id="bannerBadge"
-                type="text"
-                placeholder="e.g. 20% off"
-                value={form.bannerBadge}
-                onChange={(e) => setField('bannerBadge', e.target.value)}
-                disabled={Boolean(saving)}
-              />
-            </div>
-
-            <div className="sf-field">
-              <label htmlFor="bannerSortOrder">Sort order</label>
-              <input
-                id="bannerSortOrder"
-                type="number"
-                min="0"
-                step="1"
-                value={form.bannerSortOrder}
-                onChange={(e) => setField('bannerSortOrder', e.target.value)}
-                disabled={Boolean(saving)}
-              />
-              <span className="sf-hint">Lower numbers appear first.</span>
-            </div>
-          </div>
-
-          <div className="sf-field">
-            <label htmlFor="bannerTitle">Banner title</label>
-            <input
-              id="bannerTitle"
-              type="text"
-              placeholder="e.g. 20% Off First Booking"
-              value={form.bannerTitle}
-              onChange={(e) => setField('bannerTitle', e.target.value)}
-              disabled={Boolean(saving)}
-            />
-          </div>
-
-          <div className="sf-field">
-            <label htmlFor="bannerSubtitle">Banner subtitle</label>
-            <input
-              id="bannerSubtitle"
-              type="text"
-              placeholder="e.g. New customers get 20% off their first service"
-              value={form.bannerSubtitle}
-              onChange={(e) => setField('bannerSubtitle', e.target.value)}
-              disabled={Boolean(saving)}
-            />
-          </div>
-
-          <div className="sf-field">
-            <label htmlFor="bannerImageUrl">Banner image</label>
-            <input
-              id="bannerImageUrl"
-              type="url"
-              placeholder="https://…"
-              value={form.bannerImageUrl}
-              onChange={(e) => setField('bannerImageUrl', e.target.value)}
-              disabled={Boolean(saving)}
-            />
-            <div className="cp-upload-row">
-              <label className={`sf-btn sf-btn--secondary cp-upload ${uploading ? 'is-busy' : ''}`}>
-                {uploading ? <Loader2 size={15} className="spin" /> : <Upload size={15} />}
-                {uploading ? 'Uploading…' : 'Upload image'}
-                <input
-                  type="file"
-                  accept="image/*"
-                  hidden
-                  disabled={uploading || Boolean(saving)}
-                  onChange={handleBannerUpload}
-                />
-              </label>
-
-              {form.bannerImageUrl && (
-                <div className="cp-preview">
-                  <img src={form.bannerImageUrl} alt="Banner preview" />
-                  <button
-                    type="button"
-                    className="cp-preview-clear"
-                    onClick={() => setField('bannerImageUrl', '')}
-                    title="Remove image"
-                    aria-label="Remove banner image"
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
-              )}
-            </div>
-            <span className="sf-hint">Optional — the app falls back to a default image.</span>
-          </div>
-        </section>
+        </div>
 
         <div className="sf-actions">
           <button

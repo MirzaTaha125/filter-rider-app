@@ -1,44 +1,70 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Loader2, AlertTriangle, Gift, Users, UserCheck } from 'lucide-react'
+import { Loader2, AlertTriangle, Gift, Users, UserCheck, Check, Percent, CircleDollarSign } from 'lucide-react'
 import PageHeader from '../../../components/PageHeader/PageHeader'
 import {
   getRewardRule,
   createRewardRule,
   updateRewardRule,
+  getServices,
 } from '../../../api'
 import '../adminForm.css'
 import './RewardForm.css'
+import { PageShimmer } from '../../../components/Shimmer/Shimmer'
+import ArabicField from '../../../components/ArabicField/ArabicField'
+import ImageUploadField from '../../../components/ImageUpload/ImageUploadField'
+
+const CARD_COLORS = ['#FFF3C4', '#D9F5E5', '#FDE3D0', '#E7E0FB', '#D9EEFB']
 
 const EMPTY_FORM = {
   name: '',
+  nameAr: '',
   description: '',
+  descriptionAr: '',
   audience: 'CUSTOMER',
   trigger: 'SIGN_UP',
   threshold: '10',
+  rewardKind: 'WALLET',
   rewardAmount: '50',
+  discountType: 'PERCENTAGE',
+  discountValue: '20',
+  selectedServiceIds: [],
   repeatMode: 'ONCE',
   maxGrants: '',
   validFrom: '',
   validTo: '',
   isActive: true,
+  cardColor: '#FFF3C4',
+  iconUrl: '',
 }
 
 function toDateInput(value) {
   return value ? String(value).slice(0, 10) : ''
 }
 
+function toArray(value) {
+  return Array.isArray(value) ? value : []
+}
+
 function previewText(form) {
   const who = form.audience === 'PROVIDER' ? 'a provider' : 'a customer'
-  const amount = form.rewardAmount === '' ? '…' : Number(form.rewardAmount)
+  const isDiscount = form.rewardKind === 'SERVICE_DISCOUNT'
+  const count = form.selectedServiceIds?.length || 0
+  const discountLabel = form.discountType === 'FIXED'
+    ? `${form.discountValue === '' ? '…' : Number(form.discountValue)} SAR off`
+    : `${form.discountValue === '' ? '…' : Number(form.discountValue)}% off`
+  const rewardBit = isDiscount
+    ? `give ${discountLabel} on ${count || 'selected'} service${count === 1 ? '' : 's'}`
+    : `credit ${form.rewardAmount === '' ? '…' : Number(form.rewardAmount)} SAR to their wallet`
+
   if (form.trigger === 'SIGN_UP') {
-    return `When ${who} signs up, credit ${amount} SAR to their wallet.`
+    return `When ${who} signs up, ${rewardBit}.`
   }
   const n = form.threshold === '' ? '…' : Number(form.threshold)
   if (form.repeatMode === 'EVERY_N') {
-    return `When ${who} completes every ${n} orders, credit ${amount} SAR.`
+    return `When ${who} completes every ${n} orders, ${rewardBit}.`
   }
-  return `When ${who} completes ${n} order${n === 1 ? '' : 's'}, credit ${amount} SAR.`
+  return `When ${who} completes ${n} order${n === 1 ? '' : 's'}, ${rewardBit}.`
 }
 
 function RewardForm() {
@@ -51,6 +77,7 @@ function RewardForm() {
   const [saving, setSaving] = useState(false)
   const [loadError, setLoadError] = useState('')
   const [formError, setFormError] = useState('')
+  const [services, setServices] = useState([])
 
   const load = useCallback(async () => {
     if (!isEdit) return
@@ -64,16 +91,24 @@ function RewardForm() {
       }
       setForm({
         name: rule.name ?? '',
+        nameAr: rule.name_ar ?? '',
         description: rule.description ?? '',
+        descriptionAr: rule.description_ar ?? '',
         audience: rule.audience ?? 'CUSTOMER',
         trigger: rule.trigger ?? 'SIGN_UP',
         threshold: rule.threshold != null ? String(rule.threshold) : '10',
+        rewardKind: rule.reward_kind ?? 'WALLET',
         rewardAmount: rule.reward_amount != null ? String(Number(rule.reward_amount)) : '',
+        discountType: rule.discount_type ?? 'PERCENTAGE',
+        discountValue: rule.discount_value != null ? String(Number(rule.discount_value)) : '20',
+        selectedServiceIds: toArray(rule.service_ids),
         repeatMode: rule.repeat_mode ?? 'ONCE',
         maxGrants: rule.max_grants != null ? String(rule.max_grants) : '',
         validFrom: toDateInput(rule.valid_from),
         validTo: toDateInput(rule.valid_to),
         isActive: rule.is_active !== false,
+        cardColor: rule.card_color || '#FFF3C4',
+        iconUrl: rule.icon_url || '',
       })
     } catch (err) {
       setLoadError(err.message || 'Failed to load reward rule')
@@ -84,17 +119,34 @@ function RewardForm() {
 
   useEffect(() => { load() }, [load])
 
+  useEffect(() => {
+    getServices(null, true)
+      .then((list) => setServices(toArray(list)))
+      .catch(() => setServices([]))
+  }, [])
+
   const setField = (field, value) => {
-    setForm(prev => ({ ...prev, [field]: value }))
+    setForm((prev) => ({ ...prev, [field]: value }))
     setFormError('')
   }
 
   const validate = () => {
-    if (!form.name.trim()) return 'Give this reward a name.'
+    if (!(form.name ?? '').trim()) return 'Give this reward a name.'
 
-    const amount = Number(form.rewardAmount)
-    if (form.rewardAmount === '' || Number.isNaN(amount) || amount <= 0) {
-      return 'Reward amount must be greater than 0.'
+    if (form.rewardKind === 'SERVICE_DISCOUNT') {
+      if (!form.selectedServiceIds.length) return 'Pick at least one service for the discount.'
+      const discount = Number(form.discountValue)
+      if (form.discountValue === '' || Number.isNaN(discount) || discount <= 0) {
+        return 'Discount value must be greater than 0.'
+      }
+      if (form.discountType === 'PERCENTAGE' && discount > 100) {
+        return 'Percentage discount cannot exceed 100.'
+      }
+    } else {
+      const amount = Number(form.rewardAmount)
+      if (form.rewardAmount === '' || Number.isNaN(amount) || amount <= 0) {
+        return 'Reward amount must be greater than 0.'
+      }
     }
 
     if (form.trigger === 'ORDERS_COMPLETED') {
@@ -128,17 +180,25 @@ function RewardForm() {
     setSaving(true)
     setFormError('')
     const payload = {
-      name: form.name.trim(),
-      description: form.description.trim(),
+      name: (form.name ?? '').trim(),
+      nameAr: (form.nameAr ?? '').trim(),
+      description: (form.description ?? '').trim(),
+      descriptionAr: (form.descriptionAr ?? '').trim(),
       audience: form.audience,
       trigger: form.trigger,
+      rewardKind: form.rewardKind,
       rewardAmount: form.rewardAmount,
+      discountType: form.discountType,
+      discountValue: form.discountValue,
+      serviceIds: form.selectedServiceIds,
       threshold: form.trigger === 'ORDERS_COMPLETED' ? form.threshold : undefined,
       repeatMode: form.trigger === 'SIGN_UP' ? 'ONCE' : form.repeatMode,
       maxGrants: form.maxGrants,
       validFrom: form.validFrom,
       validTo: form.validTo,
       isActive: form.isActive,
+      cardColor: form.cardColor,
+      iconUrl: form.iconUrl,
     }
 
     try {
@@ -161,7 +221,7 @@ function RewardForm() {
     return (
       <div className="reward-form-page">
         <PageHeader title={title} />
-        <div className="sf-state"><Loader2 size={32} className="spin" /><span>Loading…</span></div>
+        <PageShimmer />
       </div>
     )
   }
@@ -186,7 +246,7 @@ function RewardForm() {
     <div className="reward-form-page">
       <PageHeader
         title={title}
-        subtitle="Credit a wallet when a customer or provider hits a rule you define."
+        subtitle="Credit a wallet, or give a service discount, when a customer or provider hits a rule you define."
       />
 
       <form className="sf-form" onSubmit={handleSubmit}>
@@ -214,6 +274,16 @@ function RewardForm() {
             />
           </div>
 
+          <ArabicField
+            id="rw-name-ar"
+            label="Name"
+            placeholder="مثال: مكافأة الترحيب"
+            value={form.nameAr}
+            onChange={(value) => setField('nameAr', value)}
+            disabled={saving}
+            maxLength={120}
+          />
+
           <div className="sf-field">
             <label htmlFor="rw-description">Description</label>
             <textarea
@@ -226,6 +296,17 @@ function RewardForm() {
               disabled={saving}
             />
           </div>
+
+          <ArabicField
+            id="rw-description-ar"
+            label="Description"
+            placeholder="وصف اختياري"
+            value={form.descriptionAr}
+            onChange={(value) => setField('descriptionAr', value)}
+            disabled={saving}
+            maxLength={500}
+            multiline
+          />
 
           <div className="sf-field">
             <label>Audience <span className="sf-req">*</span></label>
@@ -241,7 +322,10 @@ function RewardForm() {
               <button
                 type="button"
                 className={`rw-segment-btn ${form.audience === 'PROVIDER' ? 'is-active' : ''}`}
-                onClick={() => setField('audience', 'PROVIDER')}
+                onClick={() => {
+                  setField('audience', 'PROVIDER')
+                  if (form.rewardKind === 'SERVICE_DISCOUNT') setField('rewardKind', 'WALLET')
+                }}
                 disabled={saving}
               >
                 <UserCheck size={16} /> Providers
@@ -323,10 +407,36 @@ function RewardForm() {
         <section className="sf-card">
           <div className="sf-card-head">
             <h2>Reward</h2>
-            <p>How much to credit, and optional limits.</p>
+            <p>Wallet credit, or a discount on selected services.</p>
           </div>
 
-          <div className="sf-grid sf-grid--2">
+          <div className="sf-field">
+            <label>Type <span className="sf-req">*</span></label>
+            <div className="rw-segment">
+              <button
+                type="button"
+                className={`rw-segment-btn ${form.rewardKind === 'WALLET' ? 'is-active' : ''}`}
+                onClick={() => setField('rewardKind', 'WALLET')}
+                disabled={saving}
+              >
+                Amount
+              </button>
+              <button
+                type="button"
+                className={`rw-segment-btn ${form.rewardKind === 'SERVICE_DISCOUNT' ? 'is-active' : ''}`}
+                onClick={() => setField('rewardKind', 'SERVICE_DISCOUNT')}
+                disabled={saving || form.audience === 'PROVIDER'}
+                title={form.audience === 'PROVIDER' ? 'Service discounts are for customers' : undefined}
+              >
+                Service discount
+              </button>
+            </div>
+            {form.audience === 'PROVIDER' && (
+              <span className="sf-hint">Service discounts apply on customer bookings only.</span>
+            )}
+          </div>
+
+          {form.rewardKind === 'WALLET' ? (
             <div className="sf-field">
               <label htmlFor="rw-amount">Amount (SAR) <span className="sf-req">*</span></label>
               <div className="sf-input-affix">
@@ -342,6 +452,88 @@ function RewardForm() {
                 />
               </div>
             </div>
+          ) : (
+            <>
+              <div className="sf-grid sf-grid--2">
+                <div className="sf-field">
+                  <label>Discount type <span className="sf-req">*</span></label>
+                  <div className="rw-segment">
+                    <button
+                      type="button"
+                      className={`rw-segment-btn ${form.discountType === 'PERCENTAGE' ? 'is-active' : ''}`}
+                      onClick={() => setField('discountType', 'PERCENTAGE')}
+                      disabled={saving}
+                    >
+                      <Percent size={15} /> Percent
+                    </button>
+                    <button
+                      type="button"
+                      className={`rw-segment-btn ${form.discountType === 'FIXED' ? 'is-active' : ''}`}
+                      onClick={() => setField('discountType', 'FIXED')}
+                      disabled={saving}
+                    >
+                      <CircleDollarSign size={15} /> Amount (SAR)
+                    </button>
+                  </div>
+                </div>
+                <div className="sf-field">
+                  <label htmlFor="rw-discount">
+                    {form.discountType === 'FIXED' ? 'Discount (SAR)' : 'Discount (%)'} <span className="sf-req">*</span>
+                  </label>
+                  <input
+                    id="rw-discount"
+                    type="number"
+                    min="0.01"
+                    max={form.discountType === 'PERCENTAGE' ? '100' : undefined}
+                    step="0.01"
+                    value={form.discountValue}
+                    onChange={(e) => setField('discountValue', e.target.value)}
+                    disabled={saving}
+                  />
+                </div>
+              </div>
+
+              <div className="sf-field">
+                <label>
+                  Services <span className="sf-req">*</span>
+                  {form.selectedServiceIds.length > 0 && (
+                    <span className="rw-selected">{form.selectedServiceIds.length} selected</span>
+                  )}
+                </label>
+                {services.length === 0 ? (
+                  <p className="rw-empty">No services found.</p>
+                ) : (
+                  <div className="rw-pills">
+                    {services.map((svc) => {
+                      const on = form.selectedServiceIds.includes(svc.id)
+                      return (
+                        <button
+                          key={svc.id}
+                          type="button"
+                          className={`rw-pill ${on ? 'is-on' : ''}`}
+                          onClick={() => {
+                            setField(
+                              'selectedServiceIds',
+                              on
+                                ? form.selectedServiceIds.filter((id) => id !== svc.id)
+                                : [...form.selectedServiceIds, svc.id],
+                            )
+                          }}
+                          disabled={saving}
+                          aria-pressed={on}
+                        >
+                          {on && <Check size={13} />}
+                          {svc.name_en}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          <div className="sf-grid sf-grid--2">
             <div className="sf-field">
               <label htmlFor="rw-max">Max grants per user</label>
               <input
@@ -379,6 +571,42 @@ function RewardForm() {
                 disabled={saving}
               />
             </div>
+          </div>
+
+          <div className="sf-grid sf-grid--2">
+            <div className="sf-field">
+              <label>Card color</label>
+              <div className="rw-colors">
+                {CARD_COLORS.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    className={`rw-color ${form.cardColor?.toUpperCase() === color ? 'is-active' : ''}`}
+                    style={{ background: color }}
+                    onClick={() => setField('cardColor', color)}
+                    disabled={saving}
+                    aria-label={color}
+                  />
+                ))}
+                <input
+                  type="color"
+                  className="rw-color-input"
+                  value={/^#[0-9A-Fa-f]{6}$/.test(form.cardColor || '') ? form.cardColor : '#FFF3C4'}
+                  onChange={(e) => setField('cardColor', e.target.value.toUpperCase())}
+                  disabled={saving}
+                  aria-label="Custom card color"
+                />
+              </div>
+              <span className="sf-hint">This color is used on the customer reward card.</span>
+            </div>
+            <ImageUploadField
+              label="Card icon"
+              folder="rewards"
+              value={form.iconUrl || null}
+              onChange={(url) => setField('iconUrl', url || '')}
+              disabled={saving}
+              hint="Shown on the right of the reward card. Leave empty for the default gift."
+            />
           </div>
 
           <label className="sf-toggle">

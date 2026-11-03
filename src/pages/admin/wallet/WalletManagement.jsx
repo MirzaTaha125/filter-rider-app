@@ -4,6 +4,7 @@ import {
   DollarSign, ArrowUpRight, ArrowDownRight, Percent, Loader2
 } from 'lucide-react'
 import { getWalletOverview, getPaymentApprovals, getWalletLedger, approvePayment, rejectPayment } from '../../../api'
+import { ListRowsShimmer } from '../../../components/Shimmer/Shimmer'
 import './WalletManagement.css'
 
 const fmt = (n) => Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -108,7 +109,7 @@ function WalletManagement() {
                 <div className="wallet-kpi-label">{kpi.label}</div>
                 <div className="wallet-kpi-value">
                   {overviewLoading
-                    ? <Loader2 size={20} className="spin" />
+                    ? <span className="shimmer shimmer-value" />
                     : <><span className="riyal-symbol">&#x20C1;</span>{fmt(kpi.value)}</>}
                 </div>
                 <div className={`wallet-kpi-trend ${kpi.trendType}`}>
@@ -154,19 +155,29 @@ function WalletManagement() {
             )}
           </div>
           {approvalsLoading ? (
-            <div className="wallet-loading"><Loader2 size={20} className="spin" /> Loading…</div>
+            <ListRowsShimmer rows={4} />
           ) : pendingApprovals.length === 0 ? (
             <div className="wallet-empty"><DollarSign size={32} style={{ opacity: 0.3 }} /><p>No pending approvals</p></div>
           ) : (
             <div className="approvals-list">
               {pendingApprovals.map((a) => {
-                const providerName = a.provider?.name ?? a.provider?.full_name ?? a.provider?.email ?? `#${a.id?.slice(0, 8)}`
+                const requesterName =
+                  a.owner_name ||
+                  a.provider?.user?.full_name ||
+                  a.provider?.name ||
+                  a.provider?.full_name ||
+                  a.provider?.email ||
+                  a.customer?.user?.full_name ||
+                  a.customer?.user?.email ||
+                  `#${a.id?.slice(0, 8)}`
+                const role = (a.owner_type || a.ownerType || (a.customer && !a.provider ? 'CUSTOMER' : 'PROVIDER')).toString()
+                const roleLabel = role.toUpperCase() === 'CUSTOMER' ? 'Customer' : 'Provider'
                 const method = a.bank_account?.bank_name ?? a.payment_method ?? 'Bank Transfer'
                 const timeAgo = a.created_at ? new Date(a.created_at).toLocaleDateString() : ''
                 return (
                   <div key={a.id} className="approval-item">
                     <div className="approval-info">
-                      <div className="approval-entity">{providerName}</div>
+                      <div className="approval-entity">{requesterName} · {roleLabel}</div>
                       <div className="approval-amount"><span className="riyal-symbol">&#x20C1;</span>{fmt(a.amount)}</div>
                       <div className="approval-details">{method} • {timeAgo}</div>
                     </div>
@@ -202,7 +213,7 @@ function WalletManagement() {
             <h3 className="card-title">Recent Transactions</h3>
           </div>
           {ledgerLoading ? (
-            <div className="wallet-loading"><Loader2 size={20} className="spin" /> Loading…</div>
+            <ListRowsShimmer rows={4} />
           ) : ledger.length === 0 ? (
             <div className="wallet-empty"><p>No transactions yet</p></div>
           ) : (

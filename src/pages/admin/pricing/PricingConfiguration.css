@@ -8,7 +8,7 @@
 
 .pricing-title {
   font-size: 2rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   margin: 0 0 0.5rem 0;
 }
@@ -35,7 +35,7 @@
   border-radius: 8px;
   background: transparent;
   color: var(--text-muted);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -73,7 +73,7 @@
 
 .config-title {
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   margin: 0 0 0.5rem 0;
 }
@@ -98,7 +98,7 @@
 
 .form-group label {
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -142,7 +142,7 @@
   border: none;
   border-radius: 8px;
   color: var(--bg-card);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -175,14 +175,14 @@
 }
 
 .rule-name {
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
   font-size: 1rem;
 }
 
 .rule-multiplier {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--primary-color);
 }
 
@@ -215,7 +215,7 @@
 }
 
 .regional-name {
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
   font-size: 1rem;
 }
@@ -233,7 +233,7 @@
   border-radius: 6px;
   background: var(--action-btn-bg);
   color: var(--text-main);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s;

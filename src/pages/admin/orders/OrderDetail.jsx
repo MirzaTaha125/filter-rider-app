@@ -26,6 +26,8 @@ import { normalizeStatus, orderStatusTone } from './orderStatus'
 import { ORDER_PIN_SRC } from '../../../components/map/orderPin'
 import './OrderDetail.css'
 import TableScroll from '../../../components/DataTable/TableScroll'
+import { DetailShimmer, ListRowsShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 /**
  * What the order *is* — service, schedule, customer, provider — used to be
@@ -227,10 +229,7 @@ function OrderDetail() {
 
   if (loading) {
     return (
-      <div className="od-state">
-        <Loader2 size={34} className="spin" />
-        <span>Loading order…</span>
-      </div>
+      <DetailShimmer />
     )
   }
 
@@ -475,6 +474,12 @@ function OrderDetail() {
                 onClick={() => setActiveTab(tab)}
               >
                 {TAB_LABELS[tab] ?? tab}
+                {tab === 'media' && (
+                  <span className="tab-count">{order.media?.length ?? 0}</span>
+                )}
+                {tab === 'timeline' && (
+                  <span className="tab-count">{order.timeline?.length ?? 0}</span>
+                )}
               </button>
             ))}
           </div>
@@ -745,9 +750,7 @@ function OrderDetail() {
 
               <div className="provider-list">
                 {reassignState.spLoading ? (
-                  <div className="provider-loading">
-                    <Loader2 size={18} className="spin" /> Loading providers...
-                  </div>
+                  <ListRowsShimmer rows={4} />
                 ) : (() => {
                   const q = reassignState.spSearch.toLowerCase()
                   const filtered = reassignState.spList.filter(sp => {

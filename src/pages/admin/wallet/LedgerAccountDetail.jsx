@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Loader2, AlertTriangle } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 import PageHeader from '../../../components/PageHeader/PageHeader'
 import {
   getWalletLedger,
@@ -11,8 +11,6 @@ import { formatMoney, unwrapList } from './walletFormat.js'
 import { LEDGER_TYPES, typeLabel } from './ledger.js'
 import LedgerTable from './LedgerTable'
 import './TransactionLedger.css'
-
-const PAGE_SIZE = 20
 
 function LedgerAccountDetail({ kind }) {
   const { providerId, customerId } = useParams()
@@ -29,7 +27,7 @@ function LedgerAccountDetail({ kind }) {
   const [totalVolume, setTotalVolume] = useState(null)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
+  const [limit, setLimit] = useState(20)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -54,31 +52,30 @@ function LedgerAccountDetail({ kind }) {
     return () => { cancelled = true }
   }, [kind, id])
 
-  const load = useCallback(async (nextPage, replace) => {
-    replace ? setLoading(true) : setLoadingMore(true)
+  const load = useCallback(async (pageNo) => {
+    setLoading(true)
     setError('')
     try {
       const data = await getWalletLedger({
         type: type || undefined,
         providerId: kind === 'provider' ? id : undefined,
         customerId: kind === 'customer' ? id : undefined,
-        page: nextPage,
-        limit: PAGE_SIZE,
+        page: pageNo,
+        limit,
       })
       const { items: rows, total: count } = unwrapList(data)
-      setItems((prev) => (replace ? rows : [...prev, ...rows]))
+      setItems(rows)
       setTotal(count)
       setTotalVolume(data?.total_volume ?? null)
-      setPage(nextPage)
     } catch (err) {
       setError(err.message || 'Failed to load ledger')
-      if (replace) setItems([])
+      setItems([])
     } finally {
-      replace ? setLoading(false) : setLoadingMore(false)
+      setLoading(false)
     }
-  }, [kind, id, type])
+  }, [kind, id, type, limit])
 
-  useEffect(() => { load(1, true) }, [load])
+  useEffect(() => { load(page) }, [load, page])
 
   const name = kind === 'provider'
     ? (profile?.full_name || profile?.user?.full_name || profile?.name || 'Service provider')
@@ -95,7 +92,7 @@ function LedgerAccountDetail({ kind }) {
   return (
     <div className="transaction-ledger">
       <PageHeader
-        title={profileLoading ? 'Loading…' : name}
+        title={profileLoading ? <span className="shimmer shimmer-line shimmer-line--title" /> : name}
         subtitle={
           kind === 'provider'
             ? 'Service provider wallet ledger'
@@ -116,7 +113,7 @@ function LedgerAccountDetail({ kind }) {
           <span className="tl-stat-label">Available balance</span>
           <span className="tl-stat-value">
             {profileLoading
-              ? <Loader2 size={18} className="spin" />
+              ? <span className="shimmer shimmer-value" />
               : <><span className="riyal-symbol">&#x20C1;</span>{formatMoney(walletBalance)}</>}
           </span>
         </div>
@@ -169,10 +166,15 @@ function LedgerAccountDetail({ kind }) {
         hideAccount
         emptyTitle="No transactions"
         emptyHint="No wallet movements for this account yet."
-        hasMore={items.length < total}
-        loadingMore={loadingMore}
-        onLoadMore={() => load(page + 1, false)}
-        moreLabel={`Load more (${items.length} of ${total})`}
+        pager={{
+          page,
+          total,
+          limit,
+          onChange: setPage,
+          onLimitChange: (n) => { setLimit(n); setPage(1) },
+          unit: 'transactions',
+          disabled: loading,
+        }}
       />
     </div>
   )

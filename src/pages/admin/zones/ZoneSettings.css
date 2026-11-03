@@ -1,0 +1,86 @@
+/* Shared form primitives (.sf-*) live in ../adminForm.css. */
+
+.zone-settings-page {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-status-grid {
+  align-items: start;
+}
+
+.zs-head-icon {
+  vertical-align: -3px;
+  margin-right: 0.4rem;
+  color: var(--text-muted);
+}
+
+.zs-input {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sf-field .zs-input input { flex: 1; min-width: 0; }
+
+.zs-input span {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.zs-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  background: rgba(22, 163, 74, 0.12);
+  color: var(--success);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* ---------- Radius over time ---------- */
+.zs-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius-md);
+  background: var(--border-light);
+}
+
+.zs-plan-title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.zs-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.zs-steps li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 64px;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  font-variant-numeric: tabular-nums;
+}
+
+.zs-steps li strong { font-size: 0.9rem; color: var(--text-main); }
+.zs-step-time { font-size: 0.7rem; color: var(--text-muted); }
+

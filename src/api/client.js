@@ -2,6 +2,9 @@ import { dispatchSessionExpired } from '../utils/authEvents';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'https://flterhomeapitemp.duckdns.org/api/v1';
 
+/** Base API URL, for callers that cannot use apiRequest (e.g. multipart uploads). */
+export const API_BASE_URL = BASE_URL;
+
 function getToken() {
   return localStorage.getItem('adminToken');
 }

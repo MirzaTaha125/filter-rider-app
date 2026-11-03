@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import {
-  Search, Loader2, AlertTriangle, MessagesSquare, ExternalLink, Eye,
+  Search, AlertTriangle, MessagesSquare, ExternalLink, Eye,
   ArrowLeft, X,
 } from 'lucide-react'
 import { getChatRooms, getChatThread, markChatThreadRead } from '../../../api'
@@ -11,6 +11,8 @@ import ChatThread from '../../../components/ChatThread/ChatThread'
 import OrderPeekModal from '../../../components/OrderPeekModal/OrderPeekModal'
 import { formatChatTime as formatTime } from '../../../components/ChatThread/formatChatTime'
 import './ChatMonitor.css'
+import { ChatRoomsShimmer, ChatThreadShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 const STATUS_FILTERS = [
   { value: 'All', label: 'All' },
@@ -46,14 +48,10 @@ function monogram(name) {
 }
 
 /**
- * Full-screen messaging client for support.
- *
- * This renders outside the admin shell (see AdminDashboard) — a conversation
- * needs the width, and a nav rail beside a chat list is two sidebars competing
- * for the same job. The way back to the panel lives in the list header.
+ * Support inbox. It stays inside the admin shell so the side menu remains
+ * available while a conversation is open.
  */
 function ChatMonitor() {
-  const navigate = useNavigate()
   const { chatSocket } = useSocket()
   const { hasPermission } = usePermissions()
   const canReply = hasPermission('chat.reply')
@@ -61,6 +59,7 @@ function ChatMonitor() {
   const activeOrderId = searchParams.get('order') ?? ''
 
   const [rooms, setRooms] = useState([])
+  const [roomCounts, setRoomCounts] = useState(null)
   const [roomsLoading, setRoomsLoading] = useState(true)
   const [roomsError, setRoomsError] = useState('')
   const [search, setSearch] = useState('')
@@ -96,9 +95,18 @@ function ChatMonitor() {
     const gen = ++roomsFetchGenRef.current
     setRoomsError('')
     try {
-      const res = await getChatRooms({ limit: 100, status: statusFilter })
+      const res = await getChatRooms({ limit: 100 })
       if (gen !== roomsFetchGenRef.current) return
-      applyRooms(Array.isArray(res?.items) ? res.items : [])
+      const items = Array.isArray(res?.items) ? res.items : []
+      applyRooms(items)
+      const fromApi = res?.meta?.counts
+      const active = items.filter((room) => room.status === 'ACTIVE').length
+      const closed = items.filter((room) => room.status === 'CLOSED').length
+      setRoomCounts(fromApi ?? {
+        all: res?.meta?.total ?? items.length,
+        active,
+        closed,
+      })
     } catch (err) {
       if (gen !== roomsFetchGenRef.current) return
       setRoomsError(err.message || 'Failed to load conversations')
@@ -106,7 +114,7 @@ function ChatMonitor() {
     } finally {
       if (gen === roomsFetchGenRef.current) setRoomsLoading(false)
     }
-  }, [statusFilter, applyRooms])
+  }, [applyRooms])
 
   useEffect(() => { loadRooms() }, [loadRooms])
 
@@ -182,33 +190,35 @@ function ChatMonitor() {
   }, [chatSocket, loadRooms, activeOrderId, clearRoomBadge])
 
   const term = search.trim().toLowerCase()
-  const visibleRooms = rooms.filter((room) =>
-    !term
-    || (room.order_no ?? '').toLowerCase().includes(term)
-    || room.customer.name.toLowerCase().includes(term)
-    || room.provider.name.toLowerCase().includes(term),
-  )
+  const visibleRooms = rooms.filter((room) => {
+    const statusOk = statusFilter === 'All' || room.status === statusFilter
+    const termOk = !term
+      || (room.order_no ?? '').toLowerCase().includes(term)
+      || room.customer.name.toLowerCase().includes(term)
+      || room.provider.name.toLowerCase().includes(term)
+    return statusOk && termOk
+  })
+  const chipCount = {
+    All: roomCounts?.all,
+    ACTIVE: roomCounts?.active,
+    CLOSED: roomCounts?.closed,
+  }
 
   const openRoom = (orderId) => {
     setSearchParams(orderId ? { order: orderId } : {}, { replace: true })
   }
 
+  const activeRoom = rooms.find((room) => room.order_id === activeOrderId)
+  const barCustomer = thread?.participants?.customer?.name || activeRoom?.customer?.name || ''
+  const barProvider = thread?.participants?.provider?.name || activeRoom?.provider?.name || ''
+  const barOrderNo = thread?.room?.order_no || activeRoom?.order_no || 'Order'
+  const barStatus = thread?.room?.order_status || ''
+  const barOrderId = thread?.room?.order_id || activeOrderId
+
   return (
     <div className={`chat-shell ${activeOrderId ? 'has-thread' : ''}`}>
       {/* ── Conversation list ───────────────────────────────────────────── */}
       <aside className="cm-list">
-        <header className="cm-list-head">
-          <button
-            className="cm-back"
-            onClick={() => navigate('/admin')}
-            title="Back to admin panel"
-            aria-label="Back to admin panel"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <h1 className="cm-title">Chat</h1>
-        </header>
-
         <div className="cm-list-tools">
           <div className="cm-search">
             <Search size={15} />
@@ -227,6 +237,9 @@ function ChatMonitor() {
                 onClick={() => setStatusFilter(value)}
               >
                 {label}
+                {chipCount[value] != null && (
+                  <span className="tab-count">{chipCount[value]}</span>
+                )}
               </button>
             ))}
           </div>
@@ -244,7 +257,7 @@ function ChatMonitor() {
 
         <div className="cm-list-scroll">
           {roomsLoading ? (
-            <div className="cm-state"><Loader2 size={22} className="spin" /><span>Loading…</span></div>
+            <ChatRoomsShimmer rows={8} />
           ) : visibleRooms.length === 0 ? (
             <div className="cm-state">
               <MessagesSquare size={26} />
@@ -304,55 +317,66 @@ function ChatMonitor() {
               support.
             </p>
           </div>
-        ) : threadLoading ? (
-          <div className="cm-state cm-state--full">
-            <Loader2 size={30} className="spin" /><span>Loading conversation…</span>
-          </div>
-        ) : threadError ? (
-          <div className="cm-state cm-state--full">
-            <AlertTriangle size={30} />
-            <h2>Could not load conversation</h2>
-            <p>{threadError}</p>
-          </div>
-        ) : thread && (
+        ) : (
           <>
-            <header className="cm-thread-head">
-              <button
-                className="cm-thread-back"
-                onClick={() => openRoom('')}
-                aria-label="Back to conversations"
-              >
-                <ArrowLeft size={18} />
-              </button>
-              <span className="cm-thread-avatar" aria-hidden="true">
-                {monogram(thread.participants.customer.name)}
-              </span>
-              <div className="cm-thread-id">
-                <h2>{thread.room.order_no ?? 'Order'}</h2>
-                <p>
-                  {thread.participants.customer.name} · {thread.participants.provider.name}
-                  {thread.room.order_status ? ` · ${thread.room.order_status}` : ''}
-                </p>
-              </div>
-              <div className="cm-thread-actions">
-                {!canReply && <span className="cm-readonly"><Eye size={13} /> Read-only</span>}
+            {(threadLoading || !thread) && !threadError ? (
+              <header className="cm-thread-head" aria-busy="true" aria-label="Loading">
+                <span className="shimmer cm-head-shimmer-avatar" />
+                <div className="cm-thread-id">
+                  <span className="shimmer cm-head-shimmer-title" />
+                  <span className="shimmer cm-head-shimmer-sub" />
+                </div>
+                <span className="shimmer cm-head-shimmer-open" />
+              </header>
+            ) : (
+              <header className="cm-thread-head">
                 <button
-                  className="cm-open-order"
-                  onClick={() => setPeekOrderId(thread.room.order_id)}
+                  className="cm-thread-back"
+                  onClick={() => openRoom('')}
+                  aria-label="Back to conversations"
                 >
-                  Open order <ExternalLink size={13} />
+                  <ArrowLeft size={18} />
                 </button>
-              </div>
-            </header>
+                <span className="cm-thread-avatar" aria-hidden="true">
+                  {monogram(barCustomer)}
+                </span>
+                <div className="cm-thread-id">
+                  <h2>{barOrderNo}</h2>
+                  <p>
+                    {[barCustomer, barProvider].filter(Boolean).join(' · ')}
+                    {barStatus ? ` · ${barStatus}` : ''}
+                  </p>
+                </div>
+                <div className="cm-thread-actions">
+                  {!canReply && <span className="cm-readonly"><Eye size={13} /> Read-only</span>}
+                  <button
+                    className="cm-open-order"
+                    onClick={() => setPeekOrderId(barOrderId)}
+                  >
+                    Open order <ExternalLink size={13} />
+                  </button>
+                </div>
+              </header>
+            )}
 
-            <ChatThread
-              key={activeOrderId}
-              orderId={activeOrderId}
-              onRead={() => {
-                clearRoomBadge(activeOrderId)
-                loadRooms()
-              }}
-            />
+            {threadError ? (
+              <div className="cm-state cm-state--full">
+                <AlertTriangle size={30} />
+                <h2>Could not load conversation</h2>
+                <p>{threadError}</p>
+              </div>
+            ) : threadLoading || !thread ? (
+              <ChatThreadShimmer />
+            ) : (
+              <ChatThread
+                key={activeOrderId}
+                orderId={activeOrderId}
+                onRead={() => {
+                  clearRoomBadge(activeOrderId)
+                  loadRooms()
+                }}
+              />
+            )}
           </>
         )}
       </section>

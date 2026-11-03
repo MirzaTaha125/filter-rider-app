@@ -12,11 +12,13 @@ import {
   ShoppingCart,
   TrendingUp,
   Settings,
+  Construction,
   X,
   Wallet,
   UserCheck,
   Wrench,
   DollarSign,
+  Percent,
   FolderOpen,
   Tag,
   MessageSquare,
@@ -25,6 +27,11 @@ import {
   MapPin,
   ChevronDown,
   ChevronRight,
+  BookOpen,
+  CarFront,
+  Calculator,
+  Car,
+  PackagePlus,
 } from "lucide-react";
 import "./Sidebar.css";
 
@@ -36,9 +43,19 @@ function Sidebar({ isOpen, onClose }) {
     permissionsError,
     reloadPermissions,
   } = usePermissions();
-  const isServicesActive = location.pathname.startsWith("/admin/services");
-  const isPricingActive = location.pathname.startsWith("/admin/pricing");
-  const isAssetsActive = location.pathname.startsWith("/admin/assets");
+  const isCategoryRoute =
+    location.pathname === "/admin/assets" ||
+    location.pathname === "/admin/assets/add" ||
+    /^\/admin\/assets\/[^/]+\/edit$/.test(location.pathname);
+  const isAddonsActive = location.pathname.startsWith("/admin/services/addons");
+  const isServicesActive =
+    location.pathname.startsWith("/admin/services") && !isAddonsActive;
+  const isCommissionActive = location.pathname === "/admin/pricing";
+  const isRewardsActive = location.pathname.startsWith("/admin/pricing/rewards");
+  const isVehicleSizesActive = location.pathname.startsWith("/admin/assets/vehicle-sizes");
+  const isVehicleTypesActive = location.pathname.startsWith("/admin/assets/vehicle-types");
+  const isVehicleCatalogActive = location.pathname.startsWith("/admin/assets/vehicles");
+  const isPriceSimulatorActive = location.pathname.startsWith("/admin/price-simulator");
   // Chat has its own top-level entry now, so it must not also open and
   // highlight the Communication dropdown.
   const isCommunicationActive =
@@ -48,33 +65,12 @@ function Sidebar({ isOpen, onClose }) {
   const isServiceProvidersActive = location.pathname.startsWith(
     "/admin/service-providers",
   );
-  const [servicesOpen, setServicesOpen] = useState(isServicesActive);
-  const [pricingOpen, setPricingOpen] = useState(isPricingActive);
-  const [assetsOpen, setAssetsOpen] = useState(isAssetsActive);
   const [communicationOpen, setCommunicationOpen] = useState(
     isCommunicationActive,
   );
   const [walletOpen, setWalletOpen] = useState(isWalletActive);
   const [chatUnread, setChatUnread] = useState(0);
   const { chatSocket } = useSocket();
-
-  useEffect(() => {
-    if (isServicesActive) {
-      setServicesOpen(true);
-    }
-  }, [isServicesActive]);
-
-  useEffect(() => {
-    if (isPricingActive) {
-      setPricingOpen(true);
-    }
-  }, [isPricingActive]);
-
-  useEffect(() => {
-    if (isAssetsActive) {
-      setAssetsOpen(true);
-    }
-  }, [isAssetsActive]);
 
   useEffect(() => {
     if (isCommunicationActive) {
@@ -92,7 +88,7 @@ function Sidebar({ isOpen, onClose }) {
   const menuItems = [
     { path: "/admin", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard.view" },
     { path: "/admin/orders", label: "Orders", icon: ShoppingCart, permission: "orders.view" },
-    { path: "/admin/reviews", label: "Reviews", icon: Star, permission: "reviews.view" },
+    { path: "/admin/analytics", label: "Analytics", icon: TrendingUp, permission: "analytics.view" },
     { path: "/admin/customers", label: "Customers", icon: Users, permission: "customers.view" },
     { path: "/admin/promotions", label: "Promotions", icon: Tag, permission: "promotions.view" },
     // Chat is its own destination rather than a Communication sub-item: it is
@@ -102,30 +98,18 @@ function Sidebar({ isOpen, onClose }) {
     // in place, so restoring this means uncommenting the line below and adding
     // AlertCircle back to the lucide-react import at the top.
     // { path: "/admin/disputes", label: "Disputes", icon: AlertCircle, permission: "disputes.view" },
-    { path: "/admin/zones", label: "Zones", icon: MapPin, permission: "zones.view" },
-    { path: "/admin/analytics", label: "Analytics", icon: TrendingUp, permission: "analytics.view" },
-    { path: "/admin/settings", label: "Settings", icon: Settings, permission: "settings.view" },
+    // Hidden for now — the /admin/zones routes and pages are still in place;
+    // restoring this is just uncommenting the line below.
+    // { path: "/admin/zones", label: "Zones", icon: MapPin, permission: "zones.view" },
+    { path: "/admin/zone-settings", label: "Zone Settings", icon: MapPin, permission: "zones.view" },
+    { path: "/admin/maintenance", label: "App Status", icon: Construction, permission: "settings.view" },
+    // ERP products / services copied for workshop orders (read-only; managed in the ERP).
+    { path: "/admin/master-catalog", label: "Master Catalog", icon: BookOpen, permission: "services.view" },
+    { path: "/admin/reviews", label: "Reviews", icon: Star, permission: "reviews.view" },
   ];
 
-  // Each sub-page carries its own slug, so a role can be given Add-ons without
-  // also getting Services and the Pricing Matrix.
-  const servicesSubItems = [
-    { path: "/admin/services", label: "Services", permission: "services.view" },
-    { path: "/admin/services/addons", label: "Add-ons", permission: "addons.view" },
-    { path: "/admin/services/pricing-matrix", label: "Pricing Matrix", permission: "pricing_matrix.view" },
-  ];
-
-  const pricingSubItems = [
-    { path: "/admin/pricing", label: "Fee Configuration", permission: "pricing_fees.view" },
-    { path: "/admin/pricing/surge", label: "Surge Pricing", permission: "surge.view" },
-    { path: "/admin/pricing/regional", label: "Regional Pricing", permission: "regional_pricing.view" },
-    { path: "/admin/pricing/rewards", label: "Rewards", permission: "rewards.view" },
-  ];
-
-  const assetsSubItems = [
-    { path: "/admin/assets", label: "Categories", permission: "asset_categories.view" },
-    { path: "/admin/assets/sizes", label: "Size Categories", permission: "size_categories.view" },
-  ];
+  // Add-ons and Pricing Matrix stay hidden. Their routes are still in place.
+  // Pricing Matrix stays hidden. Its routes are still in place.
 
   const communicationSubItems = [
     { path: "/admin/communication", label: "Email/SMS Templates", permission: "templates.view" },
@@ -168,9 +152,6 @@ function Sidebar({ isOpen, onClose }) {
 
   // A dropdown is only worth showing when at least one of its children is.
   const visible = (items) => items.filter((item) => hasPermission(item.permission));
-  const visibleServices = visible(servicesSubItems);
-  const visiblePricing = visible(pricingSubItems);
-  const visibleAssets = visible(assetsSubItems);
   const visibleCommunication = visible(communicationSubItems);
   const visibleWallet = visible(walletSubItems);
 
@@ -182,22 +163,9 @@ function Sidebar({ isOpen, onClose }) {
     location.pathname === path ||
     (path !== "/admin/pricing" &&
       path !== "/admin/services" &&
-      path !== "/admin/assets" &&
       path !== "/admin/communication" &&
       path !== "/admin/wallet" &&
       location.pathname.startsWith(`${path}/`));
-
-  const toggleServices = () => {
-    setServicesOpen(!servicesOpen);
-  };
-
-  const togglePricing = () => {
-    setPricingOpen(!pricingOpen);
-  };
-
-  const toggleAssets = () => {
-    setAssetsOpen(!assetsOpen);
-  };
 
   const toggleCommunication = () => {
     setCommunicationOpen(!communicationOpen);
@@ -233,7 +201,11 @@ function Sidebar({ isOpen, onClose }) {
         {/* Menu gating is fail-closed, so an unloaded/failed permission fetch
             would otherwise render as a silently empty sidebar. */}
         {loadingPermissions && (
-          <p className="sidebar-nav-notice">Loading menu…</p>
+          <div className="shimmer-menu" aria-busy="true" aria-label="Loading menu">
+            {Array.from({ length: 16 }, (_, index) => (
+              <span key={index} className="shimmer shimmer-menu-item" />
+            ))}
+          </div>
         )}
         {!loadingPermissions && permissionsError && (
           <div className="sidebar-nav-notice sidebar-nav-notice--warn">
@@ -251,8 +223,13 @@ function Sidebar({ isOpen, onClose }) {
               <li key={item.path}>
                 <Link
                   to={item.path}
-                  className={`sidebar-menu-item ${location.pathname === item.path ? "active" : ""
-                    }`}
+                  className={`sidebar-menu-item ${
+                    item.path === "/admin/analytics"
+                      ? location.pathname.startsWith("/admin/analytics")
+                      : location.pathname === item.path
+                        ? "active"
+                        : ""
+                  }`}
                   onClick={handleLinkClick}
                 >
                   <span className="menu-icon">
@@ -280,107 +257,126 @@ function Sidebar({ isOpen, onClose }) {
             </li>
           )}
 
-          {/* Services Dropdown */}
-          {visibleServices.length > 0 && <li>
-            <button
-              className={`sidebar-menu-item sidebar-dropdown-toggle ${isServicesActive ? "active" : ""
-                }`}
-              onClick={toggleServices}
-            >
-              <span className="menu-icon">
-                <Wrench size={20} />
-              </span>
-              <span className="menu-label">Services</span>
-              <span className={`dropdown-arrow ${servicesOpen ? "open" : ""}`}>
-                {servicesOpen ? (
-                  <ChevronDown size={16} />
-                ) : (
-                  <ChevronRight size={16} />
-                )}
-              </span>
-            </button>
-            <ul className={`sidebar-submenu ${servicesOpen ? "open" : ""}`}>
-              {visibleServices.map((subItem) => (
-                <li key={subItem.path}>
-                  <Link
-                    to={subItem.path}
-                    className={`sidebar-submenu-item ${isSubActive(subItem.path) ? "active" : ""}`}
-                    onClick={handleLinkClick}
-                  >
-                    {subItem.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </li>}
+          {/* Categories sits above Services, not inside it */}
+          {hasPermission("asset_categories.view") && (
+            <li>
+              <Link
+                to="/admin/assets"
+                className={`sidebar-menu-item ${isCategoryRoute ? "active" : ""}`}
+                onClick={handleLinkClick}
+              >
+                <span className="menu-icon">
+                  <FolderOpen size={20} />
+                </span>
+                <span className="menu-label">Categories</span>
+              </Link>
+            </li>
+          )}
 
-          {/* Pricing & Fees Dropdown */}
-          {visiblePricing.length > 0 && <li>
-            <button
-              className={`sidebar-menu-item sidebar-dropdown-toggle ${isPricingActive ? "active" : ""
-                }`}
-              onClick={togglePricing}
-            >
-              <span className="menu-icon">
-                <DollarSign size={20} />
-              </span>
-              <span className="menu-label">Pricing & Fees</span>
-              <span className={`dropdown-arrow ${pricingOpen ? "open" : ""}`}>
-                {pricingOpen ? (
-                  <ChevronDown size={16} />
-                ) : (
-                  <ChevronRight size={16} />
-                )}
-              </span>
-            </button>
-            <ul className={`sidebar-submenu ${pricingOpen ? "open" : ""}`}>
-              {visiblePricing.map((subItem) => (
-                <li key={subItem.path}>
-                  <Link
-                    to={subItem.path}
-                    className={`sidebar-submenu-item ${isSubActive(subItem.path) ? "active" : ""}`}
-                    onClick={handleLinkClick}
-                  >
-                    {subItem.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </li>}
+          {hasPermission("vehicle_sizes.view") && (
+            <li>
+              <Link
+                to="/admin/assets/vehicle-sizes"
+                className={`sidebar-menu-item ${isVehicleSizesActive ? "active" : ""}`}
+                onClick={handleLinkClick}
+              >
+                <span className="menu-icon">
+                  <Package size={20} />
+                </span>
+                <span className="menu-label">Vehicle Size Master</span>
+              </Link>
+            </li>
+          )}
 
-          {/* Assets Dropdown */}
-          {visibleAssets.length > 0 && <li>
-            <button
-              className={`sidebar-menu-item sidebar-dropdown-toggle ${isAssetsActive ? "active" : ""
-                }`}
-              onClick={toggleAssets}
-            >
-              <span className="menu-icon">
-                <FolderOpen size={20} />
-              </span>
-              <span className="menu-label">Assets</span>
-              <span className={`dropdown-arrow ${assetsOpen ? "open" : ""}`}>
-                {assetsOpen ? (
-                  <ChevronDown size={16} />
-                ) : (
-                  <ChevronRight size={16} />
-                )}
-              </span>
-            </button>
-            <ul className={`sidebar-submenu ${assetsOpen ? "open" : ""}`}>
-              {visibleAssets.map((subItem) => (
-                <li key={subItem.path}>
-                  <Link
-                    to={subItem.path}
-                    className={`sidebar-submenu-item ${isSubActive(subItem.path) ? "active" : ""}`}
-                    onClick={handleLinkClick}
-                  >
-                    {subItem.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </li>}
+          {hasPermission("vehicle_types.view") && (
+            <li>
+              <Link
+                to="/admin/assets/vehicle-types"
+                className={`sidebar-menu-item ${isVehicleTypesActive ? "active" : ""}`}
+                onClick={handleLinkClick}
+              >
+                <span className="menu-icon">
+                  <CarFront size={20} />
+                </span>
+                <span className="menu-label">Vehicle Types</span>
+              </Link>
+            </li>
+          )}
+
+          {hasPermission("vehicle_catalog.view") && (
+            <li>
+              <Link
+                to="/admin/assets/vehicles"
+                className={`sidebar-menu-item ${isVehicleCatalogActive ? "active" : ""}`}
+                onClick={handleLinkClick}
+              >
+                <span className="menu-icon">
+                  <Car size={20} />
+                </span>
+                <span className="menu-label">Vehicles</span>
+              </Link>
+            </li>
+          )}
+
+          {hasPermission("services.view") && (
+            <li>
+              <Link
+                to="/admin/price-simulator"
+                className={`sidebar-menu-item ${isPriceSimulatorActive ? "active" : ""}`}
+                onClick={handleLinkClick}
+              >
+                <span className="menu-icon">
+                  <Calculator size={20} />
+                </span>
+                <span className="menu-label">Price Simulator</span>
+              </Link>
+            </li>
+          )}
+
+          {hasPermission("services.view") && (
+            <li>
+              <Link
+                to="/admin/services"
+                className={`sidebar-menu-item ${isServicesActive ? "active" : ""}`}
+                onClick={handleLinkClick}
+              >
+                <span className="menu-icon">
+                  <Wrench size={20} />
+                </span>
+                <span className="menu-label">Services</span>
+              </Link>
+            </li>
+          )}
+
+          {(hasPermission("addons.view") || hasPermission("services.view")) && (
+            <li>
+              <Link
+                to="/admin/services/addons"
+                className={`sidebar-menu-item ${isAddonsActive ? "active" : ""}`}
+                onClick={handleLinkClick}
+              >
+                <span className="menu-icon">
+                  <PackagePlus size={20} />
+                </span>
+                <span className="menu-label">Add-ons</span>
+              </Link>
+            </li>
+          )}
+
+          {hasPermission("rewards.view") && (
+            <li>
+              <Link
+                to="/admin/pricing/rewards"
+                className={`sidebar-menu-item ${isRewardsActive ? "active" : ""}`}
+                onClick={handleLinkClick}
+              >
+                <span className="menu-icon">
+                  <DollarSign size={20} />
+                </span>
+                <span className="menu-label">Rewards</span>
+              </Link>
+            </li>
+          )}
 
           {/* Communication Dropdown */}
           {visibleCommunication.length > 0 && <li>
@@ -460,8 +456,13 @@ function Sidebar({ isOpen, onClose }) {
               <li key={item.path}>
                 <Link
                   to={item.path}
-                  className={`sidebar-menu-item ${location.pathname === item.path ? "active" : ""
-                    }`}
+                  className={`sidebar-menu-item ${
+                    item.path === "/admin/analytics"
+                      ? location.pathname.startsWith("/admin/analytics")
+                      : location.pathname === item.path
+                        ? "active"
+                        : ""
+                  }`}
                   onClick={handleLinkClick}
                 >
                   <span className="menu-icon">
@@ -477,6 +478,36 @@ function Sidebar({ isOpen, onClose }) {
               </li>
             );
           })}
+
+          {hasPermission("pricing_fees.view") && (
+            <li>
+              <Link
+                to="/admin/pricing"
+                className={`sidebar-menu-item ${isCommissionActive ? "active" : ""}`}
+                onClick={handleLinkClick}
+              >
+                <span className="menu-icon">
+                  <Percent size={20} />
+                </span>
+                <span className="menu-label">Commission</span>
+              </Link>
+            </li>
+          )}
+
+          {hasPermission("settings.view") && (
+            <li>
+              <Link
+                to="/admin/settings"
+                className={`sidebar-menu-item ${location.pathname.startsWith("/admin/settings") ? "active" : ""}`}
+                onClick={handleLinkClick}
+              >
+                <span className="menu-icon">
+                  <Settings size={20} />
+                </span>
+                <span className="menu-label">Settings</span>
+              </Link>
+            </li>
+          )}
         </ul>
       </nav>
     </aside>

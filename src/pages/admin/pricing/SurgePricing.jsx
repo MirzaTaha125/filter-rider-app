@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SlidersHorizontal, Loader2, AlertTriangle, TrendingUp } from 'lucide-react'
+import { SlidersHorizontal, AlertTriangle, TrendingUp } from 'lucide-react'
 import { getSurgeRules } from '../../../api/pricing.js'
 import {
   DEMAND_LABELS,
@@ -10,6 +10,7 @@ import {
   conditionText,
   checkCoverage,
 } from './surgeRules.js'
+import { ListCardsShimmer } from '../../../components/Shimmer/Shimmer'
 import './SurgePricing.css'
 
 function SurgePricing() {
@@ -86,10 +87,7 @@ function SurgePricing() {
       )}
 
       {loading ? (
-        <div className="sp-state">
-          <Loader2 size={32} className="spin" />
-          <span>Loading surge rules…</span>
-        </div>
+        <ListCardsShimmer count={4} />
       ) : (
         <div className="sp-grid">
           {rules.map(rule => (

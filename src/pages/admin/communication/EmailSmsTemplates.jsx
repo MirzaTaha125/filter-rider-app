@@ -7,6 +7,10 @@ import {
   deleteCommunicationTemplate,
 } from '../../../api/communication.js'
 import './EmailSmsTemplates.css'
+import Pager from '../../../components/DataTable/Pager'
+import { usePagedRows } from '../../../components/DataTable/usePagedRows'
+import { ListRowsShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 const CHANNEL_OPTIONS = ['EMAIL', 'SMS', 'BOTH']
 
@@ -20,6 +24,10 @@ const EMPTY_FORM = { name: '', slug: '', channel: 'BOTH', emailSubject: '', emai
 
 function EmailSmsTemplates() {
   const [templates, setTemplates] = useState([])
+  const { pageRows, pagerProps } = usePagedRows(templates, {
+    defaultLimit: 20,
+    resetKey: undefined,
+  })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -130,12 +138,12 @@ function EmailSmsTemplates() {
 
       <div className="templates-section">
         {loading ? (
-          <div className="templates-loading">Loading templates...</div>
+          <ListRowsShimmer rows={6} />
         ) : templates.length === 0 ? (
           <div className="templates-empty">No templates found. Create one to get started.</div>
         ) : (
           <div className="templates-list">
-            {templates.map((template) => (
+            {pageRows.map((template) => (
               <div key={template.id} className="template-item">
                 <div className="template-info">
                   <h3>{template.name}</h3>
@@ -160,6 +168,11 @@ function EmailSmsTemplates() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+        {pageRows.length > 0 && (
+          <div className="dt-pager-wrap">
+            <Pager {...pagerProps} unit="templates" />
           </div>
         )}
       </div>

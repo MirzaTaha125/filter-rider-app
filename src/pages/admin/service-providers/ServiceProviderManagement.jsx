@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useSocket } from '../../../contexts/SocketContext'
 import {
-  Search, Loader2, AlertTriangle, Users, UserCheck, Clock, Wifi,
+  Search, AlertTriangle, Users, UserCheck, Clock, Wifi,
   Star, MapPin, ChevronRight, CheckCircle,
 } from 'lucide-react'
 import { getProviders, getProviderSummary } from '../../../api'
@@ -24,6 +24,11 @@ import { useTableSort } from '../../../components/DataTable/useTableSort'
 import ProviderRequests from './ProviderRequests'
 import './ServiceProviderManagement.css'
 import TableScroll from '../../../components/DataTable/TableScroll'
+import { fetchAllPages } from '../../../utils/fetchAllPages'
+import Pager from '../../../components/DataTable/Pager'
+import { usePagedRows } from '../../../components/DataTable/usePagedRows'
+import { TableBlockShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 function toArray(value) {
   if (Array.isArray(value)) return value
@@ -64,16 +69,17 @@ function ServiceProviderManagement() {
     setLoading(true)
     setError('')
     try {
-      const response = await getProviders({
-        page: 1,
-        limit: 100,
+      // Every page, not just the first 100; the table pages through them below.
+      const all = await fetchAllPages(({ page, limit }) => getProviders({
+        page,
+        limit,
         search: filters.search || undefined,
         status: filters.status !== 'All' ? filters.status : undefined,
         zoneId: filters.zoneId !== 'All' ? filters.zoneId : undefined,
         liveStatus: filters.liveStatus !== 'All' ? filters.liveStatus : undefined,
-      })
+      }))
       // Pending providers live on the SP Requests page, not here.
-      const rows = toArray(response)
+      const rows = all
         .filter(item => (item.provider_status ?? item.status) !== 'PENDING')
         .map(mapProviderRow)
       setProviders(rows)
@@ -124,6 +130,10 @@ function ServiceProviderManagement() {
     rating: (p) => Number(p.rating ?? 0),
     earnings: (p) => Number(p.totalEarnings ?? 0),
   })
+  const { pageRows, pagerProps } = usePagedRows(sortedProviders, {
+    defaultLimit: 20,
+    resetKey: JSON.stringify(filters),
+  })
 
   return (
     <div className="sp-management">
@@ -164,6 +174,9 @@ function ServiceProviderManagement() {
           onClick={() => setTab('providers')}
         >
           Service Providers
+          {summary && (
+            <span className="spm-tab-count">{summary.totalProviders ?? 0}</span>
+          )}
         </button>
         <button
           role="tab"
@@ -172,8 +185,8 @@ function ServiceProviderManagement() {
           onClick={() => setTab('requests')}
         >
           Requests
-          {summary?.pendingRequests > 0 && (
-            <span className="spm-tab-count">{summary.pendingRequests}</span>
+          {summary && (
+            <span className="spm-tab-count">{summary.pendingRequests ?? 0}</span>
           )}
         </button>
       </div>
@@ -234,10 +247,7 @@ function ServiceProviderManagement() {
       )}
 
       {loading ? (
-        <div className="dt-empty">
-          <Loader2 size={32} className="spin" />
-          <span>Loading service providers…</span>
-        </div>
+        <TableBlockShimmer columns={8} />
       ) : providers.length === 0 ? (
         <div className="dt-empty">
           <Users size={32} />
@@ -261,7 +271,7 @@ function ServiceProviderManagement() {
                 </tr>
               </thead>
               <tbody>
-                {sortedProviders.map(sp => (
+                {pageRows.map(sp => (
                   <tr
                     key={sp.id}
                     className="is-clickable"
@@ -334,6 +344,7 @@ function ServiceProviderManagement() {
               </tbody>
             </table>
           </TableScroll>
+          <Pager {...pagerProps} unit="providers" />
         </div>
       )}
       </>

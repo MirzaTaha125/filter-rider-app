@@ -8,6 +8,95 @@
    single block.
    ═══════════════════════════════════════════════════════════════════════════ */
 
+.ct-shimmer {
+  background: var(--chat-canvas, var(--bg-admin));
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ct-shimmer-head {
+  align-items: center;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-base);
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+}
+
+.ct-shimmer-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ct-shimmer-id {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.ct-shimmer-title {
+  height: 16px;
+  width: 180px;
+}
+
+.ct-shimmer-sub {
+  height: 12px;
+  width: 240px;
+}
+
+.ct-shimmer-msgs {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.7rem;
+  min-height: 0;
+  padding: 1.1rem 1.25rem;
+}
+
+.ct-shimmer-bubble {
+  height: 46px;
+  max-width: 560px;
+  border-radius: 12px;
+}
+
+.ct-shimmer-bubble.is-in {
+  align-self: flex-start;
+  border-top-left-radius: 4px;
+}
+
+.ct-shimmer-bubble.is-out {
+  align-self: flex-end;
+  border-top-right-radius: 4px;
+}
+
+.ct-shimmer-composer {
+  align-items: center;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-base);
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+}
+
+.ct-shimmer-input {
+  flex: 1;
+  height: 42px;
+  border-radius: 999px;
+}
+
+.ct-shimmer-send {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 .ct-messages {
   display: flex;
   flex: 1;
@@ -35,7 +124,7 @@
   box-shadow: var(--shadow-sm);
   color: var(--text-muted);
   font-size: 0.68rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.03em;
   padding: 4px 12px;
   text-transform: uppercase;
@@ -88,11 +177,44 @@
 }
 
 .ct-msg-head {
-  align-items: baseline;
+  align-items: center;
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-bottom: 0.1rem;
+  gap: 0.45rem;
+  margin-bottom: 0.15rem;
+}
+
+.ct-msg-avatar {
+  align-items: center;
+  background: var(--primary-soft);
+  border-radius: 50%;
+  color: var(--primary-hover);
+  display: flex;
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  font-weight: 600;
+  height: 32px;
+  justify-content: center;
+  overflow: hidden;
+  width: 32px;
+}
+
+.ct-msg-avatar img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.ct-msg-who {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.ct-msg--admin .ct-msg-who {
+  align-items: flex-end;
 }
 
 .ct-msg.is-media .ct-msg-head {
@@ -101,7 +223,7 @@
 
 .ct-msg-head strong {
   font-size: 0.76rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 /* The sender's name is colour-coded, the way a group thread distinguishes
@@ -114,7 +236,7 @@
 .ct-role {
   border-radius: 999px;
   font-size: 0.55rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.05em;
   padding: 1px 6px;
 }
@@ -166,7 +288,7 @@
   color: var(--text-main);
   display: inline-flex;
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
   gap: 0.4rem;
   padding: 0.4rem 0.7rem;
   text-decoration: none;

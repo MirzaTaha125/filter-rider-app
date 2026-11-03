@@ -31,7 +31,7 @@
 .fo-summary span {
   color: var(--text-muted);
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
@@ -51,7 +51,7 @@
 .fo-notice {
   color: var(--success, #16a34a);
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 500;
   margin: 0;
   padding: 0.65rem 1.25rem 0;
 }
@@ -80,7 +80,7 @@
 .fo-items th {
   color: var(--text-muted);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
 }
 

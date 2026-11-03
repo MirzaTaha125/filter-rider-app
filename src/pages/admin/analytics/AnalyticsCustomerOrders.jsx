@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Loader2, AlertTriangle } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 import PageHeader from '../../../components/PageHeader/PageHeader'
 import TableScroll from '../../../components/DataTable/TableScroll'
 import StatTile from '../../../components/StatTile/StatTile'
@@ -10,6 +10,8 @@ import Pager from '../../../components/DataTable/Pager'
 import { normalizeStatus, orderStatusTone } from '../orders/orderStatus'
 import { formatMoney } from '../orders/paymentStatus'
 import '../adminForm.css'
+import { TableBlockShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 function toList(data) {
   if (Array.isArray(data)) return data
@@ -136,10 +138,7 @@ function AnalyticsCustomerOrders() {
 
       <div className="dt-card">
         {loading ? (
-          <div className="dt-state">
-            <Loader2 size={22} className="spin" />
-            <span>Loading orders…</span>
-          </div>
+          <TableBlockShimmer columns={7} />
         ) : orders.length === 0 ? (
           <div className="dt-state">No orders for this customer in this range.</div>
         ) : (

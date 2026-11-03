@@ -8,6 +8,8 @@ import SortableTh from '../../../components/DataTable/SortableTh'
 import { useTableSort } from '../../../components/DataTable/useTableSort'
 import './CustomerManagement.css'
 import TableScroll from '../../../components/DataTable/TableScroll'
+import { CustomerRowsShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 function CustomerManagement() {
   const navigate = useNavigate()
@@ -22,11 +24,11 @@ function CustomerManagement() {
   const [error, setError] = useState('')
   const [totalCustomers, setTotalCustomers] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 10
+  const [itemsPerPage, setItemsPerPage] = useState(10)
 
   useEffect(() => {
     fetchCustomers()
-  }, [currentPage, filters.search, filters.accountStatus, filters.walletRange])
+  }, [currentPage, itemsPerPage, filters.search, filters.accountStatus, filters.walletRange])
 
   const fetchCustomers = async () => {
     setLoading(true)
@@ -146,7 +148,7 @@ function CustomerManagement() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="4" className="dt-state">Loading customers…</td></tr>
+                <CustomerRowsShimmer />
               ) : error ? (
                 <tr><td colSpan="4" className="dt-state dt-state--error">{error}</td></tr>
               ) : customers.length === 0 ? (
@@ -200,6 +202,7 @@ function CustomerManagement() {
           total={totalCustomers}
           limit={itemsPerPage}
           onChange={setCurrentPage}
+          onLimitChange={(n) => { setItemsPerPage(n); setCurrentPage(1) }}
           unit="customers"
           disabled={loading}
         />

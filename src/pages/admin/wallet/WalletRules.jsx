@@ -3,6 +3,8 @@ import { Loader2, AlertTriangle, Save } from 'lucide-react'
 import { getWalletRules, updateWalletRules } from '../../../api'
 import './PaymentApproval.css'
 import './Penalties.css'
+import { PanelShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 const FIELDS = [
   {
@@ -92,7 +94,7 @@ function WalletRules() {
   if (loading) {
     return (
       <div className="payment-approval">
-        <div className="dt-empty"><Loader2 size={18} className="spin" /> Loading wallet rules…</div>
+        <PanelShimmer />
       </div>
     )
   }

@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Loader2, AlertTriangle, Search, Star, ScrollText } from 'lucide-react'
+import { AlertTriangle, Search, Star, ScrollText } from 'lucide-react'
 import { getAdminReviews } from '../../../api'
 import '../wallet/PaymentApproval.css'
 import './Reviews.css'
+import Pager from '../../../components/DataTable/Pager'
+import { ReviewCardsShimmer } from '../../../components/Shimmer/Shimmer'
 
-const PAGE_SIZE = 20
 
 const TABS = [
   { id: 'services', label: 'Services' },
@@ -24,6 +25,41 @@ function formatDate(value) {
   } catch {
     return String(value)
   }
+}
+
+function monogram(name) {
+  const parts = (name ?? '').trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+function PartyAvatar({ name, src }) {
+  const [broken, setBroken] = useState(false)
+  if (!src || broken) {
+    return <span className="reviews-avatar" aria-hidden="true">{monogram(name)}</span>
+  }
+  return (
+    <span className="reviews-avatar" aria-hidden="true">
+      <img src={src} alt="" onError={() => setBroken(true)} />
+    </span>
+  )
+}
+
+function ReviewParty({ name, avatar, onClick }) {
+  const label = name || '—'
+  const inner = (
+    <>
+      <PartyAvatar name={label} src={avatar} />
+      <span className="reviews-party-name">{label}</span>
+    </>
+  )
+  if (!onClick) return <span className="reviews-party">{inner}</span>
+  return (
+    <button type="button" className="reviews-party reviews-party-link" onClick={onClick}>
+      {inner}
+    </button>
+  )
 }
 
 function Stars({ value }) {
@@ -45,41 +81,47 @@ function Reviews() {
   const [items, setItems] = useState([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20)
   const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState('')
+  const [tabCounts, setTabCounts] = useState({})
 
   useEffect(() => {
-    const t = setTimeout(() => setSearchApplied(search.trim()), 300)
+    const t = setTimeout(() => {
+      setSearchApplied(search.trim())
+      setPage(1)
+    }, 300)
     return () => clearTimeout(t)
   }, [search])
 
-  const load = useCallback(async (nextPage, replace) => {
-    replace ? setLoading(true) : setLoadingMore(true)
+  const load = useCallback(async (pageNo) => {
+    setLoading(true)
     setError('')
     try {
       const data = await getAdminReviews({
         tab,
         search: searchApplied || undefined,
-        page: nextPage,
-        limit: PAGE_SIZE,
+        page: pageNo,
+        limit,
       })
       const rows = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : []
       const count = Number(data?.total ?? rows.length)
-      setItems((prev) => (replace ? rows : [...prev, ...rows]))
+      setItems(rows)
       setTotal(count)
-      setPage(nextPage)
     } catch (err) {
       setError(err.message || 'Failed to load reviews')
-      if (replace) setItems([])
+      setItems([])
     } finally {
-      replace ? setLoading(false) : setLoadingMore(false)
+      setLoading(false)
     }
-  }, [tab, searchApplied])
+  }, [tab, searchApplied, limit])
 
-  useEffect(() => { load(1, true) }, [load])
+  useEffect(() => { load(page) }, [load, page])
 
-  const hasMore = items.length < total
+  useEffect(() => {
+    if (loading) return
+    setTabCounts((prev) => (prev[tab] === total ? prev : { ...prev, [tab]: total }))
+  }, [loading, tab, total])
 
   const openOrder = (orderId) => {
     if (!orderId) return
@@ -110,22 +152,16 @@ function Reviews() {
         </div>
       </header>
 
-      <div className="pv-stats">
-        <div className="pv-stat">
-          <span className="pv-stat-label">{TABS.find((t) => t.id === tab)?.label}</span>
-          <span className="pv-stat-value">{loading ? '—' : total.toLocaleString()}</span>
-        </div>
-      </div>
-
       <div className="pv-tabs">
         {TABS.map((t) => (
           <button
             key={t.id}
             type="button"
             className={`pv-tab ${tab === t.id ? 'is-active' : ''}`}
-            onClick={() => setTab(t.id)}
+            onClick={() => { setTab(t.id); setPage(1) }}
           >
             {t.label}
+            {tabCounts[t.id] != null && <span className="tab-count">{tabCounts[t.id]}</span>}
           </button>
         ))}
       </div>
@@ -151,10 +187,7 @@ function Reviews() {
       )}
 
       {loading ? (
-        <div className="dt-empty">
-          <Loader2 size={20} className="spin" />
-          <span>Loading reviews…</span>
-        </div>
+        <ReviewCardsShimmer />
       ) : items.length === 0 ? (
         <div className="dt-empty">
           <ScrollText size={28} />
@@ -186,29 +219,16 @@ function Reviews() {
                 )}
 
                 <div className="reviews-card-meta">
-                  {row.customer_id ? (
-                    <button
-                      type="button"
-                      className="reviews-party-link"
-                      onClick={() => openCustomer(row.customer_id)}
-                    >
-                      {row.customer_name || 'Customer'}
-                    </button>
-                  ) : (
-                    <span>{row.customer_name || 'Customer'}</span>
-                  )}
-                  <span className="reviews-dot" aria-hidden />
-                  {row.provider_id ? (
-                    <button
-                      type="button"
-                      className="reviews-party-link"
-                      onClick={() => openProvider(row.provider_id)}
-                    >
-                      {row.provider_name || 'Provider'}
-                    </button>
-                  ) : (
-                    <span>{row.provider_name || 'Provider'}</span>
-                  )}
+                  <ReviewParty
+                    name={row.customer_name || 'Customer'}
+                    avatar={row.customer_avatar}
+                    onClick={row.customer_id ? () => openCustomer(row.customer_id) : null}
+                  />
+                  <ReviewParty
+                    name={row.provider_name || 'Provider'}
+                    avatar={row.provider_avatar}
+                    onClick={row.provider_id ? () => openProvider(row.provider_id) : null}
+                  />
                 </div>
 
                 <div className="reviews-card-scores">
@@ -229,20 +249,17 @@ function Reviews() {
             ))}
           </div>
 
-          {hasMore && (
-            <div className="pv-more">
-              <button
-                type="button"
-                className="dt-btn"
-                disabled={loadingMore}
-                onClick={() => load(page + 1, false)}
-              >
-                {loadingMore
-                  ? <><Loader2 size={16} className="spin" /> Loading…</>
-                  : `Load more (${items.length} of ${total})`}
-              </button>
-            </div>
-          )}
+          <div className="pv-pager">
+            <Pager
+              page={page}
+              total={total}
+              limit={limit}
+              onChange={setPage}
+              onLimitChange={(n) => { setLimit(n); setPage(1) }}
+              unit="reviews"
+              disabled={loading}
+            />
+          </div>
         </>
       )}
     </div>

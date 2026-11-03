@@ -36,6 +36,14 @@ export async function createService(payload) {
       base_price: String(payload.basePrice ?? 0),
       duration_min: Number(payload.duration ?? 60),
       is_active: payload.isActive !== false,
+      ...(payload.imageUrl !== undefined && { image_url: payload.imageUrl || null }),
+      ...(payload.shortDescription !== undefined && { short_description: payload.shortDescription || null }),
+      ...(payload.longDescription !== undefined && { long_description: payload.longDescription || null }),
+      ...(payload.shortDescriptionAr !== undefined && { short_description_ar: payload.shortDescriptionAr || null }),
+      ...(payload.longDescriptionAr !== undefined && { long_description_ar: payload.longDescriptionAr || null }),
+      ...(payload.displayOrder !== undefined && { display_order: Number(payload.displayOrder) }),
+      ...(payload.isAddon !== undefined && { is_addon: payload.isAddon }),
+      ...(payload.sizePrices !== undefined && { size_prices: payload.sizePrices }),
     }),
   });
   return data?.data ?? data;
@@ -51,13 +59,17 @@ export async function updateService(id, payload) {
   if (payload.basePrice !== undefined) body.base_price = String(payload.basePrice);
   if (payload.duration !== undefined) body.duration_min = Number(payload.duration);
   if (payload.isActive !== undefined) body.is_active = payload.isActive;
+  if (payload.imageUrl !== undefined) body.image_url = payload.imageUrl || null;
+  if (payload.shortDescription !== undefined) body.short_description = payload.shortDescription || null;
+  if (payload.longDescription !== undefined) body.long_description = payload.longDescription || null;
+  if (payload.shortDescriptionAr !== undefined) body.short_description_ar = payload.shortDescriptionAr || null;
+  if (payload.longDescriptionAr !== undefined) body.long_description_ar = payload.longDescriptionAr || null;
+  if (payload.displayOrder !== undefined) body.display_order = Number(payload.displayOrder);
+  if (payload.isAddon !== undefined) body.is_addon = payload.isAddon;
+  if (payload.sizePrices !== undefined) body.size_prices = payload.sizePrices;
   const data = await apiRequest(`/admin/services/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(body),
   });
   return data?.data ?? data;
-}
-
-export async function deleteService(id) {
-  await apiRequest(`/admin/services/${id}`, { method: 'DELETE' });
 }

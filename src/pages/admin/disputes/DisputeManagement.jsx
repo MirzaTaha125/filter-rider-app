@@ -18,6 +18,10 @@ import SortableTh from '../../../components/DataTable/SortableTh'
 import { useTableSort } from '../../../components/DataTable/useTableSort'
 import './DisputeManagement.css'
 import TableScroll from '../../../components/DataTable/TableScroll'
+import Pager from '../../../components/DataTable/Pager'
+import { usePagedRows } from '../../../components/DataTable/usePagedRows'
+import { TableShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 function toArray(value) {
   return Array.isArray(value) ? value : []
@@ -73,6 +77,10 @@ function DisputeManagement() {
     type: (d) => d.type,
     opened: (d) => new Date(d.created_at ?? 0).getTime(),
     status: (d) => d.status,
+  })
+  const { pageRows, pagerProps } = usePagedRows(sortedDisputes, {
+    defaultLimit: 20,
+    resetKey: `${status}|${type}|${term}`,
   })
 
   return (
@@ -153,13 +161,13 @@ function DisputeManagement() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="8" className="dt-state">Loading disputes…</td></tr>
+                <TableShimmer columns={8} />
               ) : disputes.length === 0 ? (
                 <tr><td colSpan="8" className="dt-state">Nothing has been raised yet.</td></tr>
               ) : visible.length === 0 ? (
                 <tr><td colSpan="8" className="dt-state">No disputes match the current search or filters.</td></tr>
               ) : (
-                sortedDisputes.map(dispute => (
+                pageRows.map(dispute => (
                   <tr
                     key={dispute.id}
                     className="is-clickable"
@@ -190,12 +198,8 @@ function DisputeManagement() {
             </tbody>
           </table>
         </TableScroll>
+        <Pager {...pagerProps} unit="disputes" />
 
-        <footer className="dt-foot">
-          <span className="dt-foot-info">
-            {loading ? 'Loading…' : `Showing ${visible.length} of ${disputes.length}`}
-          </span>
-        </footer>
       </div>
     </div>
   )

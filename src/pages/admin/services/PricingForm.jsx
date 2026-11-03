@@ -12,6 +12,8 @@ import {
 import { sizeCategoryLabel } from '../assets/carTypes'
 import '../adminForm.css'
 import './PricingForm.css'
+import { PageShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 const EMPTY_FORM = {
   serviceId: '',
@@ -176,7 +178,7 @@ function PricingForm() {
     return (
       <div className="pricing-form-page">
         <PageHeader title={title} />
-        <div className="sf-state"><Loader2 size={32} className="spin" /><span>Loading…</span></div>
+        <PageShimmer />
       </div>
     )
   }

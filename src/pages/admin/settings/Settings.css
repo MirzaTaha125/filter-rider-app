@@ -8,7 +8,7 @@
 
 .settings-title {
   font-size: 2rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   margin: 0 0 0.5rem 0;
 }
@@ -45,7 +45,7 @@
   border-radius: 8px;
   background: transparent;
   color: var(--text-muted);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.9rem;
   cursor: pointer;
   text-align: left;
@@ -71,7 +71,7 @@
 
 .settings-section h2 {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   margin: 0 0 1.5rem 0;
 }
@@ -130,7 +130,7 @@
 
 .form-group label {
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -171,7 +171,7 @@
   border: none;
   border-radius: 8px;
   color: var(--text-main);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
   width: fit-content;
@@ -212,7 +212,7 @@
 
 .permissions-section-title {
   font-size: 1.125rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   margin: 0;
   padding-bottom: 0.75rem;
@@ -236,7 +236,7 @@
 }
 
 .role-name {
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
   font-size: 0.875rem;
 }
@@ -292,7 +292,7 @@
   height: 24px;
   border-radius: 6px;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   transition: all 0.2s;
 }
 
@@ -418,7 +418,7 @@
 
 .success-title {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   margin: 0;
 }
@@ -436,7 +436,7 @@
   border-radius: 8px;
   background: var(--primary-color);
   color: var(--bg-card);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -480,7 +480,7 @@
 }
 
 .role-card-name {
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.95rem;
   color: var(--text-main);
   letter-spacing: 0.01em;
@@ -505,7 +505,7 @@
   cursor: pointer;
   display: flex;
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 600;
   gap: 0.6rem;
   letter-spacing: 0.02em;
   color: var(--text-main);
@@ -517,7 +517,7 @@
   border-radius: 999px;
   color: var(--text-muted);
   font-size: 0.68rem;
-  font-weight: 600;
+  font-weight: 500;
   padding: 1px 8px;
 }
 
@@ -526,7 +526,7 @@
 .au-count {
   color: var(--text-muted);
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.03em;
   margin-bottom: 0.75rem;
   text-transform: uppercase;
@@ -548,7 +548,7 @@
   display: flex;
   flex: 0 0 auto;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   height: 36px;
   justify-content: center;
   width: 36px;
@@ -563,7 +563,7 @@
 .au-user-name {
   color: var(--text-main);
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.3;
 }
 
@@ -588,7 +588,7 @@
   border-radius: 999px;
   color: var(--text-main);
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.03em;
   padding: 3px 10px;
   white-space: nowrap;
@@ -712,7 +712,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 13px;
   flex-shrink: 0;
 }

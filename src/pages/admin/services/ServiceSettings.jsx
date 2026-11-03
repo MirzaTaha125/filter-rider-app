@@ -10,26 +10,17 @@ import {
   getServiceProperties,
   createServiceProperty,
   deleteServiceProperty,
-  getServiceTypes,
-  createServiceType,
-  updateServiceType,
-  getChecklistItems,
-  createChecklistItem,
-  updateChecklistItem,
-  deleteChecklistItem,
-  toggleChecklistItem,
+  getServiceChecklist,
+  createServiceChecklistItem,
+  updateServiceChecklistItem,
+  deleteServiceChecklistItem,
+  toggleServiceChecklistItem,
 } from '../../../api'
 import './ServiceSettings.css'
+import { PageShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 const PROPERTY_TYPES = ['STRING', 'NUMBER', 'BOOLEAN']
-const PRICE_MODES = [
-  { value: 'DELTA', label: 'Delta — added to the base price' },
-  { value: 'FIXED', label: 'Fixed — replaces the base price' },
-]
-
-const EMPTY_TYPE_FORM = {
-  name_en: '', name_ar: '', price_mode: 'DELTA', price_value: '0', duration_min: '',
-}
 
 function toArray(value) {
   return Array.isArray(value) ? value : []
@@ -46,22 +37,17 @@ function ServiceSettings() {
 
   // Properties
   const [properties, setProperties] = useState([])
-  const [newProperty, setNewProperty] = useState({ name: '', type: 'STRING' })
+  const [newProperty, setNewProperty] = useState({ name: '', nameAr: '', type: 'STRING' })
   const [propertySaving, setPropertySaving] = useState(false)
 
-  // Types
-  const [types, setTypes] = useState([])
-  const [activeTypeId, setActiveTypeId] = useState(null)
-  const [typeForm, setTypeForm] = useState(EMPTY_TYPE_FORM)
-  const [editingTypeId, setEditingTypeId] = useState(null)
-  const [typeSaving, setTypeSaving] = useState(false)
-
-  // Checklists — keyed by type id
-  const [checklists, setChecklists] = useState({})
-  const [checklistLoading, setChecklistLoading] = useState(false)
+  // Checklist (belongs to the service)
+  const [checklist, setChecklist] = useState([])
   const [newChecklistTitle, setNewChecklistTitle] = useState('')
+  const [newChecklistTitleAr, setNewChecklistTitleAr] = useState('')
+  const [checklistSaving, setChecklistSaving] = useState(false)
   const [editingItemId, setEditingItemId] = useState(null)
   const [editingItemTitle, setEditingItemTitle] = useState('')
+  const [editingItemTitleAr, setEditingItemTitleAr] = useState('')
 
   // Toast + confirm
   const [toast, setToast] = useState(null)
@@ -92,16 +78,14 @@ function ServiceSettings() {
         }
         setService(found)
 
-        const [props, typeList] = await Promise.all([
+        const [props, items] = await Promise.all([
           getServiceProperties(serviceId).catch(() => []),
-          getServiceTypes(serviceId).catch(() => []),
+          getServiceChecklist(serviceId).catch(() => []),
         ])
         if (cancelled) return
 
         setProperties(toArray(props))
-        const loadedTypes = toArray(typeList)
-        setTypes(loadedTypes)
-        if (loadedTypes.length > 0) setActiveTypeId(loadedTypes[0].id)
+        setChecklist(toArray(items))
       } catch (err) {
         if (!cancelled) setLoadError(err.message || 'Failed to load service settings')
       } finally {
@@ -112,27 +96,6 @@ function ServiceSettings() {
     load()
     return () => { cancelled = true }
   }, [serviceId])
-
-  // Lazily fetch the checklist for whichever type is selected, once per type.
-  const fetchedTypes = useRef(new Set())
-
-  useEffect(() => {
-    if (!activeTypeId || fetchedTypes.current.has(activeTypeId)) return
-    fetchedTypes.current.add(activeTypeId)
-
-    let cancelled = false
-    setChecklistLoading(true)
-    getChecklistItems(activeTypeId)
-      .then(items => {
-        if (!cancelled) setChecklists(prev => ({ ...prev, [activeTypeId]: toArray(items) }))
-      })
-      .catch(() => {
-        if (!cancelled) setChecklists(prev => ({ ...prev, [activeTypeId]: [] }))
-      })
-      .finally(() => { if (!cancelled) setChecklistLoading(false) })
-
-    return () => { cancelled = true }
-  }, [activeTypeId])
 
   /* ---------------- Properties ---------------- */
 
@@ -145,10 +108,11 @@ function ServiceSettings() {
       const created = await createServiceProperty({
         serviceId,
         name,
+        nameAr: newProperty.nameAr.trim(),
         type: newProperty.type,
       })
       setProperties(prev => [...prev, created])
-      setNewProperty({ name: '', type: 'STRING' })
+      setNewProperty({ name: '', nameAr: '', type: 'STRING' })
       showToast('Property added')
     } catch (err) {
       showToast(err.message || 'Failed to add property', 'error')
@@ -174,75 +138,26 @@ function ServiceSettings() {
     })
   }
 
-  /* ---------------- Service types ---------------- */
+  /* ---------------- Checklist ---------------- */
 
-  const resetTypeForm = () => {
-    setTypeForm(EMPTY_TYPE_FORM)
-    setEditingTypeId(null)
+  const replaceItem = (itemId, updated) => {
+    setChecklist(prev => prev.map(i => (i.id === itemId ? { ...i, ...updated } : i)))
   }
-
-  const startEditType = (type) => {
-    setEditingTypeId(type.id)
-    setTypeForm({
-      name_en: type.name_en ?? '',
-      name_ar: type.name_ar ?? '',
-      price_mode: type.price_mode ?? 'DELTA',
-      price_value: String(type.price_value ?? '0'),
-      duration_min: type.duration_min == null ? '' : String(type.duration_min),
-    })
-  }
-
-  const handleSubmitType = async (e) => {
-    e.preventDefault()
-    const name = typeForm.name_en.trim()
-    if (!name) {
-      showToast('Type name (English) is required', 'error')
-      return
-    }
-
-    setTypeSaving(true)
-    const payload = {
-      name,
-      nameAr: typeForm.name_ar.trim() || name,
-      priceMode: typeForm.price_mode,
-      priceValue: typeForm.price_value || '0',
-      duration: typeForm.duration_min ? Number(typeForm.duration_min) : undefined,
-      isActive: true,
-    }
-
-    try {
-      if (editingTypeId) {
-        const updated = await updateServiceType(editingTypeId, payload)
-        setTypes(prev => prev.map(t => (t.id === editingTypeId ? { ...t, ...updated } : t)))
-        showToast('Service type updated')
-      } else {
-        const created = await createServiceType({ ...payload, serviceId })
-        setTypes(prev => [...prev, created])
-        setActiveTypeId(created.id)
-        showToast('Service type added')
-      }
-      resetTypeForm()
-    } catch (err) {
-      showToast(err.message || 'Failed to save service type', 'error')
-    } finally {
-      setTypeSaving(false)
-    }
-  }
-
-  /* ---------------- Checklist items ---------------- */
-
-  const activeItems = toArray(checklists[activeTypeId])
 
   const handleAddChecklistItem = async (e) => {
     e.preventDefault()
     const title = newChecklistTitle.trim()
-    if (!title || !activeTypeId) return
+    if (!title) return
+    setChecklistSaving(true)
     try {
-      const created = await createChecklistItem(activeTypeId, title, activeItems.length)
-      setChecklists(prev => ({ ...prev, [activeTypeId]: [...toArray(prev[activeTypeId]), created] }))
+      const created = await createServiceChecklistItem(serviceId, title, newChecklistTitleAr.trim())
+      setChecklist(prev => [...prev, created])
       setNewChecklistTitle('')
+      setNewChecklistTitleAr('')
     } catch (err) {
       showToast(err.message || 'Failed to add checklist item', 'error')
+    } finally {
+      setChecklistSaving(false)
     }
   }
 
@@ -250,13 +165,10 @@ function ServiceSettings() {
     const title = editingItemTitle.trim()
     if (!title) return
     try {
-      const updated = await updateChecklistItem(itemId, { title })
-      setChecklists(prev => ({
-        ...prev,
-        [activeTypeId]: toArray(prev[activeTypeId]).map(i => (i.id === itemId ? { ...i, ...updated } : i)),
-      }))
+      replaceItem(itemId, await updateServiceChecklistItem(itemId, { title, title_ar: editingItemTitleAr.trim() }))
       setEditingItemId(null)
       setEditingItemTitle('')
+      setEditingItemTitleAr('')
     } catch (err) {
       showToast(err.message || 'Failed to update item', 'error')
     }
@@ -264,11 +176,7 @@ function ServiceSettings() {
 
   const handleToggleChecklistItem = async (item) => {
     try {
-      const updated = await toggleChecklistItem(item.id, !item.is_active)
-      setChecklists(prev => ({
-        ...prev,
-        [activeTypeId]: toArray(prev[activeTypeId]).map(i => (i.id === item.id ? { ...i, ...updated } : i)),
-      }))
+      replaceItem(item.id, await toggleServiceChecklistItem(item.id, !item.is_active))
     } catch (err) {
       showToast(err.message || 'Failed to update item', 'error')
     }
@@ -281,11 +189,8 @@ function ServiceSettings() {
       confirmLabel: 'Delete item',
       onConfirm: async () => {
         try {
-          await deleteChecklistItem(item.id)
-          setChecklists(prev => ({
-            ...prev,
-            [activeTypeId]: toArray(prev[activeTypeId]).filter(i => i.id !== item.id),
-          }))
+          await deleteServiceChecklistItem(item.id)
+          setChecklist(prev => prev.filter(i => i.id !== item.id))
           showToast('Checklist item deleted')
         } catch (err) {
           showToast(err.message || 'Failed to delete item', 'error')
@@ -300,7 +205,7 @@ function ServiceSettings() {
     return (
       <div className="service-settings-page">
         <PageHeader title="Service Settings" />
-        <div className="ss-state"><Loader2 size={32} className="spin" /><span>Loading…</span></div>
+        <PageShimmer />
       </div>
     )
   }
@@ -349,13 +254,13 @@ function ServiceSettings() {
         </button>
         <button
           role="tab"
-          aria-selected={tab === 'types'}
-          className={`ss-tab ${tab === 'types' ? 'is-active' : ''}`}
-          onClick={() => setTab('types')}
+          aria-selected={tab === 'checklist'}
+          className={`ss-tab ${tab === 'checklist' ? 'is-active' : ''}`}
+          onClick={() => setTab('checklist')}
         >
           <ListChecks size={16} />
-          Types &amp; checklists
-          <span className="ss-tab-count">{types.length}</span>
+          Checklist
+          <span className="ss-tab-count">{checklist.length}</span>
         </button>
       </div>
 
@@ -373,7 +278,10 @@ function ServiceSettings() {
               {properties.map(prop => (
                 <li key={prop.id} className="ss-list-row">
                   <div className="ss-list-main">
-                    <span className="ss-list-title">{prop.name}</span>
+                    <span className="ss-list-title">
+                      {prop.name}
+                      {prop.name_ar && <span className="ss-title-ar" dir="rtl" lang="ar">{prop.name_ar}</span>}
+                    </span>
                     <span className={`ss-chip ss-chip--${(prop.type || 'string').toLowerCase()}`}>{prop.type}</span>
                   </div>
                   <button
@@ -392,8 +300,19 @@ function ServiceSettings() {
             <input
               type="text"
               placeholder="Property name"
+              aria-label="Property name"
               value={newProperty.name}
               onChange={(e) => setNewProperty(p => ({ ...p, name: e.target.value }))}
+              disabled={propertySaving}
+            />
+            <input
+              type="text"
+              dir="rtl"
+              lang="ar"
+              placeholder="الاسم بالعربي (اختياري)"
+              aria-label="Property name (Arabic, optional)"
+              value={newProperty.nameAr}
+              onChange={(e) => setNewProperty(p => ({ ...p, nameAr: e.target.value }))}
               disabled={propertySaving}
             />
             <select
@@ -411,204 +330,117 @@ function ServiceSettings() {
         </section>
       )}
 
-      {tab === 'types' && (
-        <div className="ss-split">
-          <section className="ss-card">
-            <header className="ss-card-head">
-              <h2>{editingTypeId ? 'Edit service type' : 'Add service type'}</h2>
-              <p>Variants of this service with their own pricing — e.g. “Sedan”, “SUV”.</p>
-            </header>
+      {tab === 'checklist' && (
+        <section className="ss-card">
+          <header className="ss-card-head">
+            <h2>Checklist</h2>
+            <p>Steps the provider ticks off on every order of this service. Active items are also shown to customers as what’s included.</p>
+          </header>
 
-            <form className="ss-form" onSubmit={handleSubmitType}>
-              <div className="ss-field">
-                <label htmlFor="type_name_en">Name (English) <span className="ss-req">*</span></label>
-                <input
-                  id="type_name_en"
-                  type="text"
-                  placeholder="e.g. Sedan"
-                  value={typeForm.name_en}
-                  onChange={(e) => setTypeForm(f => ({ ...f, name_en: e.target.value }))}
-                  disabled={typeSaving}
-                />
-              </div>
-
-              <div className="ss-field">
-                <label htmlFor="type_name_ar">Name (Arabic)</label>
-                <input
-                  id="type_name_ar"
-                  type="text"
-                  dir="rtl"
-                  placeholder="سيدان"
-                  value={typeForm.name_ar}
-                  onChange={(e) => setTypeForm(f => ({ ...f, name_ar: e.target.value }))}
-                  disabled={typeSaving}
-                />
-              </div>
-
-              <div className="ss-field">
-                <label htmlFor="type_price_mode">Price mode</label>
-                <select
-                  id="type_price_mode"
-                  value={typeForm.price_mode}
-                  onChange={(e) => setTypeForm(f => ({ ...f, price_mode: e.target.value }))}
-                  disabled={typeSaving}
-                >
-                  {PRICE_MODES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                </select>
-              </div>
-
-              <div className="ss-field-row">
-                <div className="ss-field">
-                  <label htmlFor="type_price_value">Price value</label>
-                  <input
-                    id="type_price_value"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={typeForm.price_value}
-                    onChange={(e) => setTypeForm(f => ({ ...f, price_value: e.target.value }))}
-                    disabled={typeSaving}
-                  />
-                </div>
-                <div className="ss-field">
-                  <label htmlFor="type_duration">Duration (min)</label>
-                  <input
-                    id="type_duration"
-                    type="number"
-                    min="1"
-                    step="1"
-                    placeholder="Optional"
-                    value={typeForm.duration_min}
-                    onChange={(e) => setTypeForm(f => ({ ...f, duration_min: e.target.value }))}
-                    disabled={typeSaving}
-                  />
-                </div>
-              </div>
-
-              <div className="ss-form-actions">
-                {editingTypeId && (
-                  <button type="button" className="ss-btn ss-btn--secondary" onClick={resetTypeForm} disabled={typeSaving}>
-                    Cancel
-                  </button>
-                )}
-                <button type="submit" className="ss-btn ss-btn--primary" disabled={typeSaving || !typeForm.name_en.trim()}>
-                  {typeSaving ? <Loader2 size={16} className="spin" /> : <Plus size={16} />}
-                  {editingTypeId ? 'Save type' : 'Add type'}
-                </button>
-              </div>
-            </form>
-          </section>
-
-          <section className="ss-card">
-            <header className="ss-card-head">
-              <h2>Checklists</h2>
-              <p>Steps the provider ticks off while completing the job, per service type.</p>
-            </header>
-
-            {types.length === 0 ? (
-              <p className="ss-empty">Add a service type first — checklists belong to a type.</p>
-            ) : (
-              <>
-                <div className="ss-pills">
-                  {types.map(type => (
-                    <span key={type.id} className={`ss-pill ${activeTypeId === type.id ? 'is-active' : ''}`}>
-                      <button className="ss-pill-main" onClick={() => setActiveTypeId(type.id)}>
-                        {type.name_en}
-                      </button>
-                      <button
-                        className="ss-pill-edit"
-                        onClick={() => startEditType(type)}
-                        title="Edit this type"
-                      >
-                        <Pencil size={12} />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-
-                {checklistLoading ? (
-                  <div className="ss-state ss-state--inline"><Loader2 size={22} className="spin" /></div>
-                ) : (
-                  <>
-                    {activeItems.length === 0 ? (
-                      <p className="ss-empty">No checklist items for this type yet.</p>
-                    ) : (
-                      <ul className="ss-list">
-                        {activeItems.map(item => (
-                          <li key={item.id} className={`ss-list-row ${item.is_active ? '' : 'is-inactive'}`}>
-                            {editingItemId === item.id ? (
-                              <div className="ss-list-main">
-                                <input
-                                  className="ss-inline-input"
-                                  value={editingItemTitle}
-                                  onChange={(e) => setEditingItemTitle(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleSaveChecklistItem(item.id)
-                                    if (e.key === 'Escape') setEditingItemId(null)
-                                  }}
-                                  autoFocus
-                                />
-                                <button className="ss-icon-btn" onClick={() => handleSaveChecklistItem(item.id)} title="Save">
-                                  <Check size={15} />
-                                </button>
-                                <button className="ss-icon-btn" onClick={() => setEditingItemId(null)} title="Cancel">
-                                  <X size={15} />
-                                </button>
-                              </div>
-                            ) : (
-                              <>
-                                <div className="ss-list-main">
-                                  <button
-                                    className={`ss-check ${item.is_active ? 'is-on' : ''}`}
-                                    onClick={() => handleToggleChecklistItem(item)}
-                                    title={item.is_active ? 'Deactivate' : 'Activate'}
-                                  >
-                                    {item.is_active && <Check size={13} />}
-                                  </button>
-                                  <span className="ss-list-title">{item.title}</span>
-                                </div>
-                                <div className="ss-row-actions">
-                                  <button
-                                    className="ss-icon-btn"
-                                    onClick={() => { setEditingItemId(item.id); setEditingItemTitle(item.title) }}
-                                    title="Edit"
-                                  >
-                                    <Pencil size={14} />
-                                  </button>
-                                  <button
-                                    className="ss-icon-btn ss-icon-btn--danger"
-                                    onClick={() => handleDeleteChecklistItem(item)}
-                                    title="Delete"
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-
-                    <form className="ss-inline-form" onSubmit={handleAddChecklistItem}>
+          {checklist.length === 0 ? (
+            <p className="ss-empty">No checklist items yet. Add the first step below.</p>
+          ) : (
+            <ul className="ss-list">
+              {checklist.map(item => (
+                <li key={item.id} className={`ss-list-row ${item.is_active ? '' : 'is-inactive'}`}>
+                  {editingItemId === item.id ? (
+                    <div className="ss-list-main">
                       <input
-                        type="text"
-                        placeholder="Add a checklist item…"
-                        value={newChecklistTitle}
-                        onChange={(e) => setNewChecklistTitle(e.target.value)}
+                        className="ss-inline-input"
+                        aria-label="Item title"
+                        value={editingItemTitle}
+                        onChange={(e) => setEditingItemTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveChecklistItem(item.id)
+                          if (e.key === 'Escape') setEditingItemId(null)
+                        }}
+                        autoFocus
                       />
-                      <button type="submit" className="ss-btn ss-btn--primary" disabled={!newChecklistTitle.trim()}>
-                        <Plus size={16} />
-                        Add item
+                      <input
+                        className="ss-inline-input"
+                        dir="rtl"
+                        lang="ar"
+                        placeholder="بالعربي (اختياري)"
+                        aria-label="Item title (Arabic, optional)"
+                        value={editingItemTitleAr}
+                        onChange={(e) => setEditingItemTitleAr(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveChecklistItem(item.id)
+                          if (e.key === 'Escape') setEditingItemId(null)
+                        }}
+                      />
+                      <button className="ss-icon-btn" onClick={() => handleSaveChecklistItem(item.id)} title="Save">
+                        <Check size={15} />
                       </button>
-                    </form>
-                  </>
-                )}
-              </>
-            )}
-          </section>
-        </div>
+                      <button className="ss-icon-btn" onClick={() => setEditingItemId(null)} title="Cancel">
+                        <X size={15} />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="ss-list-main">
+                        <button
+                          className={`ss-check ${item.is_active ? 'is-on' : ''}`}
+                          onClick={() => handleToggleChecklistItem(item)}
+                          title={item.is_active ? 'Deactivate' : 'Activate'}
+                        >
+                          {item.is_active && <Check size={13} />}
+                        </button>
+                        <span className="ss-list-title">
+                          {item.title}
+                          {item.title_ar && <span className="ss-title-ar" dir="rtl" lang="ar">{item.title_ar}</span>}
+                        </span>
+                      </div>
+                      <div className="ss-row-actions">
+                        <button
+                          className="ss-icon-btn"
+                          onClick={() => { setEditingItemId(item.id); setEditingItemTitle(item.title); setEditingItemTitleAr(item.title_ar ?? '') }}
+                          title="Edit"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          className="ss-icon-btn ss-icon-btn--danger"
+                          onClick={() => handleDeleteChecklistItem(item)}
+                          title="Delete"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <form className="ss-inline-form" onSubmit={handleAddChecklistItem}>
+            <input
+              type="text"
+              placeholder="Add a checklist item…"
+              aria-label="Checklist item"
+              value={newChecklistTitle}
+              onChange={(e) => setNewChecklistTitle(e.target.value)}
+              disabled={checklistSaving}
+              maxLength={200}
+            />
+            <input
+              type="text"
+              dir="rtl"
+              lang="ar"
+              placeholder="بالعربي (اختياري)"
+              aria-label="Checklist item (Arabic, optional)"
+              value={newChecklistTitleAr}
+              onChange={(e) => setNewChecklistTitleAr(e.target.value)}
+              disabled={checklistSaving}
+              maxLength={200}
+            />
+            <button type="submit" className="ss-btn ss-btn--primary" disabled={checklistSaving || !newChecklistTitle.trim()}>
+              {checklistSaving ? <Loader2 size={16} className="spin" /> : <Plus size={16} />}
+              Add item
+            </button>
+          </form>
+        </section>
       )}
 
       <ConfirmDialog

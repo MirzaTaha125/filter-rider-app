@@ -73,7 +73,7 @@
   color: var(--primary-hover);
   display: flex;
   font-size: 1.4rem;
-  font-weight: 700;
+  font-weight: 600;
   height: 84px;
   justify-content: center;
   overflow: visible;
@@ -112,7 +112,7 @@
 .cd-name {
   color: var(--text-main);
   font-size: 1.1rem;
-  font-weight: 700;
+  font-weight: 600;
   margin: 0.85rem 0 0;
 }
 
@@ -149,7 +149,7 @@
   color: var(--text-muted);
   display: block;
   font-size: 0.68rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -179,7 +179,7 @@
   display: flex;
   font-family: inherit;
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 500;
   gap: 0.45rem;
   justify-content: center;
   margin-top: 1.15rem;
@@ -213,7 +213,7 @@
   color: var(--text-main);
   display: flex;
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: 600;
   gap: 0.5rem;
   margin: 0 0 0.85rem;
 }
@@ -233,7 +233,7 @@
 .cd-wallet-notice {
   color: var(--success, #16a34a);
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .cd-count {
@@ -241,7 +241,7 @@
   border-radius: 999px;
   color: var(--text-muted);
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 600;
   padding: 2px 8px;
 }
 
@@ -306,7 +306,7 @@
   color: var(--primary-hover);
   display: inline-flex;
   font-size: 0.6rem;
-  font-weight: 700;
+  font-weight: 600;
   gap: 0.2rem;
   letter-spacing: 0.03em;
   padding: 1px 6px;

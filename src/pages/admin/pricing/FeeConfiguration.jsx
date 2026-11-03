@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Percent, DollarSign, Save } from 'lucide-react'
 import { getPlatformFee, createPlatformFee, updatePlatformFee } from '../../../api/pricing.js'
 import './FeeConfiguration.css'
+import { PageShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 const APPLICATION_LAYER_OPTIONS = [
   { value: 'SUBTOTAL_BEFORE_SURGE', label: 'Subtotal (before surge)' },
@@ -91,7 +93,7 @@ function FeeConfiguration() {
             <p className="fee-config-subtitle">Configure platform fees and commissions</p>
           </div>
         </div>
-        <div className="fee-loading">Loading configuration...</div>
+        <PageShimmer />
       </div>
     )
   }

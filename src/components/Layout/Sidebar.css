@@ -111,6 +111,7 @@
 }
 
 .sidebar-nav {
+  position: relative;
   padding: 1rem 0.75rem;
   margin-top: 0.25rem;
   flex: 1;
@@ -197,7 +198,7 @@
   background: var(--sidebar-active-bg);
   color: var(--sidebar-active-text);
   box-shadow: none;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .sidebar-menu-item.active .menu-icon {
@@ -244,7 +245,15 @@
 
 .sidebar-dropdown-toggle.active,
 .sidebar-dropdown-toggle.open {
-  color: #ffffff;
+  color: var(--secondary-color);
+}
+
+.sidebar-dropdown-toggle.active .menu-icon,
+.sidebar-dropdown-toggle.open .menu-icon,
+.sidebar-dropdown-toggle.active .dropdown-arrow,
+.sidebar-dropdown-toggle.open .dropdown-arrow {
+  color: var(--secondary-color);
+  opacity: 1;
 }
 
 .dropdown-arrow {
@@ -296,7 +305,7 @@
 .sidebar-submenu-item.active {
   background: var(--primary-soft);
   color: var(--primary-color);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 /* Unread counter on a submenu entry (chat). */
@@ -305,7 +314,7 @@
   border-radius: 999px;
   color: #fff;
   font-size: 0.62rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1;
   margin-left: auto;
   min-width: 18px;

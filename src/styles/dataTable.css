@@ -52,17 +52,19 @@
   align-items: center;
   background: var(--bg-input);
   border: 1px solid var(--border-base);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-search);
   color: var(--text-muted);
   display: flex;
   flex: 1 1 300px;
   gap: 0.55rem;
-  max-width: 420px;
-  padding: 0.55rem 0.8rem;
+  max-width: 520px;
+  padding: 0 1rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .dt-search:focus-within {
   border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--primary-soft);
 }
 
 .dt-search input {
@@ -74,6 +76,12 @@
   font-size: 0.875rem;
   min-width: 0;
   outline: none;
+  padding: 0.7rem 0;
+}
+
+.dt-search input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.85;
 }
 
 .dt-toolbar-actions {
@@ -87,13 +95,13 @@
   align-items: center;
   background: var(--bg-card);
   border: 1px solid var(--border-base);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-btn);
   color: var(--text-main);
   cursor: pointer;
   display: inline-flex;
   font-family: inherit;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 500;
   gap: 0.45rem;
   padding: 0.55rem 0.9rem;
   transition: background 0.15s, border-color 0.15s;
@@ -138,7 +146,7 @@
   border-radius: 999px;
   color: var(--primary-color);
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 600;
   padding: 1px 7px;
 }
 
@@ -164,7 +172,7 @@
 .dt-field label {
   color: var(--text-muted);
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
@@ -276,7 +284,7 @@ select.dt-field:focus {
   border-top: 1px solid var(--border-base);
   color: var(--text-main);
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 600;
   padding: 0.85rem 1.1rem;
   text-align: left;
   white-space: nowrap;
@@ -367,7 +375,7 @@ select.dt-field:focus {
 
 .dt-cell-stack strong {
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .dt-cell-stack em {
@@ -434,7 +442,7 @@ select.dt-field:focus {
   border-radius: 999px;
   display: inline-block;
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.03em;
   padding: 3px 9px;
   text-transform: uppercase;
@@ -460,7 +468,7 @@ select.dt-field:focus {
   align-items: center;
   display: inline-flex;
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
   gap: 0.35rem;
 }
 
@@ -547,31 +555,40 @@ p.dt-empty,
 .dt-pager {
   align-items: center;
   display: flex;
+  flex-wrap: wrap;
   gap: 0.3rem;
 }
 
 .dt-page {
-  background: none;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
+  align-items: center;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-base);
+  border-radius: 8px;
+  color: var(--text-main);
   cursor: pointer;
+  display: inline-flex;
   font-family: inherit;
   font-size: 0.82rem;
-  font-weight: 600;
-  min-width: 32px;
-  padding: 0.4rem 0.6rem;
-  transition: background 0.15s, color 0.15s;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  height: 34px;
+  justify-content: center;
+  min-width: 34px;
+  padding: 0 0.6rem;
+  transition: background 0.15s, border-color 0.15s;
 }
+
+.dt-page--arrow { padding: 0; width: 34px; }
 
 .dt-page:hover:not(:disabled):not(.is-current) {
   background: var(--border-light);
-  color: var(--text-main);
 }
 
 .dt-page.is-current {
   background: var(--primary-color);
+  border-color: var(--primary-color);
   color: #1a1a1a;
+  cursor: default;
 }
 
 .dt-page:disabled {
@@ -614,13 +631,14 @@ p.dt-empty,
 .dt-foot-limit select {
   background: var(--bg-input);
   border: 1px solid var(--border-base);
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   color: var(--text-main);
   cursor: pointer;
   font-family: inherit;
   font-size: 0.82rem;
-  font-weight: 600;
-  padding: 0.35rem 0.55rem;
+  font-weight: 500;
+  height: 34px;
+  padding: 0 0.55rem;
 }
 
 .dt-foot-limit select:focus {
@@ -646,6 +664,12 @@ p.dt-empty,
   }
 }
 
+/* Pager under a card grid (not inside a table card): no top rule. */
+.dt-pager-wrap .dt-foot {
+  border-top: none;
+  padding: 0.75rem 0 0;
+}
+
 /* ── Page header above the card ──────────────────────────────────────────── */
 
 .dt-page-head {
@@ -659,7 +683,7 @@ p.dt-empty,
 .dt-page-title {
   color: var(--text-main);
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 600;
   margin: 0;
 }
 

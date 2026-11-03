@@ -15,6 +15,8 @@ import {
   changeAdminPassword,
 } from "../../../api";
 import "./AccountSettings.css";
+import { PageShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 function AccountSettings() {
   const [formData, setFormData] = useState({
@@ -220,7 +222,7 @@ function AccountSettings() {
       )}
 
       {loading ? (
-        <p className="account-loading">Loading account...</p>
+        <PageShimmer />
       ) : (
         <div className="account-settings-container">
           <div className="settings-tabs">

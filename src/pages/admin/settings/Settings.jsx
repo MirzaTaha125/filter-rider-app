@@ -6,6 +6,10 @@ import { useAppSettings } from '../../../contexts/AppSettingsContext'
 import { PREDEFINED_PERMISSIONS, PERMISSION_GROUPS } from './permissionCatalog'
 import './Settings.css'
 import TableScroll from '../../../components/DataTable/TableScroll'
+import Pager from '../../../components/DataTable/Pager'
+import { usePagedRows } from '../../../components/DataTable/usePagedRows'
+import { PanelShimmer, TableBlockShimmer, ListRowsShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 const TABS = ['general', 'api', 'security', 'admin-users', 'roles', 'permissions']
 
@@ -64,6 +68,10 @@ function Settings() {
   const [adminUsers, setAdminUsers] = useState([])
   const [adminUsersLoading, setAdminUsersLoading] = useState(false)
   const [adminUsersError, setAdminUsersError] = useState('')
+  const { pageRows: userRows, pagerProps: userPager } = usePagedRows(adminUsers, {
+    defaultLimit: 20,
+    resetKey: undefined,
+  })
 
   useEffect(() => {
     getSettings()
@@ -89,6 +97,10 @@ function Settings() {
   const [allPermissions, setAllPermissions] = useState([])
   const [permsLoading, setPermsLoading] = useState(false)
   const [selectedRoleForPerms, setSelectedRoleForPerms] = useState('')
+  const { pageRows: roleRows, pagerProps: rolePager } = usePagedRows(allRoles, {
+    defaultLimit: 20,
+    resetKey: undefined,
+  })
   const [checkedPermIds, setCheckedPermIds] = useState(new Set())
   const [rolePermsLoading, setRolePermsLoading] = useState(false)
   const [permsSaving, setPermsSaving] = useState(false)
@@ -345,7 +357,7 @@ function Settings() {
             <div className="settings-message settings-message--error">{settingsError || saveError}</div>
           )}
           {settingsLoading && activeTab !== 'permissions' && (
-            <div className="settings-loading"><Loader2 size={24} className="spin" /> Loading settings…</div>
+            <PanelShimmer />
           )}
           {activeTab === 'general' && (
             <div className="settings-section">
@@ -487,7 +499,7 @@ function Settings() {
               )}
 
               {adminUsersLoading ? (
-                <div className="settings-loading"><Loader2 size={20} className="spin" /> Loading admin users…</div>
+                <TableBlockShimmer columns={5} />
               ) : adminUsers.length === 0 ? (
                 <div className="dt-state">
                   <Users size={28} />
@@ -510,7 +522,7 @@ function Settings() {
                         </tr>
                       </thead>
                       <tbody>
-                        {adminUsers.map((u) => {
+                        {userRows.map((u) => {
                           const name = u.name ?? u.full_name ?? '—'
                           const status = (u.status ?? '').toLowerCase()
                           return (
@@ -557,6 +569,7 @@ function Settings() {
                       </tbody>
                     </table>
                   </TableScroll>
+                  <Pager {...userPager} unit="accounts" />
                 </>
               )}
             </div>
@@ -580,17 +593,22 @@ function Settings() {
               <div className="roles-list-section">
                 <h3 className="permissions-section-title">Available Roles</h3>
                 {rolesListLoading ? (
-                  <div className="settings-loading"><Loader2 size={20} className="spin" /> Loading roles…</div>
+                  <ListRowsShimmer rows={4} />
                 ) : allRoles.length === 0 ? (
                   <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>No roles found. Create one above.</p>
                 ) : (
                   <div className="roles-grid">
-                    {allRoles.map((role) => (
+                    {roleRows.map((role) => (
                       <div key={role.id ?? role.name} className="role-card">
                         <div className="role-card-name">{role.name}</div>
                         {role.description && <div className="role-card-desc">{role.description}</div>}
                       </div>
                     ))}
+                  </div>
+                )}
+                {roleRows.length > 0 && (
+                  <div className="dt-pager-wrap">
+                    <Pager {...rolePager} unit="roles" />
                   </div>
                 )}
               </div>
@@ -652,7 +670,7 @@ function Settings() {
               {/* Permissions List */}
               {selectedRoleForPerms && (
                 rolePermsLoading || permsLoading ? (
-                  <div className="settings-loading"><Loader2 size={20} className="spin" /> Loading permissions…</div>
+                  <ListRowsShimmer rows={6} />
                 ) : allPermissions.length === 0 ? (
                   <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
                     No permissions found. Create permissions first from the backend.

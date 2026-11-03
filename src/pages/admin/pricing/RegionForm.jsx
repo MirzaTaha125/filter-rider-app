@@ -11,6 +11,8 @@ import {
 import { getZones } from '../../../api/zones.js'
 import '../adminForm.css'
 import './RegionForm.css'
+import { PageShimmer } from '../../../components/Shimmer/Shimmer'
+
 
 const EMPTY_FORM = {
   zoneId: '',
@@ -143,7 +145,7 @@ function RegionForm() {
     return (
       <div className="region-form-page">
         <PageHeader title={title} />
-        <div className="sf-state"><Loader2 size={32} className="spin" /><span>Loading…</span></div>
+        <PageShimmer />
       </div>
     )
   }

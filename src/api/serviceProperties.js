@@ -18,6 +18,7 @@ export async function createServiceProperty(payload) {
     body: JSON.stringify({
       service_id: payload.serviceId,
       name: payload.name,
+      name_ar: payload.nameAr,
       type: (payload.type || 'STRING').toUpperCase(),
     }),
   });
@@ -27,6 +28,7 @@ export async function createServiceProperty(payload) {
 export async function updateServiceProperty(id, payload) {
   const body = {};
   if (payload.name !== undefined) body.name = payload.name;
+  if (payload.nameAr !== undefined) body.name_ar = payload.nameAr;
   if (payload.type !== undefined) body.type = payload.type.toUpperCase();
   const data = await apiRequest(`/admin/service-properties/${id}`, {
     method: 'PATCH',

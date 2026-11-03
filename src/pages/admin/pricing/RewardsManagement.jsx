@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Plus, Pencil, Trash2, Gift, Loader2, AlertTriangle, Search, Users, UserCheck,
+  Plus, Pencil, Trash2, Gift, AlertTriangle, Search, Users, UserCheck,
 } from 'lucide-react'
 import ConfirmDialog from '../../../components/ConfirmDialog/ConfirmDialog'
 import {
@@ -9,7 +9,10 @@ import {
   updateRewardRuleStatus,
   deleteRewardRule,
 } from '../../../api'
+import { ListCardsShimmer } from '../../../components/Shimmer/Shimmer'
 import './RewardsManagement.css'
+import Pager from '../../../components/DataTable/Pager'
+import { usePagedRows } from '../../../components/DataTable/usePagedRows'
 
 const AUDIENCE_FILTERS = ['ALL', 'CUSTOMER', 'PROVIDER']
 
@@ -21,17 +24,27 @@ function audienceLabel(audience) {
   return audience === 'PROVIDER' ? 'Provider' : 'Customer'
 }
 
+function rewardLabel(rule) {
+  if (rule.reward_kind === 'SERVICE_DISCOUNT') {
+    const n = (rule.service_ids || []).length
+    const value = Number(rule.discount_value ?? 0)
+    const off = rule.discount_type === 'FIXED' ? `${value} SAR off` : `${value}% off`
+    return `${off} on ${n} service${n === 1 ? '' : 's'}`
+  }
+  return `${Number(rule.reward_amount ?? 0)} SAR wallet`
+}
+
 function ruleSummary(rule) {
   const who = rule.audience === 'PROVIDER' ? 'a provider' : 'a customer'
-  const amount = Number(rule.reward_amount ?? 0)
+  const reward = rewardLabel(rule)
   if (rule.trigger === 'SIGN_UP') {
-    return `When ${who} signs up, credit ${amount} SAR to their wallet.`
+    return `When ${who} signs up, give ${reward}.`
   }
   const n = Number(rule.threshold ?? 0)
   if (rule.repeat_mode === 'EVERY_N') {
-    return `When ${who} completes every ${n} orders, credit ${amount} SAR.`
+    return `When ${who} completes every ${n} orders, give ${reward}.`
   }
-  return `When ${who} completes ${n} order${n === 1 ? '' : 's'}, credit ${amount} SAR.`
+  return `When ${who} completes ${n} order${n === 1 ? '' : 's'}, give ${reward}.`
 }
 
 function triggerLabel(rule) {
@@ -117,6 +130,10 @@ function RewardsManagement() {
       (rule.description || '').toLowerCase().includes(term)
     return matchesAudience && matchesTerm
   })
+  const { pageRows, pagerProps } = usePagedRows(visible, {
+    defaultLimit: 20,
+    resetKey: `${audienceFilter}|${term}`,
+  })
 
   const activeCount = rules.filter(r => r.is_active).length
 
@@ -172,10 +189,7 @@ function RewardsManagement() {
       )}
 
       {loading ? (
-        <div className="rw-state">
-          <Loader2 size={32} className="spin" />
-          <span>Loading rewards…</span>
-        </div>
+        <ListCardsShimmer />
       ) : rules.length === 0 ? (
         <div className="rw-state">
           <Gift size={32} />
@@ -193,7 +207,7 @@ function RewardsManagement() {
         </div>
       ) : (
         <div className="rw-grid">
-          {visible.map(rule => {
+          {pageRows.map(rule => {
             const toggling = togglingIds.has(rule.id)
             const granted = rule.grant_count ?? 0
             const AudienceIcon = rule.audience === 'PROVIDER' ? UserCheck : Users
@@ -205,8 +219,11 @@ function RewardsManagement() {
                   <div className="rw-card-id">
                     <strong className="rw-name">{rule.name}</strong>
                     <span className="rw-amount">
-                      <span className="riyal-symbol">&#x20C1;</span>
-                      {Number(rule.reward_amount ?? 0)}
+                      {rule.reward_kind === 'SERVICE_DISCOUNT'
+                        ? (rule.discount_type === 'FIXED'
+                          ? `${Number(rule.discount_value ?? 0)} SAR off`
+                          : `${Number(rule.discount_value ?? 0)}% off`)
+                        : <><span className="riyal-symbol">&#x20C1;</span>{Number(rule.reward_amount ?? 0)}</>}
                     </span>
                   </div>
                   <span className={`rw-badge ${rule.is_active ? 'rw-badge--active' : 'rw-badge--inactive'}`}>
@@ -265,6 +282,11 @@ function RewardsManagement() {
               </article>
             )
           })}
+        </div>
+      )}
+      {pageRows.length > 0 && (
+        <div className="dt-pager-wrap">
+          <Pager {...pagerProps} unit="rewards" />
         </div>
       )}
 

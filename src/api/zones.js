@@ -35,6 +35,9 @@ export async function createZone(payload) {
       center_lat: lat ?? 24.7136,
       center_lng: lng ?? 46.6753,
       polygon_json: polygon,
+      ...(payload.cityPlaceId != null && { city_place_id: payload.cityPlaceId }),
+      ...(payload.areas != null && { areas_json: payload.areas }),
+      ...(payload.radiusKm != null && { radius_km: payload.radiusKm }),
       is_active: payload.isActive !== false,
     }),
   });
@@ -51,6 +54,9 @@ export async function updateZone(id, payload) {
   if (payload.center_lat != null) body.center_lat = payload.center_lat;
   if (payload.center_lng != null) body.center_lng = payload.center_lng;
   if (payload.polygon_json != null) body.polygon_json = payload.polygon_json;
+  if (payload.cityPlaceId != null) body.city_place_id = payload.cityPlaceId;
+  if (payload.areas != null) body.areas_json = payload.areas;
+  if (payload.radiusKm != null) body.radius_km = payload.radiusKm;
   if (payload.isActive != null) body.is_active = payload.isActive;
   return apiRequest(`/admin/zones/${id}`, {
     method: 'PATCH',
@@ -66,4 +72,23 @@ export async function deleteZone(id) {
 /** POST – Refresh service provider counts for all zones */
 export async function refreshZoneProviderCounts() {
   return apiRequest('/admin/zones/refresh-provider-counts', { method: 'POST' });
+}
+
+/* ---------- Google look-ups for the zone form (server key, cached) ---------- */
+
+/** GET /admin/zone-places/cities?q= – Saudi cities: a starting list, or a search */
+export async function getZoneCities(q = '') {
+  const qs = q.trim() ? `?q=${encodeURIComponent(q.trim())}` : '';
+  return apiRequest(`/admin/zone-places/cities${qs}`);
+}
+
+/** GET /admin/zone-places/{placeId} – Name, centre and bounds of a place */
+export async function getZonePlace(placeId) {
+  return apiRequest(`/admin/zone-places/${encodeURIComponent(placeId)}`);
+}
+
+/** GET /admin/zone-places/{cityPlaceId}/areas?q= – Areas of a city, or a search inside it */
+export async function getZoneCityAreas(cityPlaceId, q = '') {
+  const qs = q.trim() ? `?q=${encodeURIComponent(q.trim())}` : '';
+  return apiRequest(`/admin/zone-places/${encodeURIComponent(cityPlaceId)}/areas${qs}`);
 }

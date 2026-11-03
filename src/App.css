@@ -30,7 +30,7 @@ body{
   color: #1a1a1a !important;
   border: none !important;
   font-family: inherit;
-  font-weight: 600;
+  font-weight: 500;
   border-radius: var(--radius-md);
 }
 

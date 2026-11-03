@@ -1,10 +1,12 @@
 import {
-  Loader2, AlertTriangle, ScrollText, ArrowDownLeft, ArrowUpRight,
+  AlertTriangle, ScrollText, ArrowDownLeft, ArrowUpRight,
 } from 'lucide-react'
 import SortableTh from '../../../components/DataTable/SortableTh'
 import { useTableSort } from '../../../components/DataTable/useTableSort'
 import TableScroll from '../../../components/DataTable/TableScroll'
+import Pager from '../../../components/DataTable/Pager'
 import { formatMoney, formatDate } from './walletFormat.js'
+import { TableBlockShimmer } from '../../../components/Shimmer/Shimmer'
 import {
   typeLabel,
   counterparty,
@@ -24,10 +26,8 @@ export default function LedgerTable({
   emptyTitle = 'No transactions',
   emptyHint = 'The ledger is empty.',
   hideAccount = false,
-  hasMore = false,
-  loadingMore = false,
-  onLoadMore,
-  moreLabel,
+  /** Props for the shared <Pager> under the table (page, total, limit, onChange, …). */
+  pager,
 }) {
   const sort = useTableSort()
 
@@ -54,10 +54,7 @@ export default function LedgerTable({
 
   if (loading) {
     return (
-      <div className="dt-empty">
-        <Loader2 size={32} className="spin" />
-        <span>Loading ledger…</span>
-      </div>
+      <TableBlockShimmer columns={8} />
     )
   }
 
@@ -156,22 +153,8 @@ export default function LedgerTable({
             </tbody>
           </table>
         </TableScroll>
+        {pager && <Pager {...pager} />}
       </div>
-
-      {hasMore && onLoadMore && (
-        <div className="tl-more">
-          <button
-            type="button"
-            className="dt-btn"
-            onClick={onLoadMore}
-            disabled={loadingMore}
-          >
-            {loadingMore
-              ? <><Loader2 size={16} className="spin" /> Loading…</>
-              : (moreLabel || 'Load more')}
-          </button>
-        </div>
-      )}
     </>
   )
 }
